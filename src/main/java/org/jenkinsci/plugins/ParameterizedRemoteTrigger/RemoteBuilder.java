@@ -20,13 +20,15 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 
- class RemoteBuilder extends Builder {
+
+public class RemoteBuilder extends Builder {
 
     private final String token;
     private final URL hostname;
@@ -39,12 +41,12 @@ import java.util.List;
     
     
     
+    
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
-    //TODO: all sorts of validation are still needed (valid hostname, job is not empty, etc)
     @DataBoundConstructor
     public RemoteBuilder(String token, String hostname, String parameters, String job) throws MalformedURLException {
     	
-        this.token = token;
+    	this.token = token;
         this.hostname = new URL(hostname);
     	this.parameters = parameters;
     	this.job = job;
@@ -54,10 +56,8 @@ import java.util.List;
     	
     	//convert the String array into a List of Strings, and remove any empty entries
     	this.parameterList = new ArrayList<String>(Arrays.asList(params));
-    	
-    	this.cleanUpParameters();
-    	
     }
+    
     
     /**
      * A convenience function to clean up any type of unwanted items from the parameterList 
@@ -117,13 +117,9 @@ import java.util.List;
     	return queryParams;
     }
 
-        
-    /**
-     * This is where you 'build' the project.
-     */
+    
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
-
     	//TODO: this should probably be done in a helper function
     	String myTriggerURLString = this.getHostname() + "/job/" + this.getJob() + this.paramerizedBuildUrl + "?" + "token=" + this.getToken() + "&" + this.buildUrlQueryString();
         
@@ -140,7 +136,7 @@ import java.util.List;
         	connection = (HttpURLConnection)triggerUrl.openConnection();
         	
     		connection.setDoInput(true);
-    		connection.setRequestProperty("Accept", "application/json");
+    		//connection.setRequestProperty("Accept", "application/json");
     		connection.setRequestMethod("POST");
     		connection.connect();
     		
@@ -174,7 +170,6 @@ import java.util.List;
         return true;
     }
 
-    
     //Getters
     public URL getHostname() {
 		return this.hostname;
@@ -192,7 +187,6 @@ import java.util.List;
     public String getParameters() {
     	return this.parameters;
     }
-
     
     // Overridden for better type safety.
     // If your plugin doesn't really define any property on Descriptor,
@@ -203,12 +197,6 @@ import java.util.List;
     }
 
 
-	/**
-	 * 
-	 * This class is not being used as yet.
-	 * It defines items with the the global/system config section
-	 *
-	 */
     @Extension // This indicates to Jenkins that this is an implementation of an extension point.
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         /**
@@ -219,7 +207,6 @@ import java.util.List;
          * If you don't want fields to be persisted, use <tt>transient</tt>.
          */
         private boolean useFrench;
-        private List<RemoteSite> sites;
 
         /**
          * In order to load the persisted global configuration, you have to 
@@ -262,46 +249,42 @@ import java.util.List;
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             // To persist global configuration information,
             // set that to properties and call save().
-            //useFrench = formData.getBoolean("useFrench");
+            useFrench = formData.getBoolean("useFrench");
             // ^Can also use req.bindJSON(this, formData);
             //  (easier when there are many fields; need set* methods for this, like setUseFrench)
-        	
-        	this.sites = new ArrayList<RemoteSite>();
-        	
-        	JSONArray hosts = formData.optJSONArray("sites");
-        	
-        	if(hosts == null)
-        	{
-        		//then we only have 1 entry
-        		JSONObject host = formData.optJSONObject("sites");
-
-        		
-        		RemoteSite rs = this.createSite(host);
-        		this.sites.add(rs);
-        	}else{
-        		//we have an array, so lets cast it
-        		int i = 0;
-        		
-        		for(i=0; i< hosts.size(); i++) {
-        			JSONObject host = hosts.getJSONObject(i);
-        			RemoteSite rs = this.createSite(host);
-            		this.sites.add(rs);
-        			
-        		}
-        		
-        	}
-
-        	
-        	
-        	//this.sites.addAll();
             save();
             return super.configure(req,formData);
         }
-        
-        private RemoteSite createSite(JSONObject siteInfo) {
-        	return new RemoteSite(siteInfo.getString("hostname"), siteInfo.getString("displayName"));
-        }
 
+        /**
+         * Validates the given hostname to see that it's well-formed, and is reachable.
+         * 
+         * @param hostname Remote hostname to be validated
+         * @return FormValidation object
+         */
+        public FormValidation doValidateHostname(@QueryParameter String hostname) {
+        	
+        	URL host = null;
+        	
+        	//check if we have a valid, well-formed URL
+    		try {
+    			host = new URL(hostname);
+    			URI uri = host.toURI();
+    		}catch(Exception e) {
+    			return FormValidation.error("Malformed URL (" + hostname + "), please double-check your hostname");
+    		}
+    		
+    		//check that the host is reachable
+    		try {
+    			HttpURLConnection connection = (HttpURLConnection)host.openConnection();
+    			connection.connect();
+    		}catch(Exception e) {
+    			return FormValidation.error("Unable to connect to remote Jenkins: " + hostname);
+    		}
+    		
+    		return FormValidation.okWithMarkup("Hostname looks good");
+        }
+        
         /**
          * This method returns true if the global configuration says we should speak French.
          *
@@ -310,10 +293,6 @@ import java.util.List;
          */
         public boolean getUseFrench() {
             return useFrench;
-        }
-        
-        public List<RemoteSite> getSites() {
-        	return sites;
         }
     }
 }
