@@ -20,7 +20,6 @@ import org.kohsuke.stapler.QueryParameter;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -30,7 +29,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-public class RemoteBuilder extends Builder {
+public class RemoteBuildConfiguration extends Builder {
 
     private final String token;
     private final String remoteJenkinsName;
@@ -45,8 +44,8 @@ public class RemoteBuilder extends Builder {
     private static String normalBuildUrl = "/build";
 
     @DataBoundConstructor
-    public RemoteBuilder(String remoteSites, String job, String token,
-            String parameters) throws MalformedURLException {
+    public RemoteBuildConfiguration(String remoteSites, String job, String token, String parameters)
+            throws MalformedURLException {
 
         this.token = token;
         this.remoteJenkinsName = remoteSites;
@@ -85,9 +84,8 @@ public class RemoteBuilder extends Builder {
     private void removeCommentsFromParameters() {
         List<String> itemsToRemove = new ArrayList<String>();
 
-        for(String parameter : this.parameterList) {
-            if(parameter.indexOf("#") == 0)
-            {
+        for (String parameter : this.parameterList) {
+            if (parameter.indexOf("#") == 0) {
                 itemsToRemove.add(parameter);
             }
         }
@@ -98,50 +96,52 @@ public class RemoteBuilder extends Builder {
     /**
      * Return the parameterList in an encoded query-string
      * 
-     * @return URL-encoded string 
+     * @return URL-encoded string
      */
     public String buildUrlQueryString() {
 
-        //List to hold the encoded parameters
+        // List to hold the encoded parameters
         List<String> encodedParameters = new ArrayList<String>();
-        
-        
-        for(String parameter : this.parameterList) {
-            //Step #1 - break apart the parameter-pairs (because we don't want to encode the "=" character)
+
+        for (String parameter : this.parameterList) {
+            // Step #1 - break apart the parameter-pairs (because we don't want
+            // to encode the "=" character)
             String[] splitParameters = parameter.split("=");
-            
-            //List to hold each individually encoded parameter item
+
+            // List to hold each individually encoded parameter item
             List<String> encodedItems = new ArrayList<String>();
-            for(String item : splitParameters) {
+            for (String item : splitParameters) {
                 try {
-                    //Step #2 - encode each individual parameter item add the encoded item to its corresponding list
+                    // Step #2 - encode each individual parameter item add the
+                    // encoded item to its corresponding list
                     encodedItems.add(URLEncoder.encode(item, "UTF-8"));
-                }catch(Exception e) {
-                    //do nothing
-                    //because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
+                } catch (Exception e) {
+                    // do nothing
+                    // because we are "hard-coding" the encoding type, there is
+                    // a 0% chance that this will fail.
                 }
-                
+
             }
-            
-            //Step #3 - reunite the previously separated parameter items and add them to the corresponding list
+
+            // Step #3 - reunite the previously separated parameter items and
+            // add them to the corresponding list
             encodedParameters.add(StringUtils.join(encodedItems, "="));
         }
-        
 
         return StringUtils.join(encodedParameters, "&");
     }
 
     /**
-     * Lookup up a Remote Jenkins Configuration based on display name
+     * Lookup up a Remote Jenkins Server based on display name
      * 
      * @param displayName
      *            Name of the configuration you are looking for
      * @return A RemoteSitez object
      */
-    public RemoteSitez findRemoteHost(String displayName) {
-        RemoteSitez match = null;
+    public RemoteJenkinsServer findRemoteHost(String displayName) {
+        RemoteJenkinsServer match = null;
 
-        for (RemoteSitez host : this.getDescriptor().remoteSites) {
+        for (RemoteJenkinsServer host : this.getDescriptor().remoteSites) {
             // if we find a match, then stop looping
             if (displayName.equals(host.getDisplayName())) {
                 match = host;
@@ -153,25 +153,19 @@ public class RemoteBuilder extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher,
-            BuildListener listener) {
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
 
         // String myTriggerURLString = this.getHostname() + "/job/" +
         // this.getJob() + this.paramerizedBuildUrl + "?" + "token=" +
         // this.getToken() + "&" + this.buildUrlQueryString();
-        String myTriggerURLString = this
-                .findRemoteHost(this.getRemoteJenkinsName()).getAddress()
-                .toString();
-        myTriggerURLString += "/jobs/" + this.getJob() + paramerizedBuildUrl
-                + "?" + "token=" + this.getToken() + "&"
+        String myTriggerURLString = this.findRemoteHost(this.getRemoteJenkinsName()).getAddress().toString();
+        myTriggerURLString += "/jobs/" + this.getJob() + paramerizedBuildUrl + "?" + "token=" + this.getToken() + "&"
                 + this.buildUrlQueryString();
 
         listener.getLogger().println("Token: " + this.getToken());
-        listener.getLogger().println(
-                "Jenkins config: " + this.getRemoteJenkinsName());
+        listener.getLogger().println("Jenkins config: " + this.getRemoteJenkinsName());
         listener.getLogger().println("Remote Job: " + this.getJob());
-        listener.getLogger().println(
-                "Parameters: " + this.parameterList.toString());
+        listener.getLogger().println("Parameters: " + this.parameterList.toString());
         listener.getLogger().println("Fully Built URL: " + myTriggerURLString);
 
         HttpURLConnection connection = null;
@@ -185,11 +179,13 @@ public class RemoteBuilder extends Builder {
             connection.setRequestMethod("POST");
             connection.connect();
 
-            // connection.setDoOutput(true);
-
-            // TODO: right now this just "fires and forgets". will need to poll
-            // the remote server to check for success or failure
+            // TODO: right now this is just doing a "fire and forget", but would
+            // be nice to get some feedback from the remote server. TO
+            // accomplish this we would need to poll some URL -
             // http://jenkins.local/job/test/lastBuild/api/json
+            
+            
+            // connection.setDoOutput(true);
 
             /*
              * InputStream is = connection.getInputStream(); BufferedReader rd =
@@ -236,7 +232,6 @@ public class RemoteBuilder extends Builder {
         return (DescriptorImpl) super.getDescriptor();
     }
 
-    
     // This indicates to Jenkins that this is an implementation of an extension
     // point.
     @Extension
@@ -248,8 +243,7 @@ public class RemoteBuilder extends Builder {
          * <p>
          * If you don't want fields to be persisted, use <tt>transient</tt>.
          */
-        private boolean useFrench;
-        private CopyOnWriteList<RemoteSitez> remoteSites = new CopyOnWriteList<RemoteSitez>();
+        private CopyOnWriteList<RemoteJenkinsServer> remoteSites = new CopyOnWriteList<RemoteJenkinsServer>();
 
         /**
          * In order to load the persisted global configuration, you have to call
@@ -267,14 +261,15 @@ public class RemoteBuilder extends Builder {
          * @return Indicates the outcome of the validation. This is sent to the
          *         browser.
          */
-        public FormValidation doCheckName(@QueryParameter String value)
-                throws IOException, ServletException {
+        /*
+        public FormValidation doCheckName(@QueryParameter String value) throws IOException, ServletException {
             if (value.length() == 0)
                 return FormValidation.error("Please set a name");
             if (value.length() < 4)
                 return FormValidation.warning("Isn't the name too short?");
             return FormValidation.ok();
         }
+        */
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project
@@ -290,19 +285,9 @@ public class RemoteBuilder extends Builder {
         }
 
         @Override
-        public boolean configure(StaplerRequest req, JSONObject formData)
-                throws FormException {
-            // To persist global configuration information,
-            // set that to properties and call save().
-            // useFrench = formData.getBoolean("useFrench");
-            // ^Can also use req.bindJSON(this, formData);
-            // (easier when there are many fields; need set* methods for this,
-            // like setUseFrench)
-            // save();
-            // return super.configure(req,formData);
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
 
-            remoteSites.replaceBy(req.bindJSONToList(RemoteSitez.class,
-                    formData.get("remoteSites")));
+            remoteSites.replaceBy(req.bindJSONToList(RemoteJenkinsServer.class, formData.get("remoteSites")));
             save();
 
             return super.configure(req, formData);
@@ -311,34 +296,17 @@ public class RemoteBuilder extends Builder {
         public ListBoxModel doFillRemoteSitesItems() {
             ListBoxModel model = new ListBoxModel();
 
-            for (RemoteSitez site : getRemoteSites()) {
+            for (RemoteJenkinsServer site : getRemoteSites()) {
                 model.add(site.getDisplayName());
             }
 
             return model;
         }
 
-        /**
-         * This method returns true if the global configuration says we should
-         * speak French.
-         * 
-         * The method name is bit awkward because global.jelly calls this method
-         * to determine the initial state of the checkbox by the naming
-         * convention.
-         */
-        public boolean getUseFrench() {
-            return useFrench;
-        }
 
-        public RemoteSitez[] getRemoteSites() {
+        public RemoteJenkinsServer[] getRemoteSites() {
 
-            Iterator<RemoteSitez> it = remoteSites.iterator();
-            int size = 0;
-            while (it.hasNext()) {
-                it.next();
-                size++;
-            }
-            return remoteSites.toArray(new RemoteSitez[size]);
+            return remoteSites.toArray(new RemoteJenkinsServer[this.remoteSites.size()]);
         }
     }
 }

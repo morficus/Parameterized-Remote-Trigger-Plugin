@@ -15,14 +15,22 @@ import hudson.model.Descriptor;
 
 import hudson.util.FormValidation;
 
-public class RemoteSitez extends AbstractDescribableImpl<RemoteSitez> {
+/**
+ * Holds everything regarding the remote server we wish to connect to,
+ * including validations and what not.
+ * 
+ * @author Maurice W.
+ *
+ */
+public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> {
 
     private final URL address;
     private final String displayName;
 
     @DataBoundConstructor
-    public RemoteSitez(String address, String displayName)
+    public RemoteJenkinsServer(String address, String displayName)
             throws MalformedURLException {
+
         this.address = new URL(address);
 
         if (displayName == null || displayName.trim().equals("")) {
@@ -33,9 +41,7 @@ public class RemoteSitez extends AbstractDescribableImpl<RemoteSitez> {
 
     }
 
-    // XXX: need to add a bunch of stuff around URL validation (take it all from
-    // RemoteBuilder.java)
-
+    // Getters
     public String getDisplayName() {
         return displayName;
     }
@@ -50,15 +56,15 @@ public class RemoteSitez extends AbstractDescribableImpl<RemoteSitez> {
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<RemoteSitez> {
+    public static class DescriptorImpl extends Descriptor<RemoteJenkinsServer> {
 
         /**
          * In order to load the persisted global configuration, you have to call
          * load() in the constructor.
          */
-        public DescriptorImpl() {
+        /*public DescriptorImpl() {
             load();
-        }
+        }*/
 
         public String getDisplayName() {
             return "";
@@ -76,24 +82,25 @@ public class RemoteSitez extends AbstractDescribableImpl<RemoteSitez> {
 
             URL host = null;
 
+            if(address == null || address.trim().equals("")) {
+                return FormValidation.error("The remote address can not be left empty");
+            }
+            
             // check if we have a valid, well-formed URL
             try {
                 host = new URL(address);
                 URI uri = host.toURI();
             } catch (Exception e) {
-                return FormValidation.error("Malformed URL (" + address
-                        + "), please double-check your address");
+                return FormValidation.error("Malformed URL (" + address + "), please double-check the address");
             }
 
             // check that the host is reachable
             try {
-                HttpURLConnection connection = (HttpURLConnection) host
-                        .openConnection();
+                HttpURLConnection connection = (HttpURLConnection) host.openConnection();
                 connection.connect();
             } catch (Exception e) {
                 return FormValidation
-                        .error("Unable to connect to remote Jenkins: "
-                                + address);
+                        .error("Address looks good, but unable to connect: " + address);
             }
 
             return FormValidation.okWithMarkup("Address looks good");
