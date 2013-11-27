@@ -3,10 +3,10 @@
     <f:textbox />
   </f:entry>
   
-  <f:entry title="Hostname and port" field="hostname" >
+  <f:entry title="Remote address and port" field="address" >
     <f:textbox />
   </f:entry>  
-  <f:validateButton title="Validate Hostname" method="validateHostname" with="hostname" />
+  <f:validateButton title="Validate Address" method="validateAddress" with="address" />
 
 
 <f:entry title="">
