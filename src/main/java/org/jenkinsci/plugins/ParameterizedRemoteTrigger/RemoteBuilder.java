@@ -1,7 +1,9 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 import hudson.Launcher;
 import hudson.Extension;
+import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
@@ -24,6 +26,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 
@@ -31,7 +34,7 @@ import java.util.List;
 public class RemoteBuilder extends Builder {
 
     private final String token;
-    private final URL hostname;
+    private final String remoteJenkins;
     private final String job;
     private final String parameters;
     private static String paramerizedBuildUrl = "/buildWithParameters";
@@ -44,10 +47,10 @@ public class RemoteBuilder extends Builder {
     
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
-    public RemoteBuilder(String token, String hostname, String parameters, String job) throws MalformedURLException {
+    public RemoteBuilder(String token, String hostname, String parameters, String job, String remoteSites) throws MalformedURLException {
     	
     	this.token = token;
-        this.hostname = new URL(hostname);
+        this.remoteJenkins = remoteSites;
     	this.parameters = parameters;
     	this.job = job;
     	
@@ -119,10 +122,12 @@ public class RemoteBuilder extends Builder {
 
     
     @Override
+    //XXX: hostname info is now stored in a RemoteSitez object, so we need to look it up based on the string "remoteJenkins" and extract the info that way
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
     	//TODO: this should probably be done in a helper function
     	String myTriggerURLString = this.getHostname() + "/job/" + this.getJob() + this.paramerizedBuildUrl + "?" + "token=" + this.getToken() + "&" + this.buildUrlQueryString();
         
+    	
         listener.getLogger().println("Token: "+ this.getToken() );
     	listener.getLogger().println("URL: "+ this.getHostname() );
     	listener.getLogger().println("Remote Job: "+ this.getJob() );
@@ -207,6 +212,8 @@ public class RemoteBuilder extends Builder {
          * If you don't want fields to be persisted, use <tt>transient</tt>.
          */
         private boolean useFrench;
+        private CopyOnWriteList<RemoteSitez> remoteSites = new CopyOnWriteList<RemoteSitez>();
+        
 
         /**
          * In order to load the persisted global configuration, you have to 
@@ -249,41 +256,30 @@ public class RemoteBuilder extends Builder {
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             // To persist global configuration information,
             // set that to properties and call save().
-            useFrench = formData.getBoolean("useFrench");
+            //useFrench = formData.getBoolean("useFrench");
             // ^Can also use req.bindJSON(this, formData);
             //  (easier when there are many fields; need set* methods for this, like setUseFrench)
+            //save();
+            //return super.configure(req,formData);
+        	
+            remoteSites.replaceBy(req.bindJSONToList(RemoteSitez.class,
+                    formData.get("remoteSites")));
             save();
+            
             return super.configure(req,formData);
         }
-
-        /**
-         * Validates the given hostname to see that it's well-formed, and is reachable.
-         * 
-         * @param hostname Remote hostname to be validated
-         * @return FormValidation object
-         */
-        public FormValidation doValidateHostname(@QueryParameter String hostname) {
+        
+        public ListBoxModel doFillRemoteSitesItems() {
+        	ListBoxModel model = new ListBoxModel();
         	
-        	URL host = null;
+        	for(RemoteSitez site : getRemoteSites()) {
+        		model.add(site.getDisplayName());
+        	}
         	
-        	//check if we have a valid, well-formed URL
-    		try {
-    			host = new URL(hostname);
-    			URI uri = host.toURI();
-    		}catch(Exception e) {
-    			return FormValidation.error("Malformed URL (" + hostname + "), please double-check your hostname");
-    		}
-    		
-    		//check that the host is reachable
-    		try {
-    			HttpURLConnection connection = (HttpURLConnection)host.openConnection();
-    			connection.connect();
-    		}catch(Exception e) {
-    			return FormValidation.error("Unable to connect to remote Jenkins: " + hostname);
-    		}
-    		
-    		return FormValidation.okWithMarkup("Hostname looks good");
+        	return model;
         }
+
+
         
         /**
          * This method returns true if the global configuration says we should speak French.
@@ -293,6 +289,17 @@ public class RemoteBuilder extends Builder {
          */
         public boolean getUseFrench() {
             return useFrench;
+        }
+        
+        public RemoteSitez[] getRemoteSites() {
+        	
+            Iterator<RemoteSitez> it = remoteSites.iterator();
+            int size = 0;
+            while (it.hasNext()) {
+                it.next();
+                size++;
+            }
+            return remoteSites.toArray(new RemoteSitez[size]);
         }
     }
 }
