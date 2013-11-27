@@ -28,7 +28,14 @@ public class RemoteSitez extends AbstractDescribableImpl<RemoteSitez> {
 	@DataBoundConstructor
 	public RemoteSitez(String address, String displayName) throws MalformedURLException {
 		this.address = new URL(address);
-		this.displayName = displayName;
+		
+
+        if( displayName == null || displayName.trim().equals("")) {
+          this.displayName = this.getAddress().toString();
+        }else{
+            this.displayName = displayName;
+        }
+
 	}
 	
 	//XXX: need to add a bunch of stuff around URL validation (take it all from RemoteBuilder.java)
