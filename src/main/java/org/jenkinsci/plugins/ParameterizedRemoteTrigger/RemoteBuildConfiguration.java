@@ -17,13 +17,13 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import java.util.List;
 
 /**
@@ -36,6 +36,7 @@ public class RemoteBuildConfiguration extends Builder {
     private final String       token;
     private final String       remoteJenkinsName;
     private final String       job;
+    private final boolean      buildTokenRootEnabled;
     // "parameters" is the raw string entered by the user
     private final String       parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
@@ -43,6 +44,9 @@ public class RemoteBuildConfiguration extends Builder {
 
     private static String      paramerizedBuildUrl = "/buildWithParameters";
     private static String      normalBuildUrl      = "/build";
+    private static String      buildTokenRootUrl   = "/buildByToken";
+
+    private String             queryString         = "";
 
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteSites, String job, String token, String parameters)
@@ -52,6 +56,7 @@ public class RemoteBuildConfiguration extends Builder {
         this.remoteJenkinsName = remoteSites;
         this.parameters = parameters;
         this.job = job.trim();
+        this.buildTokenRootEnabled = false;
 
         // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
@@ -147,21 +152,49 @@ public class RemoteBuildConfiguration extends Builder {
         return match;
     }
 
+    private void addToQueryString(String item) {
+        String currentQueryString = this.getQueryString();
+        String newQueryString = "";
+
+        if (currentQueryString == null || currentQueryString.equals("")) {
+            newQueryString = item;
+        } else {
+            newQueryString = currentQueryString + "&" + item;
+        }
+        this.setQueryString(newQueryString);
+    }
+
+    private String buildTriggerUrl() {
+        String triggerUrlString = this.findRemoteHost(this.getRemoteJenkinsName()).getAddress().toString();
+
+        if (this.getbuildTokenRootEnabled()) {
+            // if (true) {
+            triggerUrlString += buildTokenRootUrl;
+            triggerUrlString += paramerizedBuildUrl;
+
+            this.addToQueryString("job=" + this.getJob());
+        } else {
+            triggerUrlString += "/job/";
+            triggerUrlString += this.getJob();
+            triggerUrlString += paramerizedBuildUrl;
+        }
+
+        // don't include a token in the URL if none is provided
+        if (!this.getToken().equals("")) {
+            this.addToQueryString("token=" + this.getToken());
+        }
+
+        this.addToQueryString(this.getParameters(true));
+
+        triggerUrlString += "?" + this.getQueryString();
+
+        return triggerUrlString;
+    }
+
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
 
-        String triggerUrlString = this.findRemoteHost(this.getRemoteJenkinsName()).getAddress().toString();
-        triggerUrlString += "/jobs/";
-        triggerUrlString += this.getJob();
-        triggerUrlString += paramerizedBuildUrl;
-
-        // don't include a token in the URL if none is provided
-        if (this.getToken().equals("")) {
-            triggerUrlString += "?" + this.getParameters(true);
-        } else {
-            triggerUrlString += "?" + "token=" + this.getToken();
-            triggerUrlString += "&" + this.getParameters(true);
-        }
+        String triggerUrlString = this.buildTriggerUrl();
 
         listener.getLogger().println("Triggering this job: " + this.getJob());
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
@@ -177,8 +210,8 @@ public class RemoteBuildConfiguration extends Builder {
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
             connection.setDoInput(true);
-            // connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestMethod("GET");
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
@@ -187,16 +220,17 @@ public class RemoteBuildConfiguration extends Builder {
             // remote server. To accomplish this we would need to poll some URL
             // - http://jenkins.local/job/test/lastBuild/api/json
 
+            InputStream is = connection.getInputStream();
             /*
-             * connection.setDoOutput(true); InputStream is = connection.getInputStream(); BufferedReader rd = new
-             * BufferedReader(new InputStreamReader(is)); String line; StringBuffer response = new StringBuffer();
-             * 
-             * while((line = rd.readLine()) != null) { System.out.println(line);
-             * 
-             * }
-             * 
-             * rd.close();
-             */
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            String line;
+            StringBuffer response = new StringBuffer();
+
+            while ((line = rd.readLine()) != null) {
+                System.out.println(line);
+            }
+            rd.close();
+            */
 
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
@@ -207,6 +241,9 @@ public class RemoteBuildConfiguration extends Builder {
             if (connection != null) {
                 connection.disconnect();
             }
+
+            // and always clear the query string
+            this.clearQueryString();
 
         }
 
@@ -232,11 +269,26 @@ public class RemoteBuildConfiguration extends Builder {
         } else {
             return this.parameters;
         }
-
     }
 
     public String getParameters() {
         return this.parameters;
+    }
+
+    public boolean getbuildTokenRootEnabled() {
+        return this.buildTokenRootEnabled;
+    }
+
+    public String getQueryString() {
+        return this.queryString;
+    }
+
+    private void setQueryString(String string) {
+        this.queryString = string.trim();
+    }
+
+    private void clearQueryString() {
+        this.setQueryString("");
     }
 
     // Overridden for better type safety.
