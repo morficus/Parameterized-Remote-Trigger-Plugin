@@ -9,6 +9,19 @@ This is done by calling the ```/buildWithParameters``` URL on the remote server.
 
 This plugin also has support for build authorization tokens (as defined [here](https://wiki.jenkins-ci.org/display/JENKINS/Quick+and+Simple+Security) )
 
+###Screenshots
+System configuration option
+
+![System onfiguration option](https://raw.github.com/morficus/Parameterized-Remote-Trigger-Plugin/master/screenshots/1-system-settings.png)
+
+
+Job setup options
+
+![select from drop-down](https://raw.github.com/morficus/Parameterized-Remote-Trigger-Plugin/master/screenshots/2-build-configuration-1.png)
+
+![Job setup options](https://raw.github.com/morficus/Parameterized-Remote-Trigger-Plugin/master/screenshots/3-build-configuration-2.png)
+
+
 ####Current Limitations
 1. Does not play well with [Build Token Root Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Build+Token+Root+Plugin) URL formats.
 2. No username/password authentication, must use a 'build authorization token'.
