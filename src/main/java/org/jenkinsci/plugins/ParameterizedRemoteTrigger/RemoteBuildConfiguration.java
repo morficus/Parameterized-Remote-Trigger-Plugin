@@ -1,9 +1,9 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import hudson.AbortException;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.CopyOnWriteList;
-import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -15,9 +15,6 @@ import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.QueryParameter;
-
-import javax.servlet.ServletException;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -26,22 +23,26 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
+
 import java.util.List;
 
+/**
+ * 
+ * @author Maurice W.
+ * 
+ */
 public class RemoteBuildConfiguration extends Builder {
 
-    private final String token;
-    private final String remoteJenkinsName;
-    private final String job;
+    private final String       token;
+    private final String       remoteJenkinsName;
+    private final String       job;
     // "parameters" is the raw string entered by the user
-    private final String parameters;
-    // "parameterList" is the cleaned-up version of "parameters" (stripped out
-    // comments, character encoding, etc)
+    private final String       parameters;
+    // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
     private final List<String> parameterList;
 
-    private static String paramerizedBuildUrl = "/buildWithParameters";
-    private static String normalBuildUrl = "/build";
+    private static String      paramerizedBuildUrl = "/buildWithParameters";
+    private static String      normalBuildUrl      = "/build";
 
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteSites, String job, String token, String parameters)
@@ -52,19 +53,16 @@ public class RemoteBuildConfiguration extends Builder {
         this.parameters = parameters;
         this.job = job;
 
-        // split the parameter-string into an array based on the new-line
-        // character
+        // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
 
-        // convert the String array into a List of Strings, and remove any empty
-        // entries
+        // convert the String array into a List of Strings, and remove any empty entries
         this.parameterList = new ArrayList<String>(Arrays.asList(params));
         this.cleanUpParameters();
     }
 
     /**
-     * A convenience function to clean up any type of unwanted items from the
-     * parameterList
+     * A convenience function to clean up any type of unwanted items from the parameterList
      */
     private void cleanUpParameters() {
         this.removeEmptyElements();
@@ -76,6 +74,7 @@ public class RemoteBuildConfiguration extends Builder {
      */
     private void removeEmptyElements() {
         this.parameterList.removeAll(Arrays.asList(null, ""));
+        this.parameterList.removeAll(Arrays.asList(null, " "));
     }
 
     /**
@@ -96,35 +95,31 @@ public class RemoteBuildConfiguration extends Builder {
     /**
      * Return the parameterList in an encoded query-string
      * 
-     * @return URL-encoded string
+     * @return query-parameter-formated URL-encoded string
      */
-    public String buildUrlQueryString() {
+    private String buildUrlQueryString() {
 
         // List to hold the encoded parameters
         List<String> encodedParameters = new ArrayList<String>();
 
         for (String parameter : this.parameterList) {
-            // Step #1 - break apart the parameter-pairs (because we don't want
-            // to encode the "=" character)
+            // Step #1 - break apart the parameter-pairs (because we don't want to encode the "=" character)
             String[] splitParameters = parameter.split("=");
 
             // List to hold each individually encoded parameter item
             List<String> encodedItems = new ArrayList<String>();
             for (String item : splitParameters) {
                 try {
-                    // Step #2 - encode each individual parameter item add the
-                    // encoded item to its corresponding list
+                    // Step #2 - encode each individual parameter item add the encoded item to its corresponding list
                     encodedItems.add(URLEncoder.encode(item, "UTF-8"));
                 } catch (Exception e) {
                     // do nothing
-                    // because we are "hard-coding" the encoding type, there is
-                    // a 0% chance that this will fail.
+                    // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
                 }
 
             }
 
-            // Step #3 - reunite the previously separated parameter items and
-            // add them to the corresponding list
+            // Step #3 - reunite the previously separated parameter items and add them to the corresponding list
             encodedParameters.add(StringUtils.join(encodedItems, "="));
         }
 
@@ -153,44 +148,42 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
 
-        // String myTriggerURLString = this.getHostname() + "/job/" +
-        // this.getJob() + this.paramerizedBuildUrl + "?" + "token=" +
-        // this.getToken() + "&" + this.buildUrlQueryString();
-        String myTriggerURLString = this.findRemoteHost(this.getRemoteJenkinsName()).getAddress().toString();
-        myTriggerURLString += "/jobs/" + this.getJob() + paramerizedBuildUrl + "?" + "token=" + this.getToken() + "&"
-                + this.buildUrlQueryString();
+        String triggerUrlString = this.findRemoteHost(this.getRemoteJenkinsName()).getAddress().toString();
+        triggerUrlString += "/jobs/";
+        triggerUrlString += this.getJob();
+        triggerUrlString += paramerizedBuildUrl;
+        triggerUrlString += "?" + "token=" + this.getToken();
+        triggerUrlString += "&" + this.getParameters(true);
 
+        listener.getLogger().println("Triggering this job: " + this.getJob());
+        listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
+        listener.getLogger().println("With these parameters: " + this.parameterList.toString());
+
+        listener.getLogger().println("Fully Built URL: " + triggerUrlString);
         listener.getLogger().println("Token: " + this.getToken());
-        listener.getLogger().println("Jenkins config: " + this.getRemoteJenkinsName());
-        listener.getLogger().println("Remote Job: " + this.getJob());
-        listener.getLogger().println("Parameters: " + this.parameterList.toString());
-        listener.getLogger().println("Fully Built URL: " + myTriggerURLString);
 
         HttpURLConnection connection = null;
 
         try {
-            URL triggerUrl = new URL(myTriggerURLString);
+            URL triggerUrl = new URL(triggerUrlString);
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
             connection.setDoInput(true);
             // connection.setRequestProperty("Accept", "application/json");
             connection.setRequestMethod("POST");
+            // wait up to 5 seconds for the connection to be open
+            connection.setConnectTimeout(5000);
             connection.connect();
 
-            // TODO: right now this is just doing a "fire and forget", but would
-            // be nice to get some feedback from the remote server. TO
-            // accomplish this we would need to poll some URL -
-            // http://jenkins.local/job/test/lastBuild/api/json
-            
-            
-            // connection.setDoOutput(true);
+            // TODO: right now this is just doing a "fire and forget", but would be nice to get some feedback from the
+            // remote server. To accomplish this we would need to poll some URL
+            // - http://jenkins.local/job/test/lastBuild/api/json
 
             /*
-             * InputStream is = connection.getInputStream(); BufferedReader rd =
-             * new BufferedReader(new InputStreamReader(is)); String line;
-             * StringBuffer response = new StringBuffer();
+             * connection.setDoOutput(true); InputStream is = connection.getInputStream(); BufferedReader rd = new
+             * BufferedReader(new InputStreamReader(is)); String line; StringBuffer response = new StringBuffer();
              * 
              * while((line = rd.readLine()) != null) { System.out.println(line);
              * 
@@ -200,8 +193,15 @@ public class RemoteBuildConfiguration extends Builder {
              */
 
         } catch (IOException e) {
-            // TODO Auto-generated catch block
+            //something failed with the connection, so throw an exception to mark the build as failed.
             e.printStackTrace();
+            throw new AbortException("Faield to oppen conenction to the remote server.");
+        } finally {
+            // always make sure we close the connection
+            if (connection != null) {
+                connection.disconnect();
+            }
+
         }
 
         return true;
@@ -218,6 +218,15 @@ public class RemoteBuildConfiguration extends Builder {
 
     public String getToken() {
         return this.token;
+    }
+
+    public String getParameters(Boolean asString) {
+        if (asString) {
+            return this.buildUrlQueryString();
+        } else {
+            return this.parameters;
+        }
+
     }
 
     public String getParameters() {
@@ -237,8 +246,7 @@ public class RemoteBuildConfiguration extends Builder {
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         /**
-         * To persist global configuration information, simply store it in a
-         * field and call save().
+         * To persist global configuration information, simply store it in a field and call save().
          * 
          * <p>
          * If you don't want fields to be persisted, use <tt>transient</tt>.
@@ -246,8 +254,7 @@ public class RemoteBuildConfiguration extends Builder {
         private CopyOnWriteList<RemoteJenkinsServer> remoteSites = new CopyOnWriteList<RemoteJenkinsServer>();
 
         /**
-         * In order to load the persisted global configuration, you have to call
-         * load() in the constructor.
+         * In order to load the persisted global configuration, you have to call load() in the constructor.
          */
         public DescriptorImpl() {
             load();
@@ -258,18 +265,13 @@ public class RemoteBuildConfiguration extends Builder {
          * 
          * @param value
          *            This parameter receives the value that the user has typed.
-         * @return Indicates the outcome of the validation. This is sent to the
-         *         browser.
+         * @return Indicates the outcome of the validation. This is sent to the browser.
          */
         /*
-        public FormValidation doCheckName(@QueryParameter String value) throws IOException, ServletException {
-            if (value.length() == 0)
-                return FormValidation.error("Please set a name");
-            if (value.length() < 4)
-                return FormValidation.warning("Isn't the name too short?");
-            return FormValidation.ok();
-        }
-        */
+         * public FormValidation doCheckName(@QueryParameter String value) throws IOException, ServletException { if
+         * (value.length() == 0) return FormValidation.error("Please set a name"); if (value.length() < 4) return
+         * FormValidation.warning("Isn't the name too short?"); return FormValidation.ok(); }
+         */
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project
@@ -302,7 +304,6 @@ public class RemoteBuildConfiguration extends Builder {
 
             return model;
         }
-
 
         public RemoteJenkinsServer[] getRemoteSites() {
 
