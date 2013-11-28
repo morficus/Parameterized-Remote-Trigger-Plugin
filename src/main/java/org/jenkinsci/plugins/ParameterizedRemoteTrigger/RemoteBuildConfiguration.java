@@ -48,10 +48,10 @@ public class RemoteBuildConfiguration extends Builder {
     public RemoteBuildConfiguration(String remoteSites, String job, String token, String parameters)
             throws MalformedURLException {
 
-        this.token = token;
+        this.token = token.trim();
         this.remoteJenkinsName = remoteSites;
         this.parameters = parameters;
-        this.job = job;
+        this.job = job.trim();
 
         // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
@@ -154,8 +154,14 @@ public class RemoteBuildConfiguration extends Builder {
         triggerUrlString += "/jobs/";
         triggerUrlString += this.getJob();
         triggerUrlString += paramerizedBuildUrl;
-        triggerUrlString += "?" + "token=" + this.getToken();
-        triggerUrlString += "&" + this.getParameters(true);
+
+        // don't include a token in the URL if none is provided
+        if (this.getToken().equals("")) {
+            triggerUrlString += "?" + this.getParameters(true);
+        } else {
+            triggerUrlString += "?" + "token=" + this.getToken();
+            triggerUrlString += "&" + this.getParameters(true);
+        }
 
         listener.getLogger().println("Triggering this job: " + this.getJob());
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
@@ -193,7 +199,7 @@ public class RemoteBuildConfiguration extends Builder {
              */
 
         } catch (IOException e) {
-            //something failed with the connection, so throw an exception to mark the build as failed.
+            // something failed with the connection, so throw an exception to mark the build as failed.
             e.printStackTrace();
             throw new AbortException("Faield to oppen conenction to the remote server.");
         } finally {
