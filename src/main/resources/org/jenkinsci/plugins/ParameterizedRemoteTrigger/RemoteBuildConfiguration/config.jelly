@@ -2,7 +2,6 @@
   <f:entry title="Select a remote host" >
     <f:select field="remoteSites" />
   </f:entry>
-  
   <f:entry title="Remote Job Name" field="job">
     <f:textbox />
   </f:entry>

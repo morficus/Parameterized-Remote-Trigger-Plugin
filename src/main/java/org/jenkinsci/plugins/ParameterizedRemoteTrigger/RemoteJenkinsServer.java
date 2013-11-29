@@ -25,12 +25,14 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     private final URL    address;
     private final String displayName;
+    private final boolean      hasBuildTokenRootSupport;
 
     @DataBoundConstructor
-    public RemoteJenkinsServer(String address, String displayName) throws MalformedURLException {
+    public RemoteJenkinsServer(String address, String displayName, boolean hasBuildTokenRootSupport) throws MalformedURLException {
 
         this.address = new URL(address);
         this.displayName = displayName;
+        this.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
 
     }
 
@@ -48,6 +50,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     public URL getAddress() {
         return address;
+    }
+
+    public boolean getHasBuildTokenRootSupport() {
+        return this.hasBuildTokenRootSupport;
     }
 
     @Override

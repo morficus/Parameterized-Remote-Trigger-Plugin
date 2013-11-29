@@ -2,7 +2,11 @@
   <f:entry title="Display name" field="displayName" >
     <f:textbox />
   </f:entry>
-  
+
+  <f:entry title="Enable 'build token root' support" field="hasBuildTokenRootSupport">
+    <f:checkbox />
+  </f:entry>
+
   <f:entry title="Remote address and port" field="address" >
     <f:textbox />
   </f:entry>  
