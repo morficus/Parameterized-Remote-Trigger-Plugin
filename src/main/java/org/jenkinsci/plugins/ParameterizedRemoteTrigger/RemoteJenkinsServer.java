@@ -119,7 +119,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
                 connection.setConnectTimeout(5000);
                 connection.connect();
             } catch (Exception e) {
-                return FormValidation.warning("Address looks good, but we were not to connect to it");
+                return FormValidation.warning("Address looks good, but we were not able to connect to it");
             }
 
             return FormValidation.okWithMarkup("Address looks good");
