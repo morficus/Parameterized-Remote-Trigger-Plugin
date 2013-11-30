@@ -5,7 +5,7 @@ A plugin for Jenkins CI  that lets you trigger new builds parameterized on a **r
 
 Similar to the [Parameterized Trigger Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Trigger+Plugin), but for remote servers. And similar to [Call Remote Job Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Call+Remote+Job+Plugin) but with (arguably) better configuration options.
 
-This is done by calling the ```/buildWithParameters``` URL on the remote server.
+This is done by calling the ```/buildWithParameters``` URL on the remote server. (or the ```/build``` URL, if you don't specify any parameters)
 
 This plugin also has support for build authorization tokens (as defined [here](https://wiki.jenkins-ci.org/display/JENKINS/Quick+and+Simple+Security) ).
 
