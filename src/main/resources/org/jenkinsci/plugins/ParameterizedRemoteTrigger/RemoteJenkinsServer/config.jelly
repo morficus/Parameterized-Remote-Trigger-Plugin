@@ -8,7 +8,7 @@
   </f:entry>
 
   <f:advanced title="Add/Edit username &amp; token">
-    <f:entry title="Remote Username" field="username">
+    <f:entry title="Remote Username" field="username" >
         <f:textbox />
     </f:entry>
     <f:entry title="API Token" field="apiToken">
@@ -16,7 +16,7 @@
     </f:entry>
   </f:advanced>
 
-  <f:entry title="Remote address and port" field="address" >
+  <f:entry title="Remote address and port" field="address" description="Remember to indicate the protocol (i.e.: http, https, etc)" >
     <f:textbox />
   </f:entry>
     <f:validateButton title="Validate Address" method="validateAddress" with="address" />

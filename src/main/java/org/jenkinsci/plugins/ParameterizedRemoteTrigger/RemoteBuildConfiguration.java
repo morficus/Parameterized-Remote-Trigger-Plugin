@@ -40,6 +40,7 @@ public class RemoteBuildConfiguration extends Builder {
     private final String       token;
     private final String       remoteJenkinsName;
     private final String       job;
+    private final boolean      shouldNotFailBuild;
     // "parameters" is the raw string entered by the user
     private final String       parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
@@ -52,13 +53,14 @@ public class RemoteBuildConfiguration extends Builder {
     private String             queryString         = "";
 
     @DataBoundConstructor
-    public RemoteBuildConfiguration(String remoteJenkinsName, String job, String token, String parameters)
-            throws MalformedURLException {
+    public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
+            String parameters) throws MalformedURLException {
 
         this.token = token.trim();
         this.remoteJenkinsName = remoteJenkinsName;
         this.parameters = parameters;
         this.job = job.trim();
+        this.shouldNotFailBuild = shouldNotFailBuild;
 
         // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
@@ -198,11 +200,36 @@ public class RemoteBuildConfiguration extends Builder {
         return triggerUrlString;
     }
 
+    /**
+     * Convenience function to mark the build as failed. It's intended to only be called from this.perform();
+     * 
+     * @param e
+     *            Exception that caused the build to fail
+     * @param listener
+     *            Build Listener
+     * @throws IOException
+     */
+    private void failBuild(Exception e, BuildListener listener) throws IOException {
+        e.getStackTrace();
+        if (this.getShouldNotFailBuild()) {
+            listener.error("Remote build failed for the following reason, but the build will continue:");
+            listener.error(e.getMessage());
+        } else {
+            listener.error("Remote build failed for the following reason:");
+            throw new AbortException(e.getMessage());
+        }
+    }
+
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+
+        if (remoteServer == null) {
+            this.failBuild(new Exception("No remote host is defined for this job."), listener);
+            return true;
+        }
 
         String triggerUrlString = this.buildTriggerUrl();
-        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
 
         listener.getLogger().println("Triggering this job: " + this.getJob());
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
@@ -249,8 +276,8 @@ public class RemoteBuildConfiguration extends Builder {
 
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
-            e.printStackTrace();
-            throw new AbortException(e.getMessage());
+            this.failBuild(e, listener);
+
         } finally {
             // always make sure we close the connection
             if (connection != null) {
@@ -286,6 +313,10 @@ public class RemoteBuildConfiguration extends Builder {
 
     public String getJob() {
         return this.job;
+    }
+
+    public boolean getShouldNotFailBuild() {
+        return this.shouldNotFailBuild;
     }
 
     public String getToken(boolean isEncoded) {
