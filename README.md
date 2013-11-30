@@ -24,5 +24,5 @@ Job setup options
 
 ####Current Limitations
 1. ~~Does not play well with [Build Token Root Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Build+Token+Root+Plugin) URL formats.~~ (added with [this commit](https://github.com/morficus/Parameterized-Remote-Trigger-Plugin/commit/f687dbe75d1c4f39f7e14b68220890384d7c5674)  )
-2. No username/password authentication, must use a 'build authorization token'.
-3. Follows a "fire & forget" model when triggering the remote build, which means that we don't know the status of the remote build.
+2. ~~No username/password authentication, must use a 'build authorization token'.~~ (added with [this commit](https://github.com/morficus/Parameterized-Remote-Trigger-Plugin/commit/a23ade0add621830e85eb228990a95658e239b80) )
+3. Follows a "fire & forget" model when triggering the remote build, which means that we don't know the status of the remote build, only if the request was successful or not.
