@@ -183,7 +183,7 @@ public class RemoteBuildConfiguration extends Builder {
 
         // don't include a token in the URL if none is provided
         if (!this.getToken().equals("")) {
-            this.addToQueryString("token=" + this.getToken());
+            this.addToQueryString("token=" + this.getToken(true));
         }
 
         String buildParams = this.getParameters(true);
@@ -287,6 +287,20 @@ public class RemoteBuildConfiguration extends Builder {
         return this.job;
     }
 
+    public String getToken(boolean isEncoded) {
+        String token = this.getToken();
+        if (isEncoded) {
+            try {
+                token = URLEncoder.encode(token, "UTF-8").replace("+", "%20");
+            } catch (Exception e) {
+                // do nothing
+                // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
+            }
+
+        }
+        return token;
+    }
+    
     public String getToken() {
         return this.token;
     }
