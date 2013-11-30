@@ -3,7 +3,7 @@ Parameterized-Remote-Trigger-Plugin
 
 A plugin for Jenkins CI  that lets you trigger new builds parameterized on a **remote** Jenkins server when your build has completed.
 
-Similar to the [Parameterized Trigger Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Trigger+Plugin), but for remote servers. And similar to [Call Remote Job Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Call+Remote+Job+Plugin) but with (arguably) better configuration options.
+Similar to the [Parameterized Trigger Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Trigger+Plugin), but for remote servers.
 
 This is done by calling the ```/buildWithParameters``` URL on the remote server. (or the ```/build``` URL, if you don't specify any parameters)
 
