@@ -387,7 +387,7 @@ public class RemoteBuildConfiguration extends Builder {
             return super.configure(req, formData);
         }
 
-        public ListBoxModel doFillRemoteSitesItems() {
+        public ListBoxModel doFillRemoteJenkinsNameItems() {
             ListBoxModel model = new ListBoxModel();
 
             for (RemoteJenkinsServer site : getRemoteSites()) {
