@@ -208,8 +208,9 @@ public class RemoteBuildConfiguration extends Builder {
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
         listener.getLogger().println("With these parameters: " + this.parameterList.toString());
 
-        listener.getLogger().println("Fully Built URL: " + triggerUrlString);
-        listener.getLogger().println("Token: " + this.getToken());
+        // uncomment the 2 lines below for debugging purposes only
+        // listener.getLogger().println("Fully Built URL: " + triggerUrlString);
+        // listener.getLogger().println("Token: " + this.getToken());
 
         HttpURLConnection connection = null;
 
