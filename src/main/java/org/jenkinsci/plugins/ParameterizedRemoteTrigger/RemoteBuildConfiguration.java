@@ -52,11 +52,11 @@ public class RemoteBuildConfiguration extends Builder {
     private String             queryString         = "";
 
     @DataBoundConstructor
-    public RemoteBuildConfiguration(String remoteSites, String job, String token, String parameters)
+    public RemoteBuildConfiguration(String remoteJenkinsName, String job, String token, String parameters)
             throws MalformedURLException {
 
         this.token = token.trim();
-        this.remoteJenkinsName = remoteSites;
+        this.remoteJenkinsName = remoteJenkinsName;
         this.parameters = parameters;
         this.job = job.trim();
 
