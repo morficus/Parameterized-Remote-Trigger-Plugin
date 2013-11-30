@@ -37,11 +37,11 @@
      </plugins> 
    </build> 
 
-  <scm>
-    <connection>scm:git:ssh://github.com/jenkinsci/Parameterized-Remote-Trigger-Plugin.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/Parameterized-Remote-Trigger-Plugin.git</developerConnection>
-    <url>https://github.com/jenkinsci/Parameterized-Remote-Trigger-Plugin</url>
-  </scm>
+   <scm>
+     <connection>scm:git:git://github.com/jenkinsci/parameterized-remote-trigger-tlugin.git</connection>
+     <developerConnection>scm:git:git@github.com:jenkinsci/parameterized-remote-trigger-plugin.git</developerConnection>
+      <url>https://github.com/jenkinsci/parameterized-remote-trigger-plugin</url>
+   </scm>
 
   <repositories>
     <repository>
