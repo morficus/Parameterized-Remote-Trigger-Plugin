@@ -168,18 +168,17 @@ public class RemoteBuildConfiguration extends Builder {
 
     private String buildTriggerUrl() {
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
-
         String triggerUrlString = remoteServer.getAddress().toString();
 
         if (remoteServer.getHasBuildTokenRootSupport()) {
             triggerUrlString += buildTokenRootUrl;
-            triggerUrlString += paramerizedBuildUrl;
+            triggerUrlString += getBuildTypeUrl();
+            this.addToQueryString("job=" + this.getJob(true));
 
-            this.addToQueryString("job=" + this.getJob());
         } else {
             triggerUrlString += "/job/";
-            triggerUrlString += this.getJob();
-            triggerUrlString += paramerizedBuildUrl;
+            triggerUrlString += this.getJob(true);
+            triggerUrlString += getBuildTypeUrl();
         }
 
         // don't include a token in the URL if none is provided
@@ -187,7 +186,10 @@ public class RemoteBuildConfiguration extends Builder {
             this.addToQueryString("token=" + this.getToken());
         }
 
-        this.addToQueryString(this.getParameters(true));
+        String buildParams = this.getParameters(true);
+        if (!buildParams.isEmpty()) {
+            this.addToQueryString(buildParams);
+        }
 
         this.addToQueryString("delay=0");
 
@@ -267,6 +269,20 @@ public class RemoteBuildConfiguration extends Builder {
         return this.remoteJenkinsName;
     }
 
+    public String getJob(boolean isEncoded) {
+        String jobName = this.getJob();
+        if (isEncoded) {
+            try {
+                jobName = URLEncoder.encode(jobName, "UTF-8").replace("+", "%20");
+            } catch (Exception e) {
+                // do nothing
+                // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
+            }
+
+        }
+        return jobName;
+    }
+
     public String getJob() {
         return this.job;
     }
@@ -280,6 +296,16 @@ public class RemoteBuildConfiguration extends Builder {
             return this.buildUrlQueryString();
         } else {
             return this.parameters;
+        }
+    }
+
+    private String getBuildTypeUrl() {
+        boolean isParameterized = (this.getParameters().length() > 0);
+
+        if (isParameterized) {
+            return RemoteBuildConfiguration.paramerizedBuildUrl;
+        } else {
+            return RemoteBuildConfiguration.normalBuildUrl;
         }
     }
 
