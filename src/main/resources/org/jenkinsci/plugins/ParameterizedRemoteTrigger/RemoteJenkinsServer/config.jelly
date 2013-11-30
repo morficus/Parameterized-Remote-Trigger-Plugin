@@ -27,5 +27,5 @@
   <f:repeatableDeleteButton />
 </div>
 </f:entry>
-  
+<hr/>
 </j:jelly>
