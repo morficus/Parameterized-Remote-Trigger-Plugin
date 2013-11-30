@@ -215,10 +215,9 @@ public class RemoteBuildConfiguration extends Builder {
             URL triggerUrl = new URL(triggerUrlString);
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
-            
-            //if there is a username + apiToken defined for this remote host, then use it
+            // if there is a username + apiToken defined for this remote host, then use it
             String usernameTokenConcat = remoteServer.getUsername() + ":" + remoteServer.getApiToken();
-            if(usernameTokenConcat != null && !usernameTokenConcat.equals(":")) {
+            if (usernameTokenConcat != null && !usernameTokenConcat.equals(":")) {
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
             }
@@ -237,13 +236,13 @@ public class RemoteBuildConfiguration extends Builder {
             InputStream is = connection.getInputStream();
 
             BufferedReader rd = new BufferedReader(new InputStreamReader(is));
-            //String line;
-            //StringBuffer response = new StringBuffer();
+            // String line;
+            // StringBuffer response = new StringBuffer();
 
-             //while ((line = rd.readLine()) != null) { 
-                 //System.out.println(line);
-             //}
-            //rd.close();
+            // while ((line = rd.readLine()) != null) {
+            // System.out.println(line);
+            // }
+            // rd.close();
 
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
