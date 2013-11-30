@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Base64;
+
 /**
  * 
  * @author Maurice W.
@@ -198,6 +200,7 @@ public class RemoteBuildConfiguration extends Builder {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
 
         String triggerUrlString = this.buildTriggerUrl();
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
 
         listener.getLogger().println("Triggering this job: " + this.getJob());
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
@@ -212,9 +215,17 @@ public class RemoteBuildConfiguration extends Builder {
             URL triggerUrl = new URL(triggerUrlString);
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
+            
+            //if there is a username + apiToken defined for this remote host, then use it
+            String usernameTokenConcat = remoteServer.getUsername() + ":" + remoteServer.getApiToken();
+            if(usernameTokenConcat != null && !usernameTokenConcat.equals(":")) {
+                byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
+                connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
+            }
+
             connection.setDoInput(true);
             connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestMethod("GET");
+            connection.setRequestMethod("POST");
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
@@ -230,8 +241,7 @@ public class RemoteBuildConfiguration extends Builder {
             //StringBuffer response = new StringBuffer();
 
              //while ((line = rd.readLine()) != null) { 
-                 //System.out.println(line); //JSONObject r = new
-
+                 //System.out.println(line);
              //}
             //rd.close();
 

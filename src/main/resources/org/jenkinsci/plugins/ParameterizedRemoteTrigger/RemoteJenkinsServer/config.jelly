@@ -7,14 +7,23 @@
     <f:checkbox />
   </f:entry>
 
+  <f:advanced title="Add/Edit username &amp; token">
+    <f:entry title="Remote Username" field="username">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="API Token" field="apiToken">
+        <f:password />
+    </f:entry>
+  </f:advanced>
+
   <f:entry title="Remote address and port" field="address" >
     <f:textbox />
-  </f:entry>  
-  <f:validateButton title="Validate Address" method="validateAddress" with="address" />
-
+  </f:entry>
+    <f:validateButton title="Validate Address" method="validateAddress" with="address" />
+  
 
 <f:entry title="">
-<div style="float: right">  
+<div style="float: left">  
   <f:repeatableDeleteButton />
 </div>
 </f:entry>
