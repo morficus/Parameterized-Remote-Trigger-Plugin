@@ -219,7 +219,7 @@ public class RemoteBuildConfiguration extends Builder {
 
             // if there is a username + apiToken defined for this remote host, then use it
             String usernameTokenConcat = remoteServer.getUsername() + ":" + remoteServer.getApiToken();
-            if (usernameTokenConcat != null && !usernameTokenConcat.equals(":")) {
+            if (!usernameTokenConcat.equals(":")) {
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
             }
@@ -300,7 +300,7 @@ public class RemoteBuildConfiguration extends Builder {
         }
         return token;
     }
-    
+
     public String getToken() {
         return this.token;
     }
