@@ -5,11 +5,15 @@
 *.war
 *.ear
 
+# Eclipse-specific stuff
 .classpath
 .project
 *.prefs
 
-target
 
-# jenkins data directory
+# jenkins data directory, build dir and release settings
 work
+release.properties
+target
+*.releaseBackup
+*.swp
