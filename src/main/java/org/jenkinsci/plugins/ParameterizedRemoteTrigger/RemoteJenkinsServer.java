@@ -5,14 +5,14 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 
+import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
-
 import hudson.model.Descriptor;
-
 import hudson.util.FormValidation;
 
 /**
@@ -26,19 +26,26 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     private final URL     address;
     private final String  displayName;
     private final boolean hasBuildTokenRootSupport;
+    private final Auth    authenticationMode;
+    // private final JSONObject authenticationMode;
+    // private final String authenticationMode;
     private final String  username;
     private final String  apiToken;
 
     @DataBoundConstructor
-    public RemoteJenkinsServer(String address, String displayName, boolean hasBuildTokenRootSupport, String username,
-            String apiToken) throws MalformedURLException {
+    public RemoteJenkinsServer(String address, String displayName, boolean hasBuildTokenRootSupport,
+            Auth authenticationMode) throws MalformedURLException {
 
         this.address = new URL(address);
         this.displayName = displayName.trim();
         this.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
+        this.authenticationMode = authenticationMode;
+        // this.authenticationMode = authenticationMode;
 
-        this.username = username.trim();
-        this.apiToken = apiToken.trim();
+        // Holding on to both of these variables for legacy purposes. The seemingly 'dirty' getters for these properties
+        // are for the same reason.
+        this.username = "";
+        this.apiToken = "";
 
     }
 
@@ -58,16 +65,32 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return address;
     }
 
+    public Auth getAuthenticationMode() {
+        return this.authenticationMode;
+    }
+
     public boolean getHasBuildTokenRootSupport() {
         return this.hasBuildTokenRootSupport;
     }
 
     public String getUsername() {
-        return this.username;
+        String username = "";
+        if (this.username.equals("")) {
+            username = this.authenticationMode.getUsername();
+        } else {
+            username = this.username;
+        }
+        return username;
     }
 
     public String getApiToken() {
-        return this.apiToken;
+        String apiToken = "";
+        if (this.apiToken.equals("")) {
+            apiToken = this.authenticationMode.getApiToken();
+        } else {
+            apiToken = this.apiToken;
+        }
+        return apiToken;
     }
 
     @Override
@@ -78,6 +101,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @Extension
     public static class DescriptorImpl extends Descriptor<RemoteJenkinsServer> {
 
+        private JSONObject authenticationMode;
+
         /**
          * In order to load the persisted global configuration, you have to call load() in the constructor.
          */
@@ -87,6 +112,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
         public String getDisplayName() {
             return "";
+        }
+
+        public JSONObject doFillAuthenticationMode() {
+            return this.authenticationMode.getJSONObject("value");
         }
 
         /**
