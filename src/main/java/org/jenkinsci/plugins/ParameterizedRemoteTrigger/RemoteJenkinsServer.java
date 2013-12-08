@@ -14,6 +14,7 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 
 /**
  * Holds everything regarding the remote server we wish to connect to, including validations and what not.
@@ -93,6 +94,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return apiToken;
     }
 
+    public String getCreds() {
+        return this.authenticationMode.getCreds();
+    }
+
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl) super.getDescriptor();
@@ -112,6 +117,18 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
         public String getDisplayName() {
             return "";
+        }
+
+        public ListBoxModel doFillCredsItems() {
+            // StandardUsernameListBoxModel model = new StandardUsernameListBoxModel();
+
+            // Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
+            // model.withAll(CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, item, ACL.SYSTEM,
+            // Collections.<DomainRequirement>emptyList()));
+
+            return Auth.DescriptorImpl.doFillCredsItems();
+
+            // return model;
         }
 
         public JSONObject doFillAuthenticationMode() {

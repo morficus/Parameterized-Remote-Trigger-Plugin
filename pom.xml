@@ -57,4 +57,13 @@
     </pluginRepository>
   </pluginRepositories>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>credentials</artifactId>
+      <version>1.9.3</version>
+      <!-- <optional>true</optional> -->
+    </dependency>
+  </dependencies>
+
 </project>
