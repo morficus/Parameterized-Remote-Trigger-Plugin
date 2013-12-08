@@ -75,7 +75,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     public String getUsername() {
         String username = "";
-        if (this.username.equals("")) {
+        if (this.username == null || this.username.equals("")) {
             username = this.authenticationMode.getUsername();
         } else {
             username = this.username;
@@ -85,7 +85,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     public String getApiToken() {
         String apiToken = "";
-        if (this.apiToken.equals("")) {
+        if (this.apiToken == null || this.apiToken.equals("")) {
             apiToken = this.authenticationMode.getApiToken();
         } else {
             apiToken = this.apiToken;
