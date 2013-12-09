@@ -132,7 +132,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         }
 
         public JSONObject doFillAuthenticationMode() {
-            return this.authenticationMode.getJSONObject("value");
+            return this.authenticationMode.getJSONObject("authenticationType");
         }
 
         /**

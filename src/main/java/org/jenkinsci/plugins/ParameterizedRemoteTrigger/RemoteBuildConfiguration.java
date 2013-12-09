@@ -246,7 +246,7 @@ public class RemoteBuildConfiguration extends Builder {
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
             // if there is a username + apiToken defined for this remote host, then use it
-            String usernameTokenConcat = remoteServer.getUsername() + ":" + remoteServer.getApiToken();
+            String usernameTokenConcat = remoteServer.getAuthenticationMode().getUsername() + ":" + remoteServer.getAuthenticationMode().getPassword();
             if (!usernameTokenConcat.equals(":")) {
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
