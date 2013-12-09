@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -114,11 +115,18 @@ public class Auth extends AbstractDescribableImpl<Auth> {
             StandardUsernameListBoxModel model = new StandardUsernameListBoxModel();
 
             Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
-            @SuppressWarnings("unchecked")
-            Iterable<? extends StandardUsernameCredentials> listOfSandardUsernameCredentials = (Iterable<? extends StandardUsernameCredentials>) CredentialsProvider
-                    .lookupCredentials(UsernamePasswordCredentials.class, item, ACL.SYSTEM,
-                            Collections.<DomainRequirement> emptyList());
 
+            List<StandardUsernameCredentials> listOfAllCredentails = CredentialsProvider.lookupCredentials(
+                    StandardUsernameCredentials.class, item, ACL.SYSTEM, Collections.<DomainRequirement> emptyList());
+
+            List<StandardUsernameCredentials> listOfSandardUsernameCredentials = new ArrayList<StandardUsernameCredentials>();
+
+            // since we only care about 'UsernamePasswordCredentials' objects, lets seek those out and ignore the rest.
+            for (StandardUsernameCredentials c : listOfAllCredentails) {
+                if (c instanceof UsernamePasswordCredentials) {
+                    listOfSandardUsernameCredentials.add(c);
+                }
+            }
             model.withAll(listOfSandardUsernameCredentials);
 
             return model;
