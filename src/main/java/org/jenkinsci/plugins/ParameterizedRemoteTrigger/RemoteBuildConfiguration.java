@@ -37,22 +37,50 @@ import org.apache.commons.codec.binary.Base64;
  */
 public class RemoteBuildConfiguration extends Builder {
 
-    private final String       token;
-    private final String       remoteJenkinsName;
-    private final String       job;
-    private final boolean      shouldNotFailBuild;
+    private final String          token;
+    private final String          remoteJenkinsName;
+    private final String          job;
+    private final boolean         shouldNotFailBuild;
     // "parameters" is the raw string entered by the user
-    private final String       parameters;
+    private final String          parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
-    private final List<String> parameterList;
+    private final List<String>    parameterList;
 
-    private static String      paramerizedBuildUrl = "/buildWithParameters";
-    private static String      normalBuildUrl      = "/build";
-    private static String      buildTokenRootUrl   = "/buildByToken";
+    private static String         paramerizedBuildUrl = "/buildWithParameters";
+    private static String         normalBuildUrl      = "/build";
+    private static String         buildTokenRootUrl   = "/buildByToken";
+    private final boolean         overrideAuth;
 
-    private String             queryString         = "";
+    private CopyOnWriteList<Auth> auth                = new CopyOnWriteList<Auth>();
+
+    private String                queryString         = "";
 
     @DataBoundConstructor
+    public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
+            String parameters, JSONObject overrideAuth) throws MalformedURLException {
+
+        this.token = token.trim();
+        this.remoteJenkinsName = remoteJenkinsName;
+        this.parameters = parameters;
+        this.job = job.trim();
+        this.shouldNotFailBuild = shouldNotFailBuild;
+        if (overrideAuth != null && overrideAuth.has("auth")) {
+            this.overrideAuth = true;
+            this.auth.replaceBy(new Auth(overrideAuth.getJSONObject("auth")));
+        } else {
+            this.overrideAuth = false;
+            this.auth.replaceBy(new Auth(new JSONObject()));
+        }
+
+        // split the parameter-string into an array based on the new-line character
+        String[] params = parameters.split("\n");
+
+        // convert the String array into a List of Strings, and remove any empty entries
+        this.parameterList = new ArrayList<String>(Arrays.asList(params));
+        this.cleanUpParameters();
+
+    }
+
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
             String parameters) throws MalformedURLException {
 
@@ -61,6 +89,8 @@ public class RemoteBuildConfiguration extends Builder {
         this.parameters = parameters;
         this.job = job.trim();
         this.shouldNotFailBuild = shouldNotFailBuild;
+        this.overrideAuth = false;
+        this.auth.replaceBy(new Auth(null));
 
         // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
@@ -68,6 +98,15 @@ public class RemoteBuildConfiguration extends Builder {
         // convert the String array into a List of Strings, and remove any empty entries
         this.parameterList = new ArrayList<String>(Arrays.asList(params));
         this.cleanUpParameters();
+
+    }
+
+    public boolean getOverrideAuth() {
+        return this.overrideAuth;
+    }
+
+    public Auth[] getAuth() {
+        return auth.toArray(new Auth[this.auth.size()]);
     }
 
     /**
@@ -246,7 +285,15 @@ public class RemoteBuildConfiguration extends Builder {
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
             // if there is a username + apiToken defined for this remote host, then use it
-            String usernameTokenConcat = remoteServer.getAuthenticationMode().getUsername() + ":" + remoteServer.getAuthenticationMode().getPassword();
+            String usernameTokenConcat = "";
+
+            if (this.overrideAuth) {
+                usernameTokenConcat = this.getAuth()[0].getUsername() + ":" + this.getAuth()[0].getPassword();
+            } else {
+                usernameTokenConcat = remoteServer.getAuth()[0].getUsername() + ":"
+                        + remoteServer.getAuth()[0].getPassword();
+            }
+
             if (!usernameTokenConcat.equals(":")) {
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));

@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.sf.json.JSONObject;
+
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer.DescriptorImpl;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.StaplerRequest;
 
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
@@ -32,12 +36,26 @@ public class Auth extends AbstractDescribableImpl<Auth> {
     public final String  API_TOKEN          = "apiToken";
     public final String  CREDENTIALS_PLUGIN = "credentialsPlugin";
 
+    // @DataBoundConstructor
+    /*
+     * public Auth(String value, String username, String apiToken, String creds) { this.authType = value; this.username
+     * = username; this.apiToken = apiToken; this.creds = creds; }
+     */
+
     @DataBoundConstructor
-    public Auth(String value, String username, String apiToken, String creds) {
-        this.authType = value;
-        this.username = username;
-        this.apiToken = apiToken;
-        this.creds = creds;
+    public Auth(JSONObject formData) {
+
+        JSONObject authMode = new JSONObject();
+        // because I don't know how to automatically bind a JSON object to properties in a constructor, we are manually
+        // pulling out each item and assigning it
+        if (formData.has("authenticationMode")) {
+            authMode = (JSONObject) formData.get("authenticationMode");
+        }
+
+        this.authType = (String) authMode.get("value");
+        this.username = (String) authMode.get("username");
+        this.apiToken = (String) authMode.get("apiToken");
+        this.creds = (String) authMode.get("creds");
     }
 
     public String getAuthType() {
@@ -102,6 +120,11 @@ public class Auth extends AbstractDescribableImpl<Auth> {
 
         // now we have matchedCredentials.getPassword() and matchedCredentials.getUsername();
         return (UsernamePasswordCredentials) matchedCredentials;
+    }
+
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return (DescriptorImpl) super.getDescriptor();
     }
 
     @Extension

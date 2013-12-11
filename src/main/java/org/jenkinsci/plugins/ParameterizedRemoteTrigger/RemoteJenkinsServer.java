@@ -4,6 +4,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.sf.json.JSONObject;
 
@@ -13,6 +15,7 @@ import org.kohsuke.stapler.QueryParameter;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
@@ -24,33 +27,38 @@ import hudson.util.ListBoxModel;
  */
 public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> {
 
-    private final URL     address;
-    private final String  displayName;
-    private final boolean hasBuildTokenRootSupport;
-    private final Auth    authenticationMode;
-    // private final JSONObject authenticationMode;
-    // private final String authenticationMode;
-    private final String  username;
-    private final String  apiToken;
+    private final URL             address;
+    private final String          displayName;
+    private final boolean         hasBuildTokenRootSupport;
+    private final String          username;
+    private final String          apiToken;
+
+    private CopyOnWriteList<Auth> auth = new CopyOnWriteList<Auth>();
 
     @DataBoundConstructor
-    public RemoteJenkinsServer(String address, String displayName, boolean hasBuildTokenRootSupport,
-            Auth authenticationMode) throws MalformedURLException {
+    public RemoteJenkinsServer(String address, String displayName, boolean hasBuildTokenRootSupport, JSONObject auth)
+            throws MalformedURLException {
 
         this.address = new URL(address);
         this.displayName = displayName.trim();
         this.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
-        this.authenticationMode = authenticationMode;
-        // this.authenticationMode = authenticationMode;
 
         // Holding on to both of these variables for legacy purposes. The seemingly 'dirty' getters for these properties
         // are for the same reason.
         this.username = "";
         this.apiToken = "";
 
+        // this.auth = new Auth(auth);
+        this.auth.replaceBy(new Auth(auth));
+
     }
 
     // Getters
+
+    public Auth[] getAuth() {
+        return auth.toArray(new Auth[this.auth.size()]);
+    }
+
     public String getDisplayName() {
         String displayName = null;
 
@@ -66,36 +74,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return address;
     }
 
-    public Auth getAuthenticationMode() {
-        return this.authenticationMode;
-    }
-
     public boolean getHasBuildTokenRootSupport() {
         return this.hasBuildTokenRootSupport;
-    }
-
-    public String getUsername() {
-        String username = "";
-        if (this.username == null || this.username.equals("")) {
-            username = this.authenticationMode.getUsername();
-        } else {
-            username = this.username;
-        }
-        return username;
-    }
-
-    public String getApiToken() {
-        String apiToken = "";
-        if (this.apiToken == null || this.apiToken.equals("")) {
-            apiToken = this.authenticationMode.getApiToken();
-        } else {
-            apiToken = this.apiToken;
-        }
-        return apiToken;
-    }
-
-    public String getCreds() {
-        return this.authenticationMode.getCreds();
     }
 
     @Override
