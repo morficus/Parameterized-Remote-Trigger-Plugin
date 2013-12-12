@@ -13,6 +13,8 @@ import hudson.tasks.BuildStepDescriptor;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -20,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -54,6 +57,9 @@ public class RemoteBuildConfiguration extends Builder {
     private CopyOnWriteList<Auth> auth                = new CopyOnWriteList<Auth>();
 
     private String                queryString         = "";
+
+    private AbstractBuild         build;
+    private BuildListener         listener;
 
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
@@ -144,6 +150,9 @@ public class RemoteBuildConfiguration extends Builder {
      * Return the parameterList in an encoded query-string
      * 
      * @return query-parameter-formated URL-encoded string
+     * @throws InterruptedException
+     * @throws IOException
+     * @throws MacroEvaluationException
      */
     private String buildUrlQueryString() {
 
@@ -151,6 +160,19 @@ public class RemoteBuildConfiguration extends Builder {
         List<String> encodedParameters = new ArrayList<String>();
 
         for (String parameter : this.parameterList) {
+
+            try {
+                parameter = this.replaceToken(parameter);
+            } catch (MacroEvaluationException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            } catch (InterruptedException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
             // Step #1 - break apart the parameter-pairs (because we don't want to encode the "=" character)
             String[] splitParameters = parameter.split("=");
 
@@ -159,7 +181,7 @@ public class RemoteBuildConfiguration extends Builder {
             for (String item : splitParameters) {
                 try {
                     // Step #2 - encode each individual parameter item add the encoded item to its corresponding list
-                    encodedItems.add(URLEncoder.encode(item, "UTF-8"));
+                    encodedItems.add(this.encodeValue(item));
                 } catch (Exception e) {
                     // do nothing
                     // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
@@ -211,23 +233,46 @@ public class RemoteBuildConfiguration extends Builder {
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
         String triggerUrlString = remoteServer.getAddress().toString();
 
+        String job = this.getJob();
+        String securityToken = this.getToken();
+        String buildParams = this.getParameters(true);
+
+        try {
+            job = this.replaceToken(job);
+            securityToken = this.replaceToken(securityToken);
+            buildParams = this.replaceToken(buildParams);
+        } catch (MacroEvaluationException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        job = this.encodeValue(job);
+        securityToken = this.encodeValue(securityToken);
+
         if (remoteServer.getHasBuildTokenRootSupport()) {
+            // triggerUrlString += TokenMacro.expandAll(build, listener, buildTokenRootUrl);
             triggerUrlString += buildTokenRootUrl;
             triggerUrlString += getBuildTypeUrl();
-            this.addToQueryString("job=" + this.getJob(true));
+            this.addToQueryString("job=" + job);
 
         } else {
             triggerUrlString += "/job/";
-            triggerUrlString += this.getJob(true);
+            triggerUrlString += job;
             triggerUrlString += getBuildTypeUrl();
         }
 
         // don't include a token in the URL if none is provided
-        if (!this.getToken().equals("")) {
-            this.addToQueryString("token=" + this.getToken(true));
+        if (!securityToken.equals("")) {
+            securityToken = this.encodeValue(securityToken);
+            this.addToQueryString("token=" + securityToken);
         }
 
-        String buildParams = this.getParameters(true);
         if (!buildParams.isEmpty()) {
             this.addToQueryString(buildParams);
         }
@@ -261,6 +306,13 @@ public class RemoteBuildConfiguration extends Builder {
 
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
+
+        // TODO: find a way to clean this up
+        // yes... this is dirty :-( but at the moment of writing this I was not able to think of a better way of
+        // implementing this so I could have a reusable utility function (see RemoteBuildConfiguration::replaceToken())
+        this.build = build;
+        this.listener = listener;
+
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
 
         if (remoteServer == null) {
@@ -295,6 +347,9 @@ public class RemoteBuildConfiguration extends Builder {
             }
 
             if (!usernameTokenConcat.equals(":")) {
+                // token-macro replacment
+                usernameTokenConcat = TokenMacro.expandAll(build, listener, usernameTokenConcat);
+
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
             }
@@ -324,19 +379,42 @@ public class RemoteBuildConfiguration extends Builder {
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
             this.failBuild(e, listener);
-
+        } catch (MacroEvaluationException e) {
+            this.failBuild(e, listener);
+        } catch (InterruptedException e) {
+            this.failBuild(e, listener);
         } finally {
             // always make sure we close the connection
             if (connection != null) {
                 connection.disconnect();
             }
 
-            // and always clear the query string
+            // and always clear the query string and remove some "global" values
             this.clearQueryString();
+            this.build = null;
+            this.listener = null;
 
         }
 
         return true;
+    }
+
+    private String encodeValue(String dirtyValue) {
+        String cleanValue = "";
+
+        try {
+            cleanValue = URLEncoder.encode(dirtyValue, "UTF-8").replace("+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        return cleanValue;
+    }
+
+    private String replaceToken(String tokenizedString) throws MacroEvaluationException, IOException,
+            InterruptedException {
+        return TokenMacro.expandAll(this.build, this.listener, tokenizedString);
     }
 
     // Getters
