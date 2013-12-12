@@ -70,7 +70,9 @@ public class Auth extends AbstractDescribableImpl<Auth> {
         String authType = this.getAuthType();
         String username = null;
 
-        if (authType.equals(NONE)) {
+        if(authType == null) {
+            username = "";
+        }else if (authType.equals(NONE)) {
             username = "";
         } else if (authType.equals(API_TOKEN)) {
             username = this.username;
