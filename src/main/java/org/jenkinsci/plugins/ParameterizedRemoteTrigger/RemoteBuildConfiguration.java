@@ -45,7 +45,8 @@ public class RemoteBuildConfiguration extends Builder {
     private final String       parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
     private final List<String> parameterList;
-    
+    // "evaluatedParams" is the Token ENV Variable expanded "parameters" I.E (${JAVA_HOME} becomes c:\Java)
+    private List<String> evaluatedParams;
     private static String      paramerizedBuildUrl = "/buildWithParameters";
     private static String      normalBuildUrl      = "/build";
     private static String      buildTokenRootUrl   = "/buildByToken";
@@ -67,6 +68,7 @@ public class RemoteBuildConfiguration extends Builder {
 
         // convert the String array into a List of Strings, and remove any empty entries
         this.parameterList = new ArrayList<String>(Arrays.asList(params));
+        this.evaluatedParams = new ArrayList<String>();
         this.cleanUpParameters();
     }
 
@@ -92,9 +94,9 @@ public class RemoteBuildConfiguration extends Builder {
      * @param listener
      */
     private void resolveEnvironmentVariables(AbstractBuild<?, ?> build, BuildListener listener) {
-    	for (int i = 0; i < parameterList.size(); i++) {
-			String param = parameterList.get(i);
-			parameterList.set(i, resolveParametersInString(build, listener, param));
+    	evaluatedParams.clear();
+    	for (String param : parameterList) {
+    		evaluatedParams.add(resolveParametersInString(build, listener, param));
 		}
     }
     
@@ -146,7 +148,7 @@ public class RemoteBuildConfiguration extends Builder {
         // List to hold the encoded parameters
         List<String> encodedParameters = new ArrayList<String>();
 
-        for (String parameter : this.parameterList) {
+        for (String parameter : this.evaluatedParams) {
             // Step #1 - break apart the parameter-pairs (because we don't want to encode the "=" character)
             String[] splitParameters = parameter.split("=");
 
@@ -271,7 +273,7 @@ public class RemoteBuildConfiguration extends Builder {
 
         listener.getLogger().println("Triggering this job: " + this.getJob());
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
-        listener.getLogger().println("With these parameters: " + this.parameterList.toString());
+        listener.getLogger().println("With these parameters: " + this.evaluatedParams.toString());
 
         // uncomment the 2 lines below for debugging purposes only
         // listener.getLogger().println("Fully Built URL: " + triggerUrlString);
