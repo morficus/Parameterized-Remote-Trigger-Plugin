@@ -45,7 +45,7 @@ public class RemoteBuildConfiguration extends Builder {
     private final String       parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
     private final List<String> parameterList;
-
+    
     private static String      paramerizedBuildUrl = "/buildWithParameters";
     private static String      normalBuildUrl      = "/build";
     private static String      buildTokenRootUrl   = "/buildByToken";
@@ -85,7 +85,42 @@ public class RemoteBuildConfiguration extends Builder {
         this.parameterList.removeAll(Arrays.asList(null, ""));
         this.parameterList.removeAll(Arrays.asList(null, " "));
     }
-
+    
+    /**
+     * Resolves any environment variables in the parameters list
+     * @param build
+     * @param listener
+     */
+    private void resolveEnvironmentVariables(AbstractBuild<?, ?> build, BuildListener listener) {
+    	for (int i = 0; i < parameterList.size(); i++) {
+			String param = parameterList.get(i);
+			parameterList.set(i, resolveParametersInString(build, listener, param));
+		}
+    }
+    
+    /**
+     * Resolves any environment variables in the string
+     * @param build
+     * @param listener
+     * @param input
+     * @return String with resolved Environment variables
+     */
+    private String resolveParametersInString(AbstractBuild<?, ?> build, BuildListener listener, String input) {
+    	try {
+    		return build.getEnvironment(listener).expand(input);
+    	}
+    	catch (Exception e) {
+    		listener.getLogger().println(
+    			String.format(
+    					"Failed to resolve parameters in string %s due to following error:\n%s",
+    					input,
+    					e.getMessage()
+    					)
+    				);
+    	}
+    	return input;
+    }
+    
     /**
      * Strip out any comments (lines that start with a #) from the parameterList
      */
@@ -223,12 +258,15 @@ public class RemoteBuildConfiguration extends Builder {
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
-
+        
         if (remoteServer == null) {
             this.failBuild(new Exception("No remote host is defined for this job."), listener);
             return true;
         }
 
+        //Resolve the environment variables before building the URL
+        resolveEnvironmentVariables(build, listener);
+        
         String triggerUrlString = this.buildTriggerUrl();
 
         listener.getLogger().println("Triggering this job: " + this.getJob());
