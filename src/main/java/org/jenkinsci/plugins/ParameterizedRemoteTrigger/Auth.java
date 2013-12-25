@@ -106,6 +106,10 @@ public class Auth extends AbstractDescribableImpl<Auth> {
         return this.creds;
     }
 
+    /**
+     * Looks up the credentialsID attached to this object in the Global Credentials plugin datastore
+     * @return the matched credentials
+     */
     private UsernamePasswordCredentials getCredentials() {
         String credetialId = this.getCreds();
         StandardUsernameCredentials matchedCredentials = null;
