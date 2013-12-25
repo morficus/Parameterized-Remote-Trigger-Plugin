@@ -29,7 +29,6 @@
         </div>
     </f:entry>
 
-    <f:entry title="">
-        <hr/>
-    </f:entry>
+
+    <hr/>
 </j:jelly>
