@@ -1,13 +1,18 @@
 Parameterized-Remote-Trigger-Plugin
 ===================================
 
-A plugin for Jenkins CI  that lets you trigger new builds parameterized on a **remote** Jenkins server when your build has completed.
+A plugin for Jenkins CI  that gives you the ability to trigger parameterized builds on a **remote** Jenkins server as part of your build.
 
 Similar to the [Parameterized Trigger Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Trigger+Plugin), but for remote servers.
 
 This is done by calling the ```/buildWithParameters``` URL on the remote server. (or the ```/build``` URL, if you don't specify any parameters)
 
-This plugin also has support for build authorization tokens (as defined [here](https://wiki.jenkins-ci.org/display/JENKINS/Quick+and+Simple+Security) ).
+This plugin also has support for build authorization tokens (as defined [here](https://wiki.jenkins-ci.org/display/JENKINS/Quick+and+Simple+Security) ), and plays nicely with these other guys:
+- [Build Token Root Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Build+Token+Root+Plugin)
+- [Credentials Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin)
+- [Token Macro Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Token+Macro+Plugin)
+
+
 
 ###Screenshots
 System configuration option

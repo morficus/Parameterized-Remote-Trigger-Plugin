@@ -12,7 +12,9 @@ import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 import net.sf.json.JSONObject;
 
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -20,12 +22,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
@@ -37,22 +41,50 @@ import org.apache.commons.codec.binary.Base64;
  */
 public class RemoteBuildConfiguration extends Builder {
 
-    private final String       token;
-    private final String       remoteJenkinsName;
-    private final String       job;
-    private final boolean      shouldNotFailBuild;
+    private final String          token;
+    private final String          remoteJenkinsName;
+    private final String          job;
+    private final boolean         shouldNotFailBuild;
     // "parameters" is the raw string entered by the user
-    private final String       parameters;
+    private final String          parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
-    private final List<String> parameterList;
 
-    private static String      paramerizedBuildUrl = "/buildWithParameters";
-    private static String      normalBuildUrl      = "/build";
-    private static String      buildTokenRootUrl   = "/buildByToken";
+    private final List<String>    parameterList;
 
-    private String             queryString         = "";
+    private static String         paramerizedBuildUrl = "/buildWithParameters";
+    private static String         normalBuildUrl      = "/build";
+    private static String         buildTokenRootUrl   = "/buildByToken";
+
+    private final boolean         overrideAuth;
+    private CopyOnWriteList<Auth> auth                = new CopyOnWriteList<Auth>();
+
+    private String                queryString         = "";
 
     @DataBoundConstructor
+    public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
+            String parameters, JSONObject overrideAuth) throws MalformedURLException {
+
+        this.token = token.trim();
+        this.remoteJenkinsName = remoteJenkinsName;
+        this.parameters = parameters;
+        this.job = job.trim();
+        this.shouldNotFailBuild = shouldNotFailBuild;
+        if (overrideAuth != null && overrideAuth.has("auth")) {
+            this.overrideAuth = true;
+            this.auth.replaceBy(new Auth(overrideAuth.getJSONObject("auth")));
+        } else {
+            this.overrideAuth = false;
+            this.auth.replaceBy(new Auth(new JSONObject()));
+        }
+
+        // split the parameter-string into an array based on the new-line character
+        String[] params = parameters.split("\n");
+
+        // convert the String array into a List of Strings, and remove any empty entries
+        this.parameterList = new ArrayList<String>(Arrays.asList(params));
+
+    }
+
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
             String parameters) throws MalformedURLException {
 
@@ -61,57 +93,107 @@ public class RemoteBuildConfiguration extends Builder {
         this.parameters = parameters;
         this.job = job.trim();
         this.shouldNotFailBuild = shouldNotFailBuild;
+        this.overrideAuth = false;
+        this.auth.replaceBy(new Auth(null));
 
         // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
 
         // convert the String array into a List of Strings, and remove any empty entries
         this.parameterList = new ArrayList<String>(Arrays.asList(params));
-        this.cleanUpParameters();
-    }
 
-    /**
-     * A convenience function to clean up any type of unwanted items from the parameterList
-     */
-    private void cleanUpParameters() {
-        this.removeEmptyElements();
-        this.removeCommentsFromParameters();
     }
 
     /**
      * Strip out any empty strings from the parameterList
      */
-    private void removeEmptyElements() {
-        this.parameterList.removeAll(Arrays.asList(null, ""));
-        this.parameterList.removeAll(Arrays.asList(null, " "));
+    private void removeEmptyElements(Collection<String> collection) {
+        collection.removeAll(Arrays.asList(null, ""));
+        collection.removeAll(Arrays.asList(null, " "));
     }
 
     /**
-     * Strip out any comments (lines that start with a #) from the parameterList
+     * Same as "getParameterList", but removes comments and empty strings Notice that no type of character encoding is
+     * happening at this step. All encoding happens in the "buildUrlQueryString" method.
+     * 
+     * @return List<String> of build parameters
      */
-    private void removeCommentsFromParameters() {
+    private List<String> getCleanedParameters() {
+        List<String> params = new ArrayList<String>(this.getParameterList());
+        removeEmptyElements(params);
+        removeCommentsFromParameters(params);
+        return params;
+    }
+
+    /**
+     * Similar to "replaceToken", but acts on a list in place of just a single string
+     * 
+     * @param build
+     * @param listener
+     * @param params
+     *            List<String> of params to be tokenized/replaced
+     * @return List<String> of resolved variables/tokens
+     */
+    private List<String> replaceTokens(AbstractBuild<?, ?> build, BuildListener listener, List<String> params) {
+        List<String> tokenizedParams = new ArrayList<String>();
+
+        for (int i = 0; i < params.size(); i++) {
+            tokenizedParams.add(replaceToken(build, listener, params.get(i)));
+            // params.set(i, replaceToken(build, listener, params.get(i)));
+        }
+
+        return tokenizedParams;
+    }
+
+    /**
+     * Resolves any environment variables in the string
+     * 
+     * @param build
+     * @param listener
+     * @param input
+     *            String to be tokenized/replaced
+     * @return String with resolved Environment variables
+     */
+    private String replaceToken(AbstractBuild<?, ?> build, BuildListener listener, String input) {
+        try {
+            return TokenMacro.expandAll(build, listener, input);
+        } catch (Exception e) {
+            listener.getLogger().println(
+                    String.format("Failed to resolve parameters in string %s due to following error:\n%s", input,
+                            e.getMessage()));
+        }
+        return input;
+    }
+
+    /**
+     * Strip out any comments (lines that start with a #) from the collection that is passed in.
+     */
+    private void removeCommentsFromParameters(Collection<String> collection) {
         List<String> itemsToRemove = new ArrayList<String>();
 
-        for (String parameter : this.parameterList) {
+        for (String parameter : collection) {
             if (parameter.indexOf("#") == 0) {
                 itemsToRemove.add(parameter);
             }
         }
-
-        this.parameterList.removeAll(itemsToRemove);
+        collection.removeAll(itemsToRemove);
     }
 
     /**
-     * Return the parameterList in an encoded query-string
+     * Return the Collection<String> in an encoded query-string
      * 
      * @return query-parameter-formated URL-encoded string
+     * @throws InterruptedException
+     * @throws IOException
+     * @throws MacroEvaluationException
      */
-    private String buildUrlQueryString() {
+    private String buildUrlQueryString(Collection<String> parameters) {
 
         // List to hold the encoded parameters
         List<String> encodedParameters = new ArrayList<String>();
 
-        for (String parameter : this.parameterList) {
+        for (String parameter : parameters) {
+
             // Step #1 - break apart the parameter-pairs (because we don't want to encode the "=" character)
             String[] splitParameters = parameter.split("=");
 
@@ -120,7 +202,9 @@ public class RemoteBuildConfiguration extends Builder {
             for (String item : splitParameters) {
                 try {
                     // Step #2 - encode each individual parameter item add the encoded item to its corresponding list
-                    encodedItems.add(URLEncoder.encode(item, "UTF-8"));
+
+                    encodedItems.add(encodeValue(item));
+
                 } catch (Exception e) {
                     // do nothing
                     // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
@@ -156,6 +240,11 @@ public class RemoteBuildConfiguration extends Builder {
         return match;
     }
 
+    /**
+     * Helper function to allow values to be added to the query string from any method.
+     * 
+     * @param item
+     */
     private void addToQueryString(String item) {
         String currentQueryString = this.getQueryString();
         String newQueryString = "";
@@ -168,31 +257,50 @@ public class RemoteBuildConfiguration extends Builder {
         this.setQueryString(newQueryString);
     }
 
-    private String buildTriggerUrl() {
+    /**
+     * Build the proper URL to trigger the remote build
+     * 
+     * All passed in string have already had their tokens replaced with real values. All 'params' also have the proper
+     * character encoding
+     * 
+     * @param job
+     *            Name of the remote job
+     * @param securityToken
+     *            Security token used to trigger remote job
+     * @param params
+     *            Parameters for the remote job
+     * @return fully formed, fully qualified remote trigger URL
+     */
+    private String buildTriggerUrl(String job, String securityToken, Collection<String> params) {
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
         String triggerUrlString = remoteServer.getAddress().toString();
 
+        // start building the proper URL based on known capabiltiies of the remote server
         if (remoteServer.getHasBuildTokenRootSupport()) {
             triggerUrlString += buildTokenRootUrl;
             triggerUrlString += getBuildTypeUrl();
-            this.addToQueryString("job=" + this.getJob(true));
+
+            this.addToQueryString("job=" + this.encodeValue(job));
 
         } else {
             triggerUrlString += "/job/";
-            triggerUrlString += this.getJob(true);
+            triggerUrlString += this.encodeValue(job);
             triggerUrlString += getBuildTypeUrl();
         }
 
-        // don't include a token in the URL if none is provided
-        if (!this.getToken().equals("")) {
-            this.addToQueryString("token=" + this.getToken(true));
+        // don't try to include a security token in the URL if none is provided
+        if (!securityToken.equals("")) {
+            this.addToQueryString("token=" + encodeValue(securityToken));
         }
 
-        String buildParams = this.getParameters(true);
+        // turn our Collection into a query string
+        String buildParams = buildUrlQueryString(params);
+
         if (!buildParams.isEmpty()) {
             this.addToQueryString(buildParams);
         }
 
+        // by adding "delay=0", this will (theoretically) force this job to the top of the remote queue
         this.addToQueryString("delay=0");
 
         triggerUrlString += "?" + this.getQueryString();
@@ -222,6 +330,7 @@ public class RemoteBuildConfiguration extends Builder {
 
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
+
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
 
         if (remoteServer == null) {
@@ -229,15 +338,25 @@ public class RemoteBuildConfiguration extends Builder {
             return true;
         }
 
-        String triggerUrlString = this.buildTriggerUrl();
+        //tokenize all variables and encode all variables, then build the fully-qualified trigger URL
+        List<String> parameters = getCleanedParameters();
+        parameters = replaceTokens(build, listener, parameters);
+        String jobName = replaceToken(build, listener, this.getJob());
+        String securityToken = replaceToken(build, listener, this.getToken());
+        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, parameters);
 
-        listener.getLogger().println("Triggering this job: " + this.getJob());
+        //print out some debugging information to the console
+        listener.getLogger().println("URL: " + triggerUrlString);
+        listener.getLogger().println("Triggering this job: " + jobName);
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
-        listener.getLogger().println("With these parameters: " + this.parameterList.toString());
+        if (this.getOverrideAuth()) {
+            listener.getLogger().println("Using job-level defined credentails in place of those from remote Jenkins config [" + this.getRemoteJenkinsName() + "]" );
+        }
+        listener.getLogger().println("With these parameters: " + parameters.toString());
 
         // uncomment the 2 lines below for debugging purposes only
         // listener.getLogger().println("Fully Built URL: " + triggerUrlString);
-        // listener.getLogger().println("Token: " + this.getToken());
+        // listener.getLogger().println("Token: " + securityToken);
 
         HttpURLConnection connection = null;
 
@@ -246,8 +365,19 @@ public class RemoteBuildConfiguration extends Builder {
             connection = (HttpURLConnection) triggerUrl.openConnection();
 
             // if there is a username + apiToken defined for this remote host, then use it
-            String usernameTokenConcat = remoteServer.getUsername() + ":" + remoteServer.getApiToken();
+            String usernameTokenConcat = "";
+
+            if (this.getOverrideAuth()) {
+                usernameTokenConcat = this.getAuth()[0].getUsername() + ":" + this.getAuth()[0].getPassword();
+            } else {
+                usernameTokenConcat = remoteServer.getAuth()[0].getUsername() + ":"
+                        + remoteServer.getAuth()[0].getPassword();
+            }
+
             if (!usernameTokenConcat.equals(":")) {
+                // token-macro replacment
+                usernameTokenConcat = TokenMacro.expandAll(build, listener, usernameTokenConcat);
+
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
             }
@@ -277,38 +407,48 @@ public class RemoteBuildConfiguration extends Builder {
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
             this.failBuild(e, listener);
-
+        } catch (MacroEvaluationException e) {
+            this.failBuild(e, listener);
+        } catch (InterruptedException e) {
+            this.failBuild(e, listener);
         } finally {
             // always make sure we close the connection
             if (connection != null) {
                 connection.disconnect();
             }
 
-            // and always clear the query string
+            // and always clear the query string and remove some "global" values
             this.clearQueryString();
+            // this.build = null;
+            // this.listener = null;
 
         }
 
         return true;
     }
 
+    /**
+     * Helper function for character encoding
+     * 
+     * @param dirtyValue
+     * @return encoded value
+     */
+    private String encodeValue(String dirtyValue) {
+        String cleanValue = "";
+
+        try {
+            cleanValue = URLEncoder.encode(dirtyValue, "UTF-8").replace("+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        return cleanValue;
+    }
+
     // Getters
     public String getRemoteJenkinsName() {
         return this.remoteJenkinsName;
-    }
-
-    public String getJob(boolean isEncoded) {
-        String jobName = this.getJob();
-        if (isEncoded) {
-            try {
-                jobName = URLEncoder.encode(jobName, "UTF-8").replace("+", "%20");
-            } catch (Exception e) {
-                // do nothing
-                // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
-            }
-
-        }
-        return jobName;
     }
 
     public String getJob() {
@@ -319,30 +459,8 @@ public class RemoteBuildConfiguration extends Builder {
         return this.shouldNotFailBuild;
     }
 
-    public String getToken(boolean isEncoded) {
-        String token = this.getToken();
-        if (isEncoded) {
-            try {
-                token = URLEncoder.encode(token, "UTF-8").replace("+", "%20");
-            } catch (Exception e) {
-                // do nothing
-                // because we are "hard-coding" the encoding type, there is a 0% chance that this will fail.
-            }
-
-        }
-        return token;
-    }
-
     public String getToken() {
         return this.token;
-    }
-
-    public String getParameters(Boolean asString) {
-        if (asString) {
-            return this.buildUrlQueryString();
-        } else {
-            return this.parameters;
-        }
     }
 
     private String getBuildTypeUrl() {
@@ -355,8 +473,21 @@ public class RemoteBuildConfiguration extends Builder {
         }
     }
 
+    public boolean getOverrideAuth() {
+        return this.overrideAuth;
+    }
+
+    public Auth[] getAuth() {
+        return auth.toArray(new Auth[this.auth.size()]);
+
+    }
+
     public String getParameters() {
         return this.parameters;
+    }
+
+    private List<String> getParameterList() {
+        return this.parameterList;
     }
 
     public String getQueryString() {
@@ -367,6 +498,9 @@ public class RemoteBuildConfiguration extends Builder {
         this.queryString = string.trim();
     }
 
+    /**
+     * Convenience function for setting the query string to empty
+     */
     private void clearQueryString() {
         this.setQueryString("");
     }
