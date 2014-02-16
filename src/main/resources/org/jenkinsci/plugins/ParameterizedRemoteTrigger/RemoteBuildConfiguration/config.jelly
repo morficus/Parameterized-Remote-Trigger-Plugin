@@ -28,6 +28,12 @@
   <f:entry title="Parameters" field="parameters">
     <f:textarea />
   </f:entry>
+  
+  <f:optionalBlock title="Load parameters from external file" field="loadParamsFromFile">
+    <f:entry title="Parameter file name" field="parameterFile">
+       <f:textbox />
+    </f:entry>
+  </f:optionalBlock>
 </f:section>
 
 </j:jelly>

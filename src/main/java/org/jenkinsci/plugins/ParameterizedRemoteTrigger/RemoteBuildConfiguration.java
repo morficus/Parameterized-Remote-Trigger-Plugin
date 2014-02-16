@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import hudson.AbortException;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.CopyOnWriteList;
@@ -19,6 +20,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -58,11 +60,14 @@ public class RemoteBuildConfiguration extends Builder {
     private final boolean         overrideAuth;
     private CopyOnWriteList<Auth> auth                = new CopyOnWriteList<Auth>();
 
+    private final boolean         loadParamsFromFile;
+    private String                parameterFile       = "";
+
     private String                queryString         = "";
 
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
-            String parameters, JSONObject overrideAuth) throws MalformedURLException {
+            String parameters, JSONObject overrideAuth, JSONObject loadParamsFromFile) throws MalformedURLException {
 
         this.token = token.trim();
         this.remoteJenkinsName = remoteJenkinsName;
@@ -75,6 +80,13 @@ public class RemoteBuildConfiguration extends Builder {
         } else {
             this.overrideAuth = false;
             this.auth.replaceBy(new Auth(new JSONObject()));
+        }
+
+        if (loadParamsFromFile != null && loadParamsFromFile.has("parameterFile")) {
+            this.loadParamsFromFile = true;
+            this.parameterFile = loadParamsFromFile.getString("parameterFile");
+        } else {
+            this.loadParamsFromFile = false;
         }
 
         // split the parameter-string into an array based on the new-line character
@@ -105,6 +117,49 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     /**
+     * Reads a file from the jobs workspace, and loads the list of parameters from with in it.
+     * It will also call ```getCleanedParameters``` before returning.
+     * 
+     * @param build
+     * @return List<String> of build parameters
+     */
+    private List<String> loadExternalParameterFile(AbstractBuild<?, ?> build) {
+
+        FilePath workspace = build.getWorkspace();
+        BufferedReader br = null;
+        List<String> ParameterList = new ArrayList<String>();
+        try {
+
+            String filePath = workspace + this.getParameterFile();
+            String sCurrentLine;
+            String fileContent = "";
+
+            br = new BufferedReader(new FileReader(filePath));
+
+            while ((sCurrentLine = br.readLine()) != null) {
+                // fileContent += sCurrentLine;
+                ParameterList.add(sCurrentLine);
+            }
+
+            // ParameterList = new ArrayList<String>(Arrays.asList(fileContent));
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } finally {
+            try {
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        // FilePath.
+        return getCleanedParameters(ParameterList);
+    }
+
+    /**
      * Strip out any empty strings from the parameterList
      */
     private void removeEmptyElements(Collection<String> collection) {
@@ -113,13 +168,25 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     /**
-     * Same as "getParameterList", but removes comments and empty strings Notice that no type of character encoding is
-     * happening at this step. All encoding happens in the "buildUrlQueryString" method.
+     * Convenience method
      * 
      * @return List<String> of build parameters
      */
     private List<String> getCleanedParameters() {
-        List<String> params = new ArrayList<String>(this.getParameterList());
+
+        return getCleanedParameters(this.getParameterList());
+    }
+
+    /**
+     * Same as "getParameterList", but removes comments and empty strings Notice that no type of character encoding is
+     * happening at this step. All encoding happens in the "buildUrlQueryString" method.
+     * 
+     * @param List
+     *            <String> parameters
+     * @return List<String> of build parameters
+     */
+    private List<String> getCleanedParameters(List<String> parameters) {
+        List<String> params = new ArrayList<String>(parameters);
         removeEmptyElements(params);
         removeCommentsFromParameters(params);
         return params;
@@ -338,19 +405,28 @@ public class RemoteBuildConfiguration extends Builder {
             return true;
         }
 
-        //tokenize all variables and encode all variables, then build the fully-qualified trigger URL
-        List<String> parameters = getCleanedParameters();
-        parameters = replaceTokens(build, listener, parameters);
+        List<String> parameters = null;
+
+        if (this.loadParamsFromFile) {
+            parameters = loadExternalParameterFile(build);
+        } else {
+            // tokenize all variables and encode all variables, then build the fully-qualified trigger URL
+            parameters = getCleanedParameters();
+            parameters = replaceTokens(build, listener, parameters);
+        }
+
         String jobName = replaceToken(build, listener, this.getJob());
         String securityToken = replaceToken(build, listener, this.getToken());
         String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, parameters);
 
-        //print out some debugging information to the console
+        // print out some debugging information to the console
         listener.getLogger().println("URL: " + triggerUrlString);
         listener.getLogger().println("Triggering this job: " + jobName);
         listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
         if (this.getOverrideAuth()) {
-            listener.getLogger().println("Using job-level defined credentails in place of those from remote Jenkins config [" + this.getRemoteJenkinsName() + "]" );
+            listener.getLogger().println(
+                    "Using job-level defined credentails in place of those from remote Jenkins config ["
+                            + this.getRemoteJenkinsName() + "]");
         }
         listener.getLogger().println("With these parameters: " + parameters.toString());
 
@@ -461,6 +537,10 @@ public class RemoteBuildConfiguration extends Builder {
 
     public String getToken() {
         return this.token;
+    }
+
+    private String getParameterFile() {
+        return this.parameterFile;
     }
 
     private String getBuildTypeUrl() {
