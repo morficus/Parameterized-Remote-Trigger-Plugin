@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.CopyOnWriteList;
@@ -63,7 +64,7 @@ public class RemoteBuildConfiguration extends Builder {
     private static String         paramerizedBuildUrl = "/buildWithParameters";
     private static String         normalBuildUrl      = "/build";
     private static String         buildTokenRootUrl   = "/buildByToken";
-
+  
     private final boolean         overrideAuth;
     private CopyOnWriteList<Auth> auth                = new CopyOnWriteList<Auth>();
 
@@ -369,10 +370,10 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException, IllegalArgumentException {
         
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
-
+        
         //Stores the status of the remote build
         String buildStatusStr = "UNKNOWN";
 
@@ -382,11 +383,12 @@ public class RemoteBuildConfiguration extends Builder {
         }
                
         //tokenize all variables and encode all variables, then build the fully-qualified trigger URL
-        List<String> parameters = getCleanedParameters();
-        parameters = replaceTokens(build, listener, parameters);
+        List<String> cleanedParams = getCleanedParameters();
+        cleanedParams = replaceTokens(build, listener, cleanedParams);
         String jobName = replaceToken(build, listener, this.getJob());
+                
         String securityToken = replaceToken(build, listener, this.getToken());
-        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, parameters);
+        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, cleanedParams);
     
         //Trigger remote job
         //print out some debugging information to the console
@@ -429,13 +431,13 @@ public class RemoteBuildConfiguration extends Builder {
         listener.getLogger().println("Getting ID of next job to build. URL: " +  queryUrlString);
         JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "POST", build, listener);
         int nextBuildNumber = queryResponseObject.getInt( "nextBuildNumber" );
-        listener.getLogger().println("Getting ID of next job to build." );
+        listener.getLogger().println("Got ID of next job to build [" + Integer.toString( nextBuildNumber ) + "]." );
         
         if (this.getOverrideAuth()) {
            listener.getLogger().println("Using job-level defined credentails in place of those from remote Jenkins config [" + this.getRemoteJenkinsName() + "]" );
         }
         
-        listener.getLogger().println("Triggering remote job." );
+        listener.getLogger().println("Triggering remote job. " + triggerUrlString );
         JSONObject responseObject = sendHTTPCall(triggerUrlString, "POST", build, listener);
 
         String jobURL = responseObject.getString( "url" );
@@ -449,6 +451,7 @@ public class RemoteBuildConfiguration extends Builder {
         } else {
             listener.getLogger().println("DEBUG: WARNING Did not get the correct build number for the triggered job, previous nextBuildNumber:" + newNextBuildNumber + ", newNextBuildNumber" + nextBuildNumber );
         }
+        int Number = 5;
         
         //If we are told to block until remoteBuildComplete:
         if ( this.getBlockBuildUntilComplete() ) {
@@ -557,7 +560,7 @@ public class RemoteBuildConfiguration extends Builder {
             connection = (HttpURLConnection) buildUrl.openConnection();
 
             // if there is a username + apiToken defined for this remote host, then use it
-            String usernameTokenConcat = "";
+            String usernameTokenConcat;
 
             if (this.getOverrideAuth()) {
                 usernameTokenConcat = this.getAuth()[0].getUsername() + ":" + this.getAuth()[0].getPassword();
@@ -595,9 +598,10 @@ public class RemoteBuildConfiguration extends Builder {
             }
             rd.close();
             
-            JSONSerializer serializer = new JSONSerializer();
+            System.out.println ( response.toString() );
+            //JSONSerializer serializer = new JSONSerializer();
             //need to parse the data we get back into struct
-            responseObject = (JSONObject) serializer.toJSON( response.toString() );       
+            responseObject = (JSONObject) JSONSerializer.toJSON( response.toString() );       
         
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
@@ -667,7 +671,7 @@ public class RemoteBuildConfiguration extends Builder {
     public String getToken() {
         return this.token;
     }
-
+    
     private String getBuildTypeUrl() {
         boolean isParameterized = (this.getParameters().length() > 0);
 
