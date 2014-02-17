@@ -401,7 +401,7 @@ public class RemoteBuildConfiguration extends Builder {
             String preCheckUrlString = this.buildGetUrl( jobName , securityToken );
             preCheckUrlString += "/lastBuild";
             preCheckUrlString += "/api/json/";
-            JSONObject preCheckResponse = sendHTTPCall(preCheckUrlString, "POST", build, listener);
+            JSONObject preCheckResponse = sendHTTPCall(preCheckUrlString, "GET", build, listener);
             
             //check the latest build on the remote server to see if it's running - if so wait until it has stopped.
             //if building is true then the build is running
@@ -429,7 +429,7 @@ public class RemoteBuildConfiguration extends Builder {
         queryUrlString += "/api/json/";
         
         listener.getLogger().println("Getting ID of next job to build. URL: " +  queryUrlString);
-        JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "POST", build, listener);
+        JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "GET", build, listener);
         int nextBuildNumber = queryResponseObject.getInt( "nextBuildNumber" );
         listener.getLogger().println("Got ID of next job to build [" + Integer.toString( nextBuildNumber ) + "]." );
         
@@ -441,17 +441,20 @@ public class RemoteBuildConfiguration extends Builder {
         JSONObject responseObject = sendHTTPCall(triggerUrlString, "POST", build, listener);
 
         String jobURL = responseObject.getString( "url" );
-        int newNextBuildNumber = responseObject.getInt( "nextBuildNumber" ); // This should be nextBuildNumber + 1 OR there has been another job scheduled.
+
         
-        //This is only for Debug
-        if (newNextBuildNumber == (nextBuildNumber + 1)) {
-            listener.getLogger().println("DEBUG: No other jobs triggered" );
-        } else if( newNextBuildNumber > (nextBuildNumber + 1) ) {
-            listener.getLogger().println("DEBUG: WARNING Other jobs triggered," + newNextBuildNumber + ", " + nextBuildNumber );
-        } else {
-            listener.getLogger().println("DEBUG: WARNING Did not get the correct build number for the triggered job, previous nextBuildNumber:" + newNextBuildNumber + ", newNextBuildNumber" + nextBuildNumber );
-        }
-        int Number = 5;
+//This is only for Debug
+// This output whether there is another job running on the remote host that this job had conflicted with.
+// The first condition is what is expected, The second is what would happen if two jobs launched jobs at the same time (and two remote builds were triggered).
+// The third is what would happen if this job was triggers and the remote queue was already full (as the 'next build bumber' would still be the same after this job has triggered the remote job)
+//        int newNextBuildNumber = responseObject.getInt( "nextBuildNumber" ); // This should be nextBuildNumber + 1 OR there has been another job scheduled.
+//        if (newNextBuildNumber == (nextBuildNumber + 1)) {
+//            listener.getLogger().println("DEBUG: No other jobs triggered" );
+//        } else if( newNextBuildNumber > (nextBuildNumber + 1) ) {
+//            listener.getLogger().println("DEBUG: WARNING Other jobs triggered," + newNextBuildNumber + ", " + nextBuildNumber );
+//        } else {
+//            listener.getLogger().println("DEBUG: WARNING Did not get the correct build number for the triggered job, previous nextBuildNumber:" + newNextBuildNumber + ", newNextBuildNumber" + nextBuildNumber );
+//        }
         
         //If we are told to block until remoteBuildComplete:
         if ( this.getBlockBuildUntilComplete() ) {
@@ -470,6 +473,7 @@ public class RemoteBuildConfiguration extends Builder {
                 //Sleep for 'pollInterval' seconds.
                 //Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
                 try {              
+                    //Could do with a better way of sleeping...
                     Thread.sleep( this.pollInterval * 1000);
                 } catch (InterruptedException e) {
                     this.failBuild(e, listener);
@@ -483,7 +487,8 @@ public class RemoteBuildConfiguration extends Builder {
                 buildStatusStr = getBuildStatus(jobLocation, build, listener);
                 //Sleep for 'pollInterval' seconds.
                 //Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
-                try {              
+                try {
+                    //Could do with a better way of sleeping...
                     Thread.sleep( this.pollInterval * 1000);
                 } catch (InterruptedException e) {
                     this.failBuild(e, listener);
@@ -522,9 +527,6 @@ public class RemoteBuildConfiguration extends Builder {
         JSONObject responseObject = sendHTTPCall( buildUrlString, "GET", build, listener);
 
         //get the next build from the location
-
-        //System.out.println( "\n\n##### JSON Object - Build!!! #####\n\n" );    
-        //System.out.println( responseObject.toString() );
 
         if ( responseObject.getString("result") == null && responseObject.getBoolean("building") == false ) {
             //build not started
@@ -592,13 +594,11 @@ public class RemoteBuildConfiguration extends Builder {
             StringBuilder response = new StringBuilder();
 
             while ((line = rd.readLine()) != null) {
-               //System.out.println(line);
                response.append(line);
             
             }
             rd.close();
             
-            System.out.println ( response.toString() );
             //JSONSerializer serializer = new JSONSerializer();
             //need to parse the data we get back into struct
             responseObject = (JSONObject) JSONSerializer.toJSON( response.toString() );       
