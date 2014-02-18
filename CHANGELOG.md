@@ -1,3 +1,12 @@
+#2.1 (Feb 17th, 2014)
+###New Feature/Enhancement:
+- ability to specify the list of remote parameters from a file ([request ticket](https://issues.jenkins-ci.org/browse/JENKINS-21470))
+- optionally block the local build until remote build is complete ([request ticket](https://issues.jenkins-ci.org/browse/JENKINS-20828))
+
+###Misc:
+- the console output has also been cleansed of displaying any URLs, since this could pose a security risk for public CI environemnts. 
+- special thanks to [@tombrown5](https://github.com/timbrown5) for his contributions to the last item mentioned above
+
 #2.0 ( Dec 25th, 2013)
 
 Lots of refactoring and addition of some major new features.
