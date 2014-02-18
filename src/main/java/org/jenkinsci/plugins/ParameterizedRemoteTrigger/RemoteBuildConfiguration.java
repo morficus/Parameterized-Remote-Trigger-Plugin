@@ -479,12 +479,12 @@ public class RemoteBuildConfiguration extends Builder {
         // Trigger remote job
         // print out some debugging information to the console
 
-        listener.getLogger().println("URL: " + triggerUrlString);
-        listener.getLogger().println("Triggering this job: " + jobName);
+        //listener.getLogger().println("URL: " + triggerUrlString);
+        listener.getLogger().println("Triggering this remote job: " + jobName);
 
         // get the ID of the Next Job to run.
         if (this.getPreventRemoteBuildQueue()) {
-            listener.getLogger().println("Checking that the remote job " + jobName + " is not building.");
+            listener.getLogger().println("Checking that the remote job " + jobName + " is not currently building.");
             String preCheckUrlString = this.buildGetUrl(jobName, securityToken);
             preCheckUrlString += "/lastBuild";
             preCheckUrlString += "/api/json/";
@@ -494,9 +494,9 @@ public class RemoteBuildConfiguration extends Builder {
             // if building is true then the build is running
             // if result is null the build hasn't finished - but might not have started running.
             while (preCheckResponse.getBoolean("building") == true || preCheckResponse.getString("result") == null) {
-                listener.getLogger().println("Build running - waiting for build to finish.");
+                listener.getLogger().println("Remote build is currently running - waiting for it to finish.");
                 preCheckResponse = sendHTTPCall(preCheckUrlString, "POST", build, listener);
-                listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next poll.");
+                listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next retry.");
 
                 // Sleep for 'pollInterval' seconds.
                 // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
@@ -506,7 +506,7 @@ public class RemoteBuildConfiguration extends Builder {
                     this.failBuild(e, listener);
                 }
             }
-            listener.getLogger().println("Remote job remote job " + jobName + " is not building.");
+            listener.getLogger().println("Remote job remote job " + jobName + " is not currenlty building.");
         } else {
             listener.getLogger().println("Not checking if the remote job " + jobName + " is building.");
         }
@@ -514,10 +514,10 @@ public class RemoteBuildConfiguration extends Builder {
         String queryUrlString = this.buildGetUrl(jobName, securityToken);
         queryUrlString += "/api/json/";
 
-        listener.getLogger().println("Getting ID of next job to build. URL: " + queryUrlString);
+        //listener.getLogger().println("Getting ID of next job to build. URL: " + queryUrlString);
         JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "GET", build, listener);
         int nextBuildNumber = queryResponseObject.getInt("nextBuildNumber");
-        listener.getLogger().println("Got ID of next job to build [" + Integer.toString(nextBuildNumber) + "].");
+        listener.getLogger().println("This job is build #[" + Integer.toString(nextBuildNumber) + "] on the remote server.");
 
         if (this.getOverrideAuth()) {
             listener.getLogger().println(
@@ -525,7 +525,7 @@ public class RemoteBuildConfiguration extends Builder {
                             + this.getRemoteJenkinsName() + "]");
         }
 
-        listener.getLogger().println("Triggering remote job. " + triggerUrlString);
+        listener.getLogger().println("Triggering remote job now.");
         JSONObject responseObject = sendHTTPCall(triggerUrlString, "POST", build, listener);
 
         String jobURL = responseObject.getString("url");
@@ -610,7 +610,7 @@ public class RemoteBuildConfiguration extends Builder {
         }
 
         // print out some debugging information to the console
-        listener.getLogger().println("Checking Status of this job: " + buildUrlString);
+        //listener.getLogger().println("Checking Status of this job: " + buildUrlString);
         if (this.getOverrideAuth()) {
             listener.getLogger().println(
                     "Using job-level defined credentails in place of those from remote Jenkins config ["
@@ -621,7 +621,7 @@ public class RemoteBuildConfiguration extends Builder {
 
         // get the next build from the location
 
-        if (responseObject.getString("result") == null && responseObject.getBoolean("building") == false) {
+        if (responseObject == null || responseObject.getString("result") == null && responseObject.getBoolean("building") == false) {
             // build not started
             buildStatus = "not started";
         } else if (responseObject.getBoolean("building")) {
