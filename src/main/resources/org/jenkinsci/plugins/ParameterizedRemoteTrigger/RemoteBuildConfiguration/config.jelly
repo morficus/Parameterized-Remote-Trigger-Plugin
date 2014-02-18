@@ -16,7 +16,19 @@
   <f:entry title="Do not fail if remote fails" field="shouldNotFailBuild">
     <f:checkbox />
   </f:entry>
+  
+  <f:entry title="Wait to trigger remote builds until no other builds are running." field="preventRemoteBuildQueue">
+    <f:checkbox />
+  </f:entry>
+  
+  <f:entry title="Poll Interval (seconds)" field="pollInterval">
+     <f:number clazz="positive-number" min="1" step="1" default="10" />
+  </f:entry>
 
+  <f:entry title="Block until the remote triggered projects finish their builds." field="blockBuildUntilComplete">
+    <f:checkbox />
+  </f:entry>
+    
   <f:entry title="Remote Job Name" field="job">
     <f:textbox />
   </f:entry>
@@ -28,6 +40,12 @@
   <f:entry title="Parameters" field="parameters">
     <f:textarea />
   </f:entry>
+  
+  <f:optionalBlock title="Load parameters from external file (this will cause the job to ignore the text field above)" field="loadParamsFromFile">
+    <f:entry title="Parameter file name" field="parameterFile">
+       <f:textbox />
+    </f:entry>
+  </f:optionalBlock>
 </f:section>
 
 </j:jelly>

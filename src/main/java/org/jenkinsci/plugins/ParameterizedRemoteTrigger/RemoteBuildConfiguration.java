@@ -1,6 +1,11 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import hudson.AbortException;
+
+import hudson.FilePath;
+
+import hudson.EnvVars;
+
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.CopyOnWriteList;
@@ -11,6 +16,10 @@ import hudson.model.AbstractProject;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 import net.sf.json.JSONObject;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONSerializer;
+//import net.sf.json.
+//import net.sf.json.
 
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.apache.commons.lang.StringUtils;
@@ -19,6 +28,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -44,7 +54,12 @@ public class RemoteBuildConfiguration extends Builder {
     private final String          token;
     private final String          remoteJenkinsName;
     private final String          job;
+
     private final boolean         shouldNotFailBuild;
+    private final int             pollInterval;
+    private final boolean         preventRemoteBuildQueue;
+    private final boolean         blockBuildUntilComplete;
+
     // "parameters" is the raw string entered by the user
     private final String          parameters;
     // "parameterList" is the cleaned-up version of "parameters" (stripped out comments, character encoding, etc)
@@ -58,17 +73,25 @@ public class RemoteBuildConfiguration extends Builder {
     private final boolean         overrideAuth;
     private CopyOnWriteList<Auth> auth                = new CopyOnWriteList<Auth>();
 
+    private final boolean         loadParamsFromFile;
+    private String                parameterFile       = "";
+
     private String                queryString         = "";
 
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
-            String parameters, JSONObject overrideAuth) throws MalformedURLException {
+            String parameters, JSONObject overrideAuth, JSONObject loadParamsFromFile, boolean preventRemoteBuildQueue,
+            boolean blockBuildUntilComplete, int pollInterval) throws MalformedURLException {
 
         this.token = token.trim();
         this.remoteJenkinsName = remoteJenkinsName;
         this.parameters = parameters;
         this.job = job.trim();
         this.shouldNotFailBuild = shouldNotFailBuild;
+        this.preventRemoteBuildQueue = preventRemoteBuildQueue;
+        this.blockBuildUntilComplete = blockBuildUntilComplete;
+        this.pollInterval = pollInterval;
+
         if (overrideAuth != null && overrideAuth.has("auth")) {
             this.overrideAuth = true;
             this.auth.replaceBy(new Auth(overrideAuth.getJSONObject("auth")));
@@ -76,6 +99,39 @@ public class RemoteBuildConfiguration extends Builder {
             this.overrideAuth = false;
             this.auth.replaceBy(new Auth(new JSONObject()));
         }
+
+        if (loadParamsFromFile != null && loadParamsFromFile.has("parameterFile")) {
+            this.loadParamsFromFile = true;
+            this.parameterFile = loadParamsFromFile.getString("parameterFile");
+        } else {
+            this.loadParamsFromFile = false;
+        }
+
+        // TODO: clean this up a bit
+        // split the parameter-string into an array based on the new-line character
+        String[] params = parameters.split("\n");
+
+        // convert the String array into a List of Strings, and remove any empty entries
+        this.parameterList = new ArrayList<String>(Arrays.asList(params));
+
+    }
+
+    public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild,
+            boolean preventRemoteBuildQueue, boolean blockBuildUntilComplete, int pollInterval, String job,
+            String token, String parameters) throws MalformedURLException {
+
+        this.token = token.trim();
+        this.remoteJenkinsName = remoteJenkinsName;
+        this.parameters = parameters;
+        this.job = job.trim();
+        this.shouldNotFailBuild = shouldNotFailBuild;
+        this.preventRemoteBuildQueue = preventRemoteBuildQueue;
+        this.blockBuildUntilComplete = blockBuildUntilComplete;
+        this.pollInterval = pollInterval;
+        this.overrideAuth = false;
+        this.auth.replaceBy(new Auth(null));
+
+        this.loadParamsFromFile = false;
 
         // split the parameter-string into an array based on the new-line character
         String[] params = parameters.split("\n");
@@ -85,23 +141,47 @@ public class RemoteBuildConfiguration extends Builder {
 
     }
 
-    public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
-            String parameters) throws MalformedURLException {
+    /**
+     * Reads a file from the jobs workspace, and loads the list of parameters from with in it. It will also call
+     * ```getCleanedParameters``` before returning.
+     * 
+     * @param build
+     * @return List<String> of build parameters
+     */
+    private List<String> loadExternalParameterFile(AbstractBuild<?, ?> build) {
 
-        this.token = token.trim();
-        this.remoteJenkinsName = remoteJenkinsName;
-        this.parameters = parameters;
-        this.job = job.trim();
-        this.shouldNotFailBuild = shouldNotFailBuild;
-        this.overrideAuth = false;
-        this.auth.replaceBy(new Auth(null));
+        FilePath workspace = build.getWorkspace();
+        BufferedReader br = null;
+        List<String> ParameterList = new ArrayList<String>();
+        try {
 
-        // split the parameter-string into an array based on the new-line character
-        String[] params = parameters.split("\n");
+            String filePath = workspace + this.getParameterFile();
+            String sCurrentLine;
+            String fileContent = "";
 
-        // convert the String array into a List of Strings, and remove any empty entries
-        this.parameterList = new ArrayList<String>(Arrays.asList(params));
+            br = new BufferedReader(new FileReader(filePath));
 
+            while ((sCurrentLine = br.readLine()) != null) {
+                // fileContent += sCurrentLine;
+                ParameterList.add(sCurrentLine);
+            }
+
+            // ParameterList = new ArrayList<String>(Arrays.asList(fileContent));
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } finally {
+            try {
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        // FilePath.
+        return getCleanedParameters(ParameterList);
     }
 
     /**
@@ -113,13 +193,25 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     /**
-     * Same as "getParameterList", but removes comments and empty strings Notice that no type of character encoding is
-     * happening at this step. All encoding happens in the "buildUrlQueryString" method.
+     * Convenience method
      * 
      * @return List<String> of build parameters
      */
     private List<String> getCleanedParameters() {
-        List<String> params = new ArrayList<String>(this.getParameterList());
+
+        return getCleanedParameters(this.getParameterList());
+    }
+
+    /**
+     * Same as "getParameterList", but removes comments and empty strings Notice that no type of character encoding is
+     * happening at this step. All encoding happens in the "buildUrlQueryString" method.
+     * 
+     * @param List
+     *            <String> parameters
+     * @return List<String> of build parameters
+     */
+    private List<String> getCleanedParameters(List<String> parameters) {
+        List<String> params = new ArrayList<String>(parameters);
         removeEmptyElements(params);
         removeCommentsFromParameters(params);
         return params;
@@ -309,6 +401,32 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     /**
+     * Build the proper URL for GET calls
+     * 
+     * All passed in string have already had their tokens replaced with real values.
+     * 
+     * @param job
+     *            Name of the remote job
+     * @param securityToken
+     *            Security token used to trigger remote job
+     * @return fully formed, fully qualified remote trigger URL
+     */
+    private String buildGetUrl(String job, String securityToken) {
+
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+        String urlString = remoteServer.getAddress().toString();
+
+        urlString += "/job/";
+        urlString += this.encodeValue(job);
+
+        // don't try to include a security token in the URL if none is provided
+        if (!securityToken.equals("")) {
+            this.addToQueryString("token=" + encodeValue(securityToken));
+        }
+        return urlString;
+    }
+
+    /**
      * Convenience function to mark the build as failed. It's intended to only be called from this.perform();
      * 
      * @param e
@@ -329,43 +447,216 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException {
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws InterruptedException,
+            IOException, IllegalArgumentException {
 
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+
+        // Stores the status of the remote build
+        String buildStatusStr = "UNKNOWN";
 
         if (remoteServer == null) {
             this.failBuild(new Exception("No remote host is defined for this job."), listener);
             return true;
         }
 
-        //tokenize all variables and encode all variables, then build the fully-qualified trigger URL
-        List<String> parameters = getCleanedParameters();
-        parameters = replaceTokens(build, listener, parameters);
-        String jobName = replaceToken(build, listener, this.getJob());
-        String securityToken = replaceToken(build, listener, this.getToken());
-        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, parameters);
+        List<String> cleanedParams = null;
 
-        //print out some debugging information to the console
-        listener.getLogger().println("URL: " + triggerUrlString);
-        listener.getLogger().println("Triggering this job: " + jobName);
-        listener.getLogger().println("Using this remote Jenkins config: " + this.getRemoteJenkinsName());
-        if (this.getOverrideAuth()) {
-            listener.getLogger().println("Using job-level defined credentails in place of those from remote Jenkins config [" + this.getRemoteJenkinsName() + "]" );
+        if (this.loadParamsFromFile) {
+            cleanedParams = loadExternalParameterFile(build);
+        } else {
+            // tokenize all variables and encode all variables, then build the fully-qualified trigger URL
+            cleanedParams = getCleanedParameters();
+            cleanedParams = replaceTokens(build, listener, cleanedParams);
         }
-        listener.getLogger().println("With these parameters: " + parameters.toString());
 
-        // uncomment the 2 lines below for debugging purposes only
-        // listener.getLogger().println("Fully Built URL: " + triggerUrlString);
-        // listener.getLogger().println("Token: " + securityToken);
+        String jobName = replaceToken(build, listener, this.getJob());
+
+        String securityToken = replaceToken(build, listener, this.getToken());
+
+        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, cleanedParams);
+
+        // Trigger remote job
+        // print out some debugging information to the console
+
+        //listener.getLogger().println("URL: " + triggerUrlString);
+        listener.getLogger().println("Triggering this remote job: " + jobName);
+
+        // get the ID of the Next Job to run.
+        if (this.getPreventRemoteBuildQueue()) {
+            listener.getLogger().println("Checking that the remote job " + jobName + " is not currently building.");
+            String preCheckUrlString = this.buildGetUrl(jobName, securityToken);
+            preCheckUrlString += "/lastBuild";
+            preCheckUrlString += "/api/json/";
+            JSONObject preCheckResponse = sendHTTPCall(preCheckUrlString, "GET", build, listener);
+
+            // check the latest build on the remote server to see if it's running - if so wait until it has stopped.
+            // if building is true then the build is running
+            // if result is null the build hasn't finished - but might not have started running.
+            while (preCheckResponse.getBoolean("building") == true || preCheckResponse.getString("result") == null) {
+                listener.getLogger().println("Remote build is currently running - waiting for it to finish.");
+                preCheckResponse = sendHTTPCall(preCheckUrlString, "POST", build, listener);
+                listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next retry.");
+
+                // Sleep for 'pollInterval' seconds.
+                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                try {
+                    Thread.sleep(this.pollInterval * 1000);
+                } catch (InterruptedException e) {
+                    this.failBuild(e, listener);
+                }
+            }
+            listener.getLogger().println("Remote job remote job " + jobName + " is not currenlty building.");
+        } else {
+            listener.getLogger().println("Not checking if the remote job " + jobName + " is building.");
+        }
+
+        String queryUrlString = this.buildGetUrl(jobName, securityToken);
+        queryUrlString += "/api/json/";
+
+        //listener.getLogger().println("Getting ID of next job to build. URL: " + queryUrlString);
+        JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "GET", build, listener);
+        int nextBuildNumber = queryResponseObject.getInt("nextBuildNumber");
+        listener.getLogger().println("This job is build #[" + Integer.toString(nextBuildNumber) + "] on the remote server.");
+
+        if (this.getOverrideAuth()) {
+            listener.getLogger().println(
+                    "Using job-level defined credentails in place of those from remote Jenkins config ["
+                            + this.getRemoteJenkinsName() + "]");
+        }
+
+        listener.getLogger().println("Triggering remote job now.");
+        JSONObject responseObject = sendHTTPCall(triggerUrlString, "POST", build, listener);
+
+        String jobURL = responseObject.getString("url");
+
+        // This is only for Debug
+        // This output whether there is another job running on the remote host that this job had conflicted with.
+        // The first condition is what is expected, The second is what would happen if two jobs launched jobs at the
+        // same time (and two remote builds were triggered).
+        // The third is what would happen if this job was triggers and the remote queue was already full (as the 'next
+        // build bumber' would still be the same after this job has triggered the remote job)
+        // int newNextBuildNumber = responseObject.getInt( "nextBuildNumber" ); // This should be nextBuildNumber + 1 OR
+        // there has been another job scheduled.
+        // if (newNextBuildNumber == (nextBuildNumber + 1)) {
+        // listener.getLogger().println("DEBUG: No other jobs triggered" );
+        // } else if( newNextBuildNumber > (nextBuildNumber + 1) ) {
+        // listener.getLogger().println("DEBUG: WARNING Other jobs triggered," + newNextBuildNumber + ", " +
+        // nextBuildNumber );
+        // } else {
+        // listener.getLogger().println("DEBUG: WARNING Did not get the correct build number for the triggered job, previous nextBuildNumber:"
+        // + newNextBuildNumber + ", newNextBuildNumber" + nextBuildNumber );
+        // }
+
+        // If we are told to block until remoteBuildComplete:
+        if (this.getBlockBuildUntilComplete()) {
+            listener.getLogger().println("Blocking local job until remote job completes");
+            // Form the URL for the triggered job
+            String jobLocation = jobURL + nextBuildNumber + "/api/json";
+
+            buildStatusStr = getBuildStatus(jobLocation, build, listener);
+
+            while (buildStatusStr.equals("not started")) {
+                listener.getLogger().println("Waiting for remote build to start.");
+                listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next poll.");
+                buildStatusStr = getBuildStatus(jobLocation, build, listener);
+                // Sleep for 'pollInterval' seconds.
+                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                try {
+                    // Could do with a better way of sleeping...
+                    Thread.sleep(this.pollInterval * 1000);
+                } catch (InterruptedException e) {
+                    this.failBuild(e, listener);
+                }
+            }
+
+            listener.getLogger().println("Remote build started!");
+            while (buildStatusStr.equals("running")) {
+                listener.getLogger().println("Waiting for remote build to finish.");
+                listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next poll.");
+                buildStatusStr = getBuildStatus(jobLocation, build, listener);
+                // Sleep for 'pollInterval' seconds.
+                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                try {
+                    // Could do with a better way of sleeping...
+                    Thread.sleep(this.pollInterval * 1000);
+                } catch (InterruptedException e) {
+                    this.failBuild(e, listener);
+                }
+            }
+            listener.getLogger().println("Remote build finished with status " + buildStatusStr + ".");
+
+            // If build did not finish with 'success' then fail build step.
+            if (!buildStatusStr.equals("SUCCESS")) {
+                // failBuild will check if the 'shouldNotFailBuild' parameter is set or not, so will decide how to
+                // handle the failure.
+                this.failBuild(new Exception("The remote job did not succeed."), listener);
+            }
+        } else {
+            listener.getLogger().println("Not blocking local job until remote job completes - fire and forget.");
+        }
+
+        return true;
+    }
+
+    public String getBuildStatus(String buildUrlString, AbstractBuild build, BuildListener listener) throws IOException {
+        String buildStatus = "UNKNOWN";
+
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+
+        if (remoteServer == null) {
+            this.failBuild(new Exception("No remote host is defined for this job."), listener);
+            return null;
+        }
+
+        // print out some debugging information to the console
+        //listener.getLogger().println("Checking Status of this job: " + buildUrlString);
+        if (this.getOverrideAuth()) {
+            listener.getLogger().println(
+                    "Using job-level defined credentails in place of those from remote Jenkins config ["
+                            + this.getRemoteJenkinsName() + "]");
+        }
+
+        JSONObject responseObject = sendHTTPCall(buildUrlString, "GET", build, listener);
+
+        // get the next build from the location
+
+        if (responseObject == null || responseObject.getString("result") == null && responseObject.getBoolean("building") == false) {
+            // build not started
+            buildStatus = "not started";
+        } else if (responseObject.getBoolean("building")) {
+            // build running
+            buildStatus = "running";
+        } else if (responseObject.getString("result") != null) {
+            // build finished
+            buildStatus = responseObject.getString("result");
+        } else {
+            // Add additional else to check for unhandled conditions
+            listener.getLogger().println("WARNING: Unhandled condition!");
+        }
+
+        return buildStatus;
+    }
+
+    public JSONObject sendHTTPCall(String urlString, String requestType, AbstractBuild build, BuildListener listener)
+            throws IOException {
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+
+        if (remoteServer == null) {
+            this.failBuild(new Exception("No remote host is defined for this job."), listener);
+            return null;
+        }
 
         HttpURLConnection connection = null;
 
+        JSONObject responseObject = null;
+
         try {
-            URL triggerUrl = new URL(triggerUrlString);
-            connection = (HttpURLConnection) triggerUrl.openConnection();
+            URL buildUrl = new URL(urlString);
+            connection = (HttpURLConnection) buildUrl.openConnection();
 
             // if there is a username + apiToken defined for this remote host, then use it
-            String usernameTokenConcat = "";
+            String usernameTokenConcat;
 
             if (this.getOverrideAuth()) {
                 usernameTokenConcat = this.getAuth()[0].getUsername() + ":" + this.getAuth()[0].getPassword();
@@ -384,25 +675,27 @@ public class RemoteBuildConfiguration extends Builder {
 
             connection.setDoInput(true);
             connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestMethod("POST");
+            connection.setRequestMethod(requestType);
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
 
-            // TODO: right now this is just doing a "fire and forget", but would be nice to get some feedback from the
-            // remote server. To accomplish this we would need to poll some URL
-            // - http://jenkins.local/job/test/lastBuild/api/json
-
             InputStream is = connection.getInputStream();
 
             BufferedReader rd = new BufferedReader(new InputStreamReader(is));
-            // String line;
-            // StringBuffer response = new StringBuffer();
+            String line;
+            // String response = "";
+            StringBuilder response = new StringBuilder();
 
-            // while ((line = rd.readLine()) != null) {
-            // System.out.println(line);
-            // }
-            // rd.close();
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+
+            }
+            rd.close();
+
+            // JSONSerializer serializer = new JSONSerializer();
+            // need to parse the data we get back into struct
+            responseObject = (JSONObject) JSONSerializer.toJSON(response.toString());
 
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
@@ -416,15 +709,13 @@ public class RemoteBuildConfiguration extends Builder {
             if (connection != null) {
                 connection.disconnect();
             }
-
             // and always clear the query string and remove some "global" values
             this.clearQueryString();
             // this.build = null;
             // this.listener = null;
 
         }
-
-        return true;
+        return responseObject;
     }
 
     /**
@@ -459,8 +750,24 @@ public class RemoteBuildConfiguration extends Builder {
         return this.shouldNotFailBuild;
     }
 
+    public boolean getPreventRemoteBuildQueue() {
+        return this.preventRemoteBuildQueue;
+    }
+
+    public boolean getBlockBuildUntilComplete() {
+        return this.blockBuildUntilComplete;
+    }
+
+    public int getPollInterval() {
+        return this.pollInterval;
+    }
+
     public String getToken() {
         return this.token;
+    }
+
+    private String getParameterFile() {
+        return this.parameterFile;
     }
 
     private String getBuildTypeUrl() {
