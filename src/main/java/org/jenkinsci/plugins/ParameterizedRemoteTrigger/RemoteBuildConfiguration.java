@@ -461,7 +461,6 @@ public class RemoteBuildConfiguration extends Builder {
             return true;
         }
         String remoteServerURL = remoteServer.getAddress().toString();
-        
         List<String> cleanedParams = null;
 
         if (this.loadParamsFromFile) {
@@ -511,7 +510,7 @@ public class RemoteBuildConfiguration extends Builder {
                 }
                 listener.getLogger().println("Remote job remote job " + jobName + " is not currenlty building.");    
             } else {
-                this.failBuild(new Exception("Got a blank response from Remote Jenkins Server [" + remoteServerURL + "], cannot continue."), listener);
+                this.failBuild(new Exception("Got a blank response from Remote Jenkins Server, cannot continue."), listener);
             }
 
         } else {
@@ -524,6 +523,7 @@ public class RemoteBuildConfiguration extends Builder {
         //listener.getLogger().println("Getting ID of next job to build. URL: " + queryUrlString);
         JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "GET", build, listener);
         if (queryResponseObject == null ) {
+            //This should not happen as this page should return a JSON object
             this.failBuild(new Exception("Got a blank response from Remote Jenkins Server [" + remoteServerURL + "], cannot continue."), listener);
         }
         
@@ -538,9 +538,8 @@ public class RemoteBuildConfiguration extends Builder {
 
         listener.getLogger().println("Triggering remote job now.");
         sendHTTPCall(triggerUrlString, "POST", build, listener);
-
         
-        //        String jobURL = responseObject.getString("url");
+        //Have to form the string ourselves, as we might not get a response from non-parameterized builds
         String jobURL = remoteServerURL + "/job/" + this.encodeValue(job) + "/";
 
         // This is only for Debug
