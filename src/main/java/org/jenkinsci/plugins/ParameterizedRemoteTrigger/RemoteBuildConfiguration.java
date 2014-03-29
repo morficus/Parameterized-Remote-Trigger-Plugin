@@ -68,6 +68,7 @@ public class RemoteBuildConfiguration extends Builder {
 
     private static String         paramerizedBuildUrl = "/buildWithParameters";
     private static String         normalBuildUrl      = "/build";
+    //private static String         normalBuildUrl      = "/buildWithParameters";
     private static String         buildTokenRootUrl   = "/buildByToken";
 
     private final boolean         overrideAuth;
@@ -459,7 +460,7 @@ public class RemoteBuildConfiguration extends Builder {
             this.failBuild(new Exception("No remote host is defined for this job."), listener);
             return true;
         }
-
+        String remoteServerURL = remoteServer.getAddress().toString();
         List<String> cleanedParams = null;
 
         if (this.loadParamsFromFile) {
@@ -489,24 +490,29 @@ public class RemoteBuildConfiguration extends Builder {
             preCheckUrlString += "/lastBuild";
             preCheckUrlString += "/api/json/";
             JSONObject preCheckResponse = sendHTTPCall(preCheckUrlString, "GET", build, listener);
+            
+            if ( preCheckResponse != null ) {
+                // check the latest build on the remote server to see if it's running - if so wait until it has stopped.
+                // if building is true then the build is running
+                // if result is null the build hasn't finished - but might not have started running.
+                while (preCheckResponse.getBoolean("building") == true || preCheckResponse.getString("result") == null) {
+                    listener.getLogger().println("Remote build is currently running - waiting for it to finish.");
+                    preCheckResponse = sendHTTPCall(preCheckUrlString, "POST", build, listener);
+                    listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next retry.");
 
-            // check the latest build on the remote server to see if it's running - if so wait until it has stopped.
-            // if building is true then the build is running
-            // if result is null the build hasn't finished - but might not have started running.
-            while (preCheckResponse.getBoolean("building") == true || preCheckResponse.getString("result") == null) {
-                listener.getLogger().println("Remote build is currently running - waiting for it to finish.");
-                preCheckResponse = sendHTTPCall(preCheckUrlString, "POST", build, listener);
-                listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next retry.");
-
-                // Sleep for 'pollInterval' seconds.
-                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
-                try {
-                    Thread.sleep(this.pollInterval * 1000);
-                } catch (InterruptedException e) {
-                    this.failBuild(e, listener);
+                    // Sleep for 'pollInterval' seconds.
+                    // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                    try {
+                        Thread.sleep(this.pollInterval * 1000);
+                    } catch (InterruptedException e) {
+                        this.failBuild(e, listener);
+                    }
                 }
+                listener.getLogger().println("Remote job remote job " + jobName + " is not currenlty building.");    
+            } else {
+                this.failBuild(new Exception("Got a blank response from Remote Jenkins Server, cannot continue."), listener);
             }
-            listener.getLogger().println("Remote job remote job " + jobName + " is not currenlty building.");
+
         } else {
             listener.getLogger().println("Not checking if the remote job " + jobName + " is building.");
         }
@@ -516,6 +522,11 @@ public class RemoteBuildConfiguration extends Builder {
 
         //listener.getLogger().println("Getting ID of next job to build. URL: " + queryUrlString);
         JSONObject queryResponseObject = sendHTTPCall(queryUrlString, "GET", build, listener);
+        if (queryResponseObject == null ) {
+            //This should not happen as this page should return a JSON object
+            this.failBuild(new Exception("Got a blank response from Remote Jenkins Server [" + remoteServerURL + "], cannot continue."), listener);
+        }
+        
         int nextBuildNumber = queryResponseObject.getInt("nextBuildNumber");
         listener.getLogger().println("This job is build #[" + Integer.toString(nextBuildNumber) + "] on the remote server.");
 
@@ -526,9 +537,10 @@ public class RemoteBuildConfiguration extends Builder {
         }
 
         listener.getLogger().println("Triggering remote job now.");
-        JSONObject responseObject = sendHTTPCall(triggerUrlString, "POST", build, listener);
-
-        String jobURL = responseObject.getString("url");
+        sendHTTPCall(triggerUrlString, "POST", build, listener);
+        
+        //Have to form the string ourselves, as we might not get a response from non-parameterized builds
+        String jobURL = remoteServerURL + "/job/" + this.encodeValue(job) + "/";
 
         // This is only for Debug
         // This output whether there is another job running on the remote host that this job had conflicted with.
@@ -689,13 +701,18 @@ public class RemoteBuildConfiguration extends Builder {
 
             while ((line = rd.readLine()) != null) {
                 response.append(line);
-
             }
             rd.close();
 
             // JSONSerializer serializer = new JSONSerializer();
             // need to parse the data we get back into struct
-            responseObject = (JSONObject) JSONSerializer.toJSON(response.toString());
+            //listener.getLogger().println("Called URL: '" + urlString +  "', got response: '" + response.toString() + "'");
+            if ( response.toString().isEmpty() ) {
+                listener.getLogger().println("Remote Jenkins server returned empty response to trigger.");
+                return null;
+            } else {
+                responseObject = (JSONObject) JSONSerializer.toJSON(response.toString());
+            }
 
         } catch (IOException e) {
             // something failed with the connection, so throw an exception to mark the build as failed.
