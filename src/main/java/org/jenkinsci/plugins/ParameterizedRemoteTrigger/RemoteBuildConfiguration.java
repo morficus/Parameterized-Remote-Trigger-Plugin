@@ -463,7 +463,7 @@ public class RemoteBuildConfiguration extends Builder {
         String remoteServerURL = remoteServer.getAddress().toString();
         List<String> cleanedParams = null;
 
-        if (this.loadParamsFromFile) {
+        if (this.getLoadParamsFromFile()) {
             cleanedParams = loadExternalParameterFile(build);
         } else {
             // tokenize all variables and encode all variables, then build the fully-qualified trigger URL
@@ -783,7 +783,11 @@ public class RemoteBuildConfiguration extends Builder {
         return this.token;
     }
 
-    private String getParameterFile() {
+    public boolean getLoadParamsFromFile() {
+        return this.loadParamsFromFile;
+    }
+    
+    public String getParameterFile() {
         return this.parameterFile;
     }
 
