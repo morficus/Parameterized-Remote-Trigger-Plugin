@@ -440,7 +440,7 @@ public class RemoteBuildConfiguration extends Builder {
      * @throws IOException
      */
     private void failBuild(Exception e, BuildListener listener) throws IOException {
-        e.getStackTrace();
+        System.out.print(e.getStackTrace());
         if (this.getShouldNotFailBuild()) {
             listener.error("Remote build failed for the following reason, but the build will continue:");
             listener.error(e.getMessage());
@@ -667,7 +667,6 @@ public class RemoteBuildConfiguration extends Builder {
 
         JSONObject responseObject = null;
 
-        try {
             URL buildUrl = new URL(urlString);
             connection = (HttpURLConnection) buildUrl.openConnection();
 
@@ -683,31 +682,37 @@ public class RemoteBuildConfiguration extends Builder {
 
             if (!usernameTokenConcat.equals(":")) {
                 // token-macro replacment
-                usernameTokenConcat = TokenMacro.expandAll(build, listener, usernameTokenConcat);
+                try {
+                    usernameTokenConcat = TokenMacro.expandAll(build, listener, usernameTokenConcat);
+                } catch (MacroEvaluationException e) {
+                    this.failBuild(e, listener);
+                } catch (InterruptedException e) {
+                    this.failBuild(e, listener);
+                }
 
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
             }
-
+        try {
             connection.setDoInput(true);
             connection.setRequestProperty("Accept", "application/json");
             connection.setRequestMethod(requestType);
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
-
+            
             InputStream is = connection.getInputStream();
-
+            
             BufferedReader rd = new BufferedReader(new InputStreamReader(is));
             String line;
             // String response = "";
             StringBuilder response = new StringBuilder();
-
+        
             while ((line = rd.readLine()) != null) {
                 response.append(line);
             }
             rd.close();
-
+            
             // JSONSerializer serializer = new JSONSerializer();
             // need to parse the data we get back into struct
             //listener.getLogger().println("Called URL: '" + urlString +  "', got response: '" + response.toString() + "'");
@@ -724,12 +729,16 @@ public class RemoteBuildConfiguration extends Builder {
             }
 
         } catch (IOException e) {
-            // something failed with the connection, so throw an exception to mark the build as failed.
-            this.failBuild(e, listener);
-        } catch (MacroEvaluationException e) {
-            this.failBuild(e, listener);
-        } catch (InterruptedException e) {
-            this.failBuild(e, listener);
+            //If we get a 404 when trying to check a builds status (aka: called from "getBuildStatus") it just means that the build hasn't been queued up because there aren't any more executors available to call the remote server.
+            //So we basically pretend like the error didn't happen.
+            String callingMethod = Thread.currentThread().getStackTrace()[2].getMethodName();
+            if(connection.getResponseCode() == 404 && callingMethod == "getBuildStatus"){
+                return null;
+            }else{
+                //something failed with the connection, so throw an exception to mark the build as failed.
+                this.failBuild(e, listener);
+            }
+            
         } finally {
             // always make sure we close the connection
             if (connection != null) {
