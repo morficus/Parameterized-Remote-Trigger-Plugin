@@ -1,11 +1,8 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import hudson.AbortException;
-
 import hudson.FilePath;
-
 import hudson.EnvVars;
-
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.CopyOnWriteList;
@@ -20,6 +17,8 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONSerializer;
 //import net.sf.json.
 //import net.sf.json.
+
+import net.sf.json.util.JSONUtils;
 
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.apache.commons.lang.StringUtils;
@@ -712,8 +711,13 @@ public class RemoteBuildConfiguration extends Builder {
             // JSONSerializer serializer = new JSONSerializer();
             // need to parse the data we get back into struct
             //listener.getLogger().println("Called URL: '" + urlString +  "', got response: '" + response.toString() + "'");
-            if ( response.toString().isEmpty() ) {
-                listener.getLogger().println("Remote Jenkins server returned empty response to trigger.");
+
+            //Solving issue reported in this comment: https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/3#issuecomment-39369194
+            //Seems like in Jenkins version 1.547, when using "/build" (job API for non-parameterized jobs), it returns a string indicating the status.
+            //But in newer versions of Jenkins, it just returns an empty response.
+            //So we need to compensate and check for both.
+            if ( JSONUtils.mayBeJSON(response.toString()) == false) {
+                listener.getLogger().println("Remote Jenkins server returned empty response or invalid JSON - but we can still proceed with the remote build.");
                 return null;
             } else {
                 responseObject = (JSONObject) JSONSerializer.toJSON(response.toString());
