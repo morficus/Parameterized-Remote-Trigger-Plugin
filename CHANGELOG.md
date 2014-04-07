@@ -1,7 +1,8 @@
-#2.1.2 (March 29th, 2014)
+#2.1.2 (April 6th, 2014)
 ###Bug fixes:
 - fixing [JENKINS-22325](https://issues.jenkins-ci.org/browse/JENKINS-22325) - local job fails when not sending any parameters to remote job
 - fixing [JENKINS-21470](https://issues.jenkins-ci.org/browse/JENKINS-21470) - UI does not display that a build is using a file to get the parameter list
+- fixing [JENKINS-22493](https://issues.jenkins-ci.org/browse/JENKINS-22493) - 400 when remote job has default parameters and parameters are not explicitly list them.
 
 #2.1 (Feb 17th, 2014)
 ###New Feature/Enhancement:

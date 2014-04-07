@@ -368,21 +368,21 @@ public class RemoteBuildConfiguration extends Builder {
      *            Parameters for the remote job
      * @return fully formed, fully qualified remote trigger URL
      */
-    private String buildTriggerUrl(String job, String securityToken, Collection<String> params) {
+    private String buildTriggerUrl(String job, String securityToken, Collection<String> params, boolean isRemoteJobParameterized) {
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
         String triggerUrlString = remoteServer.getAddress().toString();
 
         // start building the proper URL based on known capabiltiies of the remote server
         if (remoteServer.getHasBuildTokenRootSupport()) {
             triggerUrlString += buildTokenRootUrl;
-            triggerUrlString += getBuildTypeUrl();
+            triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
 
             this.addToQueryString("job=" + this.encodeValue(job));
 
         } else {
             triggerUrlString += "/job/";
             triggerUrlString += this.encodeValue(job);
-            triggerUrlString += getBuildTypeUrl();
+            triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
         }
 
         // don't try to include a security token in the URL if none is provided
@@ -479,7 +479,8 @@ public class RemoteBuildConfiguration extends Builder {
 
         String securityToken = replaceToken(build, listener, this.getToken());
 
-        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, cleanedParams);
+        boolean isRemoteParameterized = isRemoteJobParameterized(jobName, build, listener);
+        String triggerUrlString = this.buildTriggerUrl(jobName, securityToken, cleanedParams, isRemoteParameterized);
 
         // Trigger remote job
         // print out some debugging information to the console
@@ -795,6 +796,10 @@ public class RemoteBuildConfiguration extends Builder {
         return this.parameterFile;
     }
 
+    /**
+     * Based on the number of parameters set (and only on params set), returns the proper URL string 
+     * @return A string which represents a portion of the build URL
+     */
     private String getBuildTypeUrl() {
         boolean isParameterized = (this.getParameters().length() > 0);
 
@@ -803,6 +808,57 @@ public class RemoteBuildConfiguration extends Builder {
         } else {
             return RemoteBuildConfiguration.normalBuildUrl;
         }
+    }
+    
+    /**
+     * Same as above, but takes in to consideration if the remote server has any default parameters set or not
+     * @param isRemoteJobParameterized Boolean indicating if the remote job is parameterized or not
+     * @return A string which represents a portion of the build URL
+     */
+    private String getBuildTypeUrl(boolean isRemoteJobParameterized) {
+        boolean isParameterized = false;
+        
+        if(isRemoteJobParameterized || (this.getParameters().length() > 0)) {
+            isParameterized = true;
+        }
+
+        if (isParameterized) {
+            return RemoteBuildConfiguration.paramerizedBuildUrl;
+        } else {
+            return RemoteBuildConfiguration.normalBuildUrl;
+        }
+    }
+    
+    /**
+     * Pokes the remote server to see if it has default parameters defined or not.
+     * 
+     * @param jobName Name of the remote job to test
+     * @param build Build object
+     * @param listener listner object
+     * @return true if the remote job has default parameters set, otherwise false
+     */
+    private boolean isRemoteJobParameterized(String jobName, AbstractBuild build, BuildListener listener) {
+        boolean isParameterized = false;
+        
+        //build the proper URL to inspect the remote job
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+        String remoteServerUrl = remoteServer.getAddress().toString();
+        remoteServerUrl += "/job/" + jobName;
+        remoteServerUrl += "/api/json";
+        
+        try {
+            JSONObject response = sendHTTPCall(remoteServerUrl, "GET", build, listener);
+
+            if(response.getJSONArray("actions").size() >= 1){
+                isParameterized = true;
+            }
+            
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+        return isParameterized;
     }
 
     public boolean getOverrideAuth() {
