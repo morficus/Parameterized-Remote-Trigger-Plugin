@@ -56,6 +56,7 @@ public class RemoteBuildConfiguration extends Builder {
 
     private final boolean         shouldNotFailBuild;
     private final int             pollInterval;
+    private final int             connectionRetryLimit = 5;
     private final boolean         preventRemoteBuildQueue;
     private final boolean         blockBuildUntilComplete;
 
@@ -654,10 +655,38 @@ public class RemoteBuildConfiguration extends Builder {
         return buildStatus;
     }
 
+    /**
+     * Orchestrates all calls to the remote server.
+     * Also takes care of any credentials or failed-connection retries.
+     * 
+     * @param urlString     the URL that needs to be called
+     * @param requestType   the type of request (GET, POST, etc)
+     * @param build         the build that is being triggered
+     * @param listener      build listener
+     * @return              a valid JSON object, or null
+     * @throws IOException
+     */
     public JSONObject sendHTTPCall(String urlString, String requestType, AbstractBuild build, BuildListener listener)
             throws IOException {
-        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+        
+            return sendHTTPCall( urlString, requestType, build, listener, 1 );
+    }
 
+    /**
+     * Same as sendHTTPCall, but keeps track of the number of failed connection attempts (aka: the number of times this
+     * method has been called).
+     * In the case of a failed connection, the method calls it self recursively and increments  numberOfAttempts
+     * 
+     * @see sendHTTPCall
+     * @param numberOfAttempts  number of time that the connection has been attempted
+     * @return
+     * @throws IOException
+     */
+    public JSONObject sendHTTPCall(String urlString, String requestType, AbstractBuild build, BuildListener listener, int numberOfAttempts)
+            throws IOException {
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+        int retryLimit = this.getConnectionRetryLimit();
+        
         if (remoteServer == null) {
             this.failBuild(new Exception("No remote host is defined for this job."), listener);
             return null;
@@ -693,6 +722,7 @@ public class RemoteBuildConfiguration extends Builder {
                 byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
                 connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
             }
+
         try {
             connection.setDoInput(true);
             connection.setRequestProperty("Accept", "application/json");
@@ -729,13 +759,29 @@ public class RemoteBuildConfiguration extends Builder {
             }
 
         } catch (IOException e) {
-            //If we get a 404 when trying to check a builds status (aka: called from "getBuildStatus") it just means that the build hasn't been queued up because there aren't any more executors available to call the remote server.
-            //So we basically pretend like the error didn't happen.
-            String callingMethod = Thread.currentThread().getStackTrace()[2].getMethodName();
-            if(connection.getResponseCode() == 404 && callingMethod == "getBuildStatus"){
-                return null;
+            
+            //If we have connectionRetryLimit set to > 0 then retry that many times.
+            if( numberOfAttempts <= retryLimit) {
+                listener.getLogger().println("Connection to remote server failed, waiting for to retry - " + this.pollInterval + " seconds until next attempt.");
+                
+                // Sleep for 'pollInterval' seconds.
+                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                try {
+                    // Could do with a better way of sleeping...
+                    Thread.sleep(this.pollInterval * 1000);
+                } catch (InterruptedException ex) {
+                    this.failBuild(ex, listener);
+                }
+
+ 
+                listener.getLogger().println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit );
+                numberOfAttempts++;
+                responseObject = sendHTTPCall(urlString, requestType, build, listener, numberOfAttempts);
+            }else if(numberOfAttempts > retryLimit){
+                //reached the maximum number of retries, time to fail
+                this.failBuild(new Exception("Max number of connection retries have been exeeded."), listener);
             }else{
-                //something failed with the connection, so throw an exception to mark the build as failed.
+                //something failed with the connection and we retried the max amount of times... so throw an exception to mark the build as failed.
                 this.failBuild(e, listener);
             }
             
@@ -795,6 +841,13 @@ public class RemoteBuildConfiguration extends Builder {
 
     public int getPollInterval() {
         return this.pollInterval;
+    }
+
+    /**
+     * @return the connectionRetryLimit
+     */
+    public int getConnectionRetryLimit() {
+        return connectionRetryLimit;
     }
 
     public String getToken() {
