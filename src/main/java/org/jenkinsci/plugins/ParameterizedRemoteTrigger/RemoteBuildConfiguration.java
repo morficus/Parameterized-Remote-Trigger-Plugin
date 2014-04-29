@@ -913,7 +913,7 @@ public class RemoteBuildConfiguration extends Builder {
         remoteServerUrl += "/api/json";
         
         try {
-            JSONObject response = sendHTTPCall(remoteServerUrl, "GET", build, listener);
+            JSONObject response = sendHTTPCall(encodeValue(remoteServerUrl), "GET", build, listener);
 
             if(response.getJSONArray("actions").size() >= 1){
                 isParameterized = true;
