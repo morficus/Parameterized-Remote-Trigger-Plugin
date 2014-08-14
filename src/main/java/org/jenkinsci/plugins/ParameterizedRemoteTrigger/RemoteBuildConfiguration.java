@@ -909,11 +909,11 @@ public class RemoteBuildConfiguration extends Builder {
         //build the proper URL to inspect the remote job
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
         String remoteServerUrl = remoteServer.getAddress().toString();
-        remoteServerUrl += "/job/" + jobName;
+        remoteServerUrl += "/job/" + encodeValue(jobName);
         remoteServerUrl += "/api/json";
         
         try {
-            JSONObject response = sendHTTPCall(encodeValue(remoteServerUrl), "GET", build, listener);
+            JSONObject response = sendHTTPCall(remoteServerUrl, "GET", build, listener);
 
             if(response.getJSONArray("actions").size() >= 1){
                 isParameterized = true;
