@@ -545,7 +545,7 @@ public class RemoteBuildConfiguration extends Builder {
         sendHTTPCall(triggerUrlString, "POST", build, listener);
         
         //Have to form the string ourselves, as we might not get a response from non-parameterized builds
-        String jobURL = remoteServerURL + "/job/" + this.encodeValue(job) + "/";
+        String jobURL = remoteServerURL + "/job/" + this.encodeValue(jobName) + "/";
 
         // This is only for Debug
         // This output whether there is another job running on the remote host that this job had conflicted with.
