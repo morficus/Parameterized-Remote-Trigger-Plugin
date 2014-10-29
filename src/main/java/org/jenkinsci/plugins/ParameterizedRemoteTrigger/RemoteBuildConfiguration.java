@@ -9,6 +9,7 @@ import hudson.util.CopyOnWriteList;
 import hudson.util.ListBoxModel;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Result;
 import hudson.model.AbstractProject;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
@@ -543,6 +544,7 @@ public class RemoteBuildConfiguration extends Builder {
 
         listener.getLogger().println("Triggering remote job now.");
         sendHTTPCall(triggerUrlString, "POST", build, listener);
+        BuildInfoExporterAction.addBuildInfoExporterAction(build, jobName, nextBuildNumber, Result.NOT_BUILT);
         
         //Have to form the string ourselves, as we might not get a response from non-parameterized builds
         String jobURL = remoteServerURL + "/job/" + this.encodeValue(job) + "/";
@@ -602,6 +604,7 @@ public class RemoteBuildConfiguration extends Builder {
                 }
             }
             listener.getLogger().println("Remote build finished with status " + buildStatusStr + ".");
+            BuildInfoExporterAction.addBuildInfoExporterAction(build, jobName, nextBuildNumber, Result.fromString(buildStatusStr));
 
             // If build did not finish with 'success' then fail build step.
             if (!buildStatusStr.equals("SUCCESS")) {
