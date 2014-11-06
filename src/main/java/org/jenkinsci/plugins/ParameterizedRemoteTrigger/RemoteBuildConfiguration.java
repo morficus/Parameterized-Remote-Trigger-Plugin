@@ -9,6 +9,7 @@ import hudson.util.CopyOnWriteList;
 import hudson.util.ListBoxModel;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Result;
 import hudson.model.AbstractProject;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
@@ -533,7 +534,6 @@ public class RemoteBuildConfiguration extends Builder {
         }
         
         int nextBuildNumber = queryResponseObject.getInt("nextBuildNumber");
-        listener.getLogger().println("This job is build #[" + Integer.toString(nextBuildNumber) + "] on the remote server.");
 
         if (this.getOverrideAuth()) {
             listener.getLogger().println(
@@ -543,6 +543,44 @@ public class RemoteBuildConfiguration extends Builder {
 
         listener.getLogger().println("Triggering remote job now.");
         sendHTTPCall(triggerUrlString, "POST", build, listener);
+        // Validate the build number via parameters
+        foundIt: for (int tries = 3; tries > 0; tries--) {
+            for (int buildNumber : new SearchPattern(nextBuildNumber, 2)) {
+                listener.getLogger().println("Checking parameters of #" + buildNumber);
+                String validateUrlString = this.buildGetUrl(jobName, securityToken) + "/" + buildNumber + "/api/json/";
+                JSONObject validateResponse = sendHTTPCall(validateUrlString, "GET", build, listener);
+                if (validateResponse == null) {
+                    listener.getLogger().println("Query failed.");
+                    continue;
+                }
+                JSONArray actions = validateResponse.getJSONArray("actions");
+                for (int i = 0; i < actions.size(); i++) {
+                    JSONObject action = actions.getJSONObject(i);
+                    if (!action.has("parameters")) continue;
+                    JSONArray parameters = action.getJSONArray("parameters");
+                    // Check if the parameters match
+                    if (compareParameters(listener, parameters, cleanedParams)) {
+                        // We now have a very high degree of confidence that this is the correct build.
+                        // It is still possible that this is a false positive if there are no parameters,
+                        // or multiple jobs use the same parameters.
+                        nextBuildNumber = buildNumber;
+                        break foundIt;
+                    }
+                    // This is the wrong build
+                    break;
+                }
+
+                // Sleep for 'pollInterval' seconds.
+                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                try {
+                    Thread.sleep(this.pollInterval * 1000);
+                } catch (InterruptedException e) {
+                    this.failBuild(e, listener);
+                }
+            }
+        }
+        listener.getLogger().println("This job is build #[" + Integer.toString(nextBuildNumber) + "] on the remote server.");
+        BuildInfoExporterAction.addBuildInfoExporterAction(build, jobName, nextBuildNumber, Result.NOT_BUILT);
         
         //Have to form the string ourselves, as we might not get a response from non-parameterized builds
         String jobURL = remoteServerURL + "/job/" + this.encodeValue(job) + "/";
@@ -602,6 +640,7 @@ public class RemoteBuildConfiguration extends Builder {
                 }
             }
             listener.getLogger().println("Remote build finished with status " + buildStatusStr + ".");
+            BuildInfoExporterAction.addBuildInfoExporterAction(build, jobName, nextBuildNumber, Result.fromString(buildStatusStr));
 
             // If build did not finish with 'success' then fail build step.
             if (!buildStatusStr.equals("SUCCESS")) {
@@ -613,6 +652,39 @@ public class RemoteBuildConfiguration extends Builder {
             listener.getLogger().println("Not blocking local job until remote job completes - fire and forget.");
         }
 
+        return true;
+    }
+
+    private String findParameter(String parameter, List<String> parameters) {
+        for (String search : parameters) {
+            if (search.startsWith(parameter + "=")) {
+                return search.substring(parameter.length() + 1);
+            }
+        }
+        return null;
+    }
+
+    private boolean compareParameters(BuildListener listener, JSONArray parameters, List<String> expectedParams) {
+        for (int j = 0; j < parameters.size(); j++) {
+            JSONObject parameter = parameters.getJSONObject(j);
+            String name = parameter.getString("name");
+            String value = parameter.getString("value");
+            String expected = findParameter(name, expectedParams);
+
+            if (expected == null) {
+                // If we didn't specify all of the parameters, this will happen, so we can not infer that this it he wrong build
+                listener.getLogger().println("Unable to find expected value for " + name);
+                continue;
+            }
+
+            // If we got the expected value, skip to the next parameter
+            if (expected.equals(value)) continue;
+
+            // We didn't get the expected value
+            listener.getLogger().println("Param " + name + " doesn't match!");
+            return false;
+        }
+        // All found parameters matched. This if there are no uniquely identifying parameters, this could still be a false positive.
         return true;
     }
 
@@ -909,11 +981,11 @@ public class RemoteBuildConfiguration extends Builder {
         //build the proper URL to inspect the remote job
         RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
         String remoteServerUrl = remoteServer.getAddress().toString();
-        remoteServerUrl += "/job/" + jobName;
+        remoteServerUrl += "/job/" + encodeValue(jobName);
         remoteServerUrl += "/api/json";
         
         try {
-            JSONObject response = sendHTTPCall(encodeValue(remoteServerUrl), "GET", build, listener);
+            JSONObject response = sendHTTPCall(remoteServerUrl, "GET", build, listener);
 
             if(response.getJSONArray("actions").size() >= 1){
                 isParameterized = true;
