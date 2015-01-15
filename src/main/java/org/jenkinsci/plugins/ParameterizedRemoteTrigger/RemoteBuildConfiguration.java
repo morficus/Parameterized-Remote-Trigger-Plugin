@@ -668,7 +668,6 @@ public class RemoteBuildConfiguration extends Builder {
         for (int j = 0; j < parameters.size(); j++) {
             JSONObject parameter = parameters.getJSONObject(j);
             String name = parameter.getString("name");
-            String value = parameter.getString("value");
             String expected = findParameter(name, expectedParams);
 
             if (expected == null) {
@@ -677,6 +676,7 @@ public class RemoteBuildConfiguration extends Builder {
                 continue;
             }
 
+            String value = parameter.getString("value");
             // If we got the expected value, skip to the next parameter
             if (expected.equals(value)) continue;
 
