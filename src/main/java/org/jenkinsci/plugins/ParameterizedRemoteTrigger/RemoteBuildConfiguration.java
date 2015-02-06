@@ -28,6 +28,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -803,7 +804,13 @@ public class RemoteBuildConfiguration extends Builder {
             connection.setConnectTimeout(5000);
             connection.connect();
             
-            InputStream is = connection.getInputStream();
+            InputStream is;
+            try {
+                is = connection.getInputStream();
+            } catch (FileNotFoundException e) {
+                // In case of a e.g. 404 status
+                is = connection.getErrorStream();
+            }
             
             BufferedReader rd = new BufferedReader(new InputStreamReader(is));
             String line;
@@ -1048,7 +1055,7 @@ public class RemoteBuildConfiguration extends Builder {
          * 
          * <p>
          * If you don't want fields to be persisted, use <tt>transient</tt>.
-         */
+v         */
         private CopyOnWriteList<RemoteJenkinsServer> remoteSites = new CopyOnWriteList<RemoteJenkinsServer>();
 
         /**
@@ -1106,6 +1113,10 @@ public class RemoteBuildConfiguration extends Builder {
         public RemoteJenkinsServer[] getRemoteSites() {
 
             return remoteSites.toArray(new RemoteJenkinsServer[this.remoteSites.size()]);
+        }
+
+        public void setRemoteSites(RemoteJenkinsServer... remoteSites) {
+            this.remoteSites.replaceBy(remoteSites);
         }
     }
 }
