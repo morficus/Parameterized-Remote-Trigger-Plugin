@@ -643,6 +643,15 @@ public class RemoteBuildConfiguration extends Builder {
             listener.getLogger().println("Remote build finished with status " + buildStatusStr + ".");
             BuildInfoExporterAction.addBuildInfoExporterAction(build, jobName, nextBuildNumber, Result.fromString(buildStatusStr));
 
+            String buildUrl = getBuildUrl(jobLocation, build, listener);
+            String consoleOutput = getConsoleOutput(buildUrl, "GET", build, listener);
+
+            listener.getLogger().println();
+            listener.getLogger().println("Console output of remote job:");
+            listener.getLogger().println("--------------------------------------------------------------------------------");
+            listener.getLogger().println(consoleOutput);
+            listener.getLogger().println("--------------------------------------------------------------------------------");
+
             // If build did not finish with 'success' then fail build step.
             if (!buildStatusStr.equals("SUCCESS")) {
                 // failBuild will check if the 'shouldNotFailBuild' parameter is set or not, so will decide how to
@@ -728,6 +737,45 @@ public class RemoteBuildConfiguration extends Builder {
         return buildStatus;
     }
 
+    public String getBuildUrl(String buildUrlString, AbstractBuild build, BuildListener listener) throws IOException {
+        String buildUrl = "";
+
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+
+        if (remoteServer == null) {
+            this.failBuild(new Exception("No remote host is defined for this job."), listener);
+            return null;
+        }
+
+        // print out some debugging information to the console
+        //listener.getLogger().println("Checking Status of this job: " + buildUrlString);
+        if (this.getOverrideAuth()) {
+            listener.getLogger().println(
+                    "Using job-level defined credentails in place of those from remote Jenkins config ["
+                            + this.getRemoteJenkinsName() + "]");
+        }
+
+        JSONObject responseObject = sendHTTPCall(buildUrlString, "GET", build, listener);
+
+        // get the next build from the location
+
+        if (responseObject != null && responseObject.getString("url") != null) {
+            buildUrl = responseObject.getString("url");
+        } else {
+            // Add additional else to check for unhandled conditions
+            listener.getLogger().println("WARNING: URL not found in JSON Response!");
+            return null;
+        }
+
+        return buildUrl;
+    }
+
+    public String getConsoleOutput(String urlString, String requestType, AbstractBuild build, BuildListener listener)
+            throws IOException {
+        
+            return getConsoleOutput( urlString, requestType, build, listener, 1 );
+    }
+
     /**
      * Orchestrates all calls to the remote server.
      * Also takes care of any credentials or failed-connection retries.
@@ -743,6 +791,117 @@ public class RemoteBuildConfiguration extends Builder {
             throws IOException {
         
             return sendHTTPCall( urlString, requestType, build, listener, 1 );
+    }
+
+    public String getConsoleOutput(String urlString, String requestType, AbstractBuild build, BuildListener listener, int numberOfAttempts)
+            throws IOException {
+        RemoteJenkinsServer remoteServer = this.findRemoteHost(this.getRemoteJenkinsName());
+        int retryLimit = this.getConnectionRetryLimit();
+        
+        if (remoteServer == null) {
+            this.failBuild(new Exception("No remote host is defined for this job."), listener);
+            return null;
+        }
+
+        HttpURLConnection connection = null;
+
+        String consoleOutput = null;
+
+        URL buildUrl = new URL(urlString+"consoleText");
+        connection = (HttpURLConnection) buildUrl.openConnection();
+
+        // if there is a username + apiToken defined for this remote host, then use it
+        String usernameTokenConcat;
+
+        if (this.getOverrideAuth()) {
+            usernameTokenConcat = this.getAuth()[0].getUsername() + ":" + this.getAuth()[0].getPassword();
+        } else {
+            usernameTokenConcat = remoteServer.getAuth()[0].getUsername() + ":"
+                    + remoteServer.getAuth()[0].getPassword();
+        }
+
+        if (!usernameTokenConcat.equals(":")) {
+            // token-macro replacment
+            try {
+                usernameTokenConcat = TokenMacro.expandAll(build, listener, usernameTokenConcat);
+            } catch (MacroEvaluationException e) {
+                this.failBuild(e, listener);
+            } catch (InterruptedException e) {
+                this.failBuild(e, listener);
+            }
+
+            byte[] encodedAuthKey = Base64.encodeBase64(usernameTokenConcat.getBytes());
+            connection.setRequestProperty("Authorization", "Basic " + new String(encodedAuthKey));
+        }
+
+        try {
+            connection.setDoInput(true);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestMethod(requestType);
+            // wait up to 5 seconds for the connection to be open
+            connection.setConnectTimeout(5000);
+            connection.connect();
+            
+            InputStream is;
+            try {
+                is = connection.getInputStream();
+            } catch (FileNotFoundException e) {
+                // In case of a e.g. 404 status
+                is = connection.getErrorStream();
+            }
+            
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            String line;
+            // String response = "";
+            StringBuilder response = new StringBuilder();
+        
+            while ((line = rd.readLine()) != null) {
+                response.append(line+"\n");
+            }
+            rd.close();
+            
+
+            consoleOutput = response.toString();
+        } catch (IOException e) {
+            
+            //If we have connectionRetryLimit set to > 0 then retry that many times.
+            if( numberOfAttempts <= retryLimit) {
+                listener.getLogger().println("Connection to remote server failed, waiting for to retry - " + this.pollInterval + " seconds until next attempt.");
+                e.printStackTrace();
+                
+                // Sleep for 'pollInterval' seconds.
+                // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
+                try {
+                    // Could do with a better way of sleeping...
+                    Thread.sleep(this.pollInterval * 1000);
+                } catch (InterruptedException ex) {
+                    this.failBuild(ex, listener);
+                }
+
+ 
+                listener.getLogger().println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit );
+                numberOfAttempts++;
+                consoleOutput = getConsoleOutput(urlString, requestType, build, listener, numberOfAttempts);
+            } else if(numberOfAttempts > retryLimit){
+                //reached the maximum number of retries, time to fail
+                this.failBuild(new Exception("Max number of connection retries have been exeeded."), listener);
+            } else{
+                //something failed with the connection and we retried the max amount of times... so throw an exception to mark the build as failed.
+                this.failBuild(e, listener);
+            }
+            
+        } finally {
+            // always make sure we close the connection
+            if (connection != null) {
+                connection.disconnect();
+            }
+            // and always clear the query string and remove some "global" values
+            this.clearQueryString();
+            // this.build = null;
+            // this.listener = null;
+
+        }
+        return consoleOutput;
     }
 
     /**
@@ -842,6 +1001,7 @@ public class RemoteBuildConfiguration extends Builder {
             //If we have connectionRetryLimit set to > 0 then retry that many times.
             if( numberOfAttempts <= retryLimit) {
                 listener.getLogger().println("Connection to remote server failed, waiting for to retry - " + this.pollInterval + " seconds until next attempt.");
+                e.printStackTrace();
                 
                 // Sleep for 'pollInterval' seconds.
                 // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
