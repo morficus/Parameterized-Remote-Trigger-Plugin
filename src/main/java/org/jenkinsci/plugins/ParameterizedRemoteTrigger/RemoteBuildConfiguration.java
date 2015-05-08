@@ -838,7 +838,7 @@ public class RemoteBuildConfiguration extends Builder {
             }
 
         } catch (IOException e) {
-            
+            listener.getLogger().println(e.getMessage());
             //If we have connectionRetryLimit set to > 0 then retry that many times.
             if( numberOfAttempts <= retryLimit) {
                 listener.getLogger().println("Connection to remote server failed, waiting for to retry - " + this.pollInterval + " seconds until next attempt.");
