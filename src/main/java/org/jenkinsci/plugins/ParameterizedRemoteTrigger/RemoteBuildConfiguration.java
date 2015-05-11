@@ -61,6 +61,7 @@ public class RemoteBuildConfiguration extends Builder {
     private final int             connectionRetryLimit = 5;
     private final boolean         preventRemoteBuildQueue;
     private final boolean         blockBuildUntilComplete;
+    private final boolean         enhancedLogging;
 
     // "parameters" is the raw string entered by the user
     private final String          parameters;
@@ -83,7 +84,7 @@ public class RemoteBuildConfiguration extends Builder {
 
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
-            String parameters, JSONObject overrideAuth, JSONObject loadParamsFromFile, boolean preventRemoteBuildQueue,
+            String parameters, boolean enhancedLogging, JSONObject overrideAuth, JSONObject loadParamsFromFile, boolean preventRemoteBuildQueue,
             boolean blockBuildUntilComplete, int pollInterval) throws MalformedURLException {
 
         this.token = token.trim();
@@ -94,6 +95,7 @@ public class RemoteBuildConfiguration extends Builder {
         this.preventRemoteBuildQueue = preventRemoteBuildQueue;
         this.blockBuildUntilComplete = blockBuildUntilComplete;
         this.pollInterval = pollInterval;
+        this.enhancedLogging = enhancedLogging;
 
         if (overrideAuth != null && overrideAuth.has("auth")) {
             this.overrideAuth = true;
@@ -125,11 +127,12 @@ public class RemoteBuildConfiguration extends Builder {
 
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild,
             boolean preventRemoteBuildQueue, boolean blockBuildUntilComplete, int pollInterval, String job,
-            String token, String parameters) throws MalformedURLException {
+            String token, String parameters, boolean enhancedLogging) throws MalformedURLException {
 
         this.token = token.trim();
         this.remoteJenkinsName = remoteJenkinsName;
         this.parameters = parameters;
+        this.enhancedLogging = enhancedLogging;
         this.job = job.trim();
         this.shouldNotFailBuild = shouldNotFailBuild;
         this.preventRemoteBuildQueue = preventRemoteBuildQueue;
@@ -643,14 +646,16 @@ public class RemoteBuildConfiguration extends Builder {
             listener.getLogger().println("Remote build finished with status " + buildStatusStr + ".");
             BuildInfoExporterAction.addBuildInfoExporterAction(build, jobName, nextBuildNumber, Result.fromString(buildStatusStr));
 
-            String buildUrl = getBuildUrl(jobLocation, build, listener);
-            String consoleOutput = getConsoleOutput(buildUrl, "GET", build, listener);
+            if (this.getEnhancedLogging()) {
+                String buildUrl = getBuildUrl(jobLocation, build, listener);
+                String consoleOutput = getConsoleOutput(buildUrl, "GET", build, listener);
 
-            listener.getLogger().println();
-            listener.getLogger().println("Console output of remote job:");
-            listener.getLogger().println("--------------------------------------------------------------------------------");
-            listener.getLogger().println(consoleOutput);
-            listener.getLogger().println("--------------------------------------------------------------------------------");
+                listener.getLogger().println();
+                listener.getLogger().println("Console output of remote job:");
+                listener.getLogger().println("--------------------------------------------------------------------------------");
+                listener.getLogger().println(consoleOutput);
+                listener.getLogger().println("--------------------------------------------------------------------------------");
+            }
 
             // If build did not finish with 'success' then fail build step.
             if (!buildStatusStr.equals("SUCCESS")) {
@@ -1068,6 +1073,10 @@ public class RemoteBuildConfiguration extends Builder {
 
     public boolean getShouldNotFailBuild() {
         return this.shouldNotFailBuild;
+    }
+
+    public boolean getEnhancedLogging() {
+        return this.enhancedLogging;
     }
 
     public boolean getPreventRemoteBuildQueue() {
