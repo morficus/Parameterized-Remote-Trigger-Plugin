@@ -89,7 +89,6 @@ public class RemoteBuildConfiguration extends Builder {
 
         this.token = token.trim();
         this.remoteJenkinsName = remoteJenkinsName;
-        this.parameters = parameters;
         this.job = job.trim();
         this.shouldNotFailBuild = shouldNotFailBuild;
         this.preventRemoteBuildQueue = preventRemoteBuildQueue;
@@ -115,6 +114,7 @@ public class RemoteBuildConfiguration extends Builder {
             }
         } else {
             this.loadParamsFromFile = false;
+            this.parameters = parameters;
         }
 
         // TODO: clean this up a bit
