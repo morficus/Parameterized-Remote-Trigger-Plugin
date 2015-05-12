@@ -108,6 +108,7 @@ public class RemoteBuildConfiguration extends Builder {
         if (loadParamsFromFile != null && loadParamsFromFile.has("parameterFile")) {
             this.loadParamsFromFile = true;
             this.parameterFile = loadParamsFromFile.getString("parameterFile");
+            this.parameters = "";
             //manually add a leading-slash if we don't have one
             if( this.parameterFile.charAt(0) != '/' ){
                 this.parameterFile = "/" + this.parameterFile;
