@@ -12,20 +12,20 @@ This plugin also has support for build authorization tokens (as defined [here](h
 - [Credentials Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin)
 - [Token Macro Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Token+Macro+Plugin)
 
-Please take a look at the [change log](https://github.com/morficus/Parameterized-Remote-Trigger-Plugin/blob/master/CHANGELOG.md) for a complete list of features and what not.
+Please take a look at the [change log](CHANGELOG.md) for a complete list of features and what not.
 
 
 ###Screenshots
 System configuration option
 
-![System onfiguration option](https://raw.github.com/morficus/Parameterized-Remote-Trigger-Plugin/master/screenshots/1-system-settings.png)
+![System onfiguration option](screenshots/1-system-settings.png)
 
 
 Job setup options
 
-![select from drop-down](https://raw.github.com/morficus/Parameterized-Remote-Trigger-Plugin/master/screenshots/2-build-configuration-1.png)
+![select from drop-down](screenshots/2-build-configuration-1.png)
 
-![Job setup options](https://raw.github.com/morficus/Parameterized-Remote-Trigger-Plugin/master/screenshots/3-build-configuration-2.png)
+![Job setup options](screenshots/3-build-configuration-2.png)
 
 
 ####Current Limitations
