@@ -1,9 +1,9 @@
-#2.1.4 (May 12th, 2015)
+#2.2.0 (May 12th, 2015)
 ###New Feature/Enhancement:
 - Ability to debug connection errors with (optional) enhanced console output ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/9)) 
 
 ###Bug fixes:
-- fing [JENKINS-23748](https://issues.jenkins-ci.org/browse/JENKINS-23748) - Better error handleing for console output and logs to display info about the failure ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/10))
+- fixing [JENKINS-23748](https://issues.jenkins-ci.org/browse/JENKINS-23748) - Better error handleing for console output and logs to display info about the failure ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/10))
 - Don't fail build on 404 ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/8))
 - Fixed unhandled NPE ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/7))
 - Hand-full of other bugs ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/5/commits)):
