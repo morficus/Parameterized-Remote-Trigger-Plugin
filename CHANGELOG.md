@@ -1,3 +1,11 @@
+#2.2.2 (Aug 16th, 2015)
+### Misc:
+- require Jenkins 1.580+
+
+###Bug fixes:
+- 2.2.0 didn't make it to the update center
+
+
 #2.2.0 (May 12th, 2015)
 ###New Feature/Enhancement:
 - Ability to debug connection errors with (optional) enhanced console output ([pull request](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/9)) 
