@@ -1055,6 +1055,9 @@ public class RemoteBuildConfiguration extends Builder {
 
         try {
             cleanValue = URLEncoder.encode(dirtyValue, "UTF-8").replace("+", "%20");
+
+            // jobs might be defined in folders and referenced as {host}/job/[job-name-containing-folder-and-slash]
+            cleanValue = cleanValue.replace("%2F", "/");
         } catch (UnsupportedEncodingException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
