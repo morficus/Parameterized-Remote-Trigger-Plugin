@@ -804,7 +804,6 @@ public class RemoteBuildConfiguration extends Builder {
      */
     public JSONObject sendHTTPCall(String urlString, String requestType, AbstractBuild build, BuildListener listener)
             throws IOException {
-        	//listener.getLogger().println("Inside sendHTTPCall");
             return sendHTTPCall( urlString, requestType, build, listener, 1 );
     }
 
@@ -1173,7 +1172,7 @@ public class RemoteBuildConfiguration extends Builder {
         try {
 			
             JSONObject response = sendHTTPCall(remoteServerUrl, "GET", build, listener);
-			System.out.println(remoteServerUrl);
+			
             if(response.getJSONArray("actions").size() >= 1){
                 isParameterized = true;
             }
