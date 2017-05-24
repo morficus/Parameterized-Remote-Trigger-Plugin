@@ -108,10 +108,6 @@ public class RemoteBuildConfiguration extends Builder {
             this.loadParamsFromFile = true;
             this.parameterFile = loadParamsFromFile.getString("parameterFile");
             this.parameters = "";
-            //manually add a leading-slash if we don't have one
-            if( this.parameterFile.charAt(0) != '/' ){
-                this.parameterFile = "/" + this.parameterFile;
-            }
         } else {
             this.loadParamsFromFile = false;
             this.parameters = parameters;
@@ -159,14 +155,25 @@ public class RemoteBuildConfiguration extends Builder {
      * @param build
      * @return List<String> of build parameters
      */
-    private List<String> loadExternalParameterFile(AbstractBuild<?, ?> build) {
+    private List<String> loadExternalParameterFile(AbstractBuild<?, ?> build, BuildListener listener) {
 
         FilePath workspace = build.getWorkspace();
         BufferedReader br = null;
         List<String> ParameterList = new ArrayList<String>();
         try {
+            // If parameterFile is token, we need convert it.
+            // Doesn't modify this.parameterFile because that will modify job configuration string concurrently
+            String tokenizeParameterFile = replaceToken(build, listener, this.parameterFile);
+            if( tokenizeParameterFile.charAt(0) != '/' && !tokenizeParameterFile.startsWith("\\")){
+                tokenizeParameterFile = "/" + tokenizeParameterFile;
+            }
 
-            String filePath = workspace + this.getParameterFile();
+            String filePath = workspace + tokenizeParameterFile;
+            // If file path is NFS, we should use original path
+            if(tokenizeParameterFile.startsWith("\\")){
+                filePath = tokenizeParameterFile;
+            }
+
             String sCurrentLine;
             String fileContent = "";
 
@@ -474,7 +481,7 @@ public class RemoteBuildConfiguration extends Builder {
         List<String> cleanedParams = null;
 
         if (this.getLoadParamsFromFile()) {
-            cleanedParams = loadExternalParameterFile(build);
+            cleanedParams = loadExternalParameterFile(build, listener);
         } else {
             // tokenize all variables and encode all variables, then build the fully-qualified trigger URL
             cleanedParams = getCleanedParameters();
