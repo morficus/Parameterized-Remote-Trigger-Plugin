@@ -1,19 +1,23 @@
-package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
+package org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob;
 
-import hudson.EnvVars;
-import hudson.model.EnvironmentContributingAction;
-import hudson.model.Result;
-import hudson.model.AbstractBuild;
-
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-class BuildInfoExporterAction implements EnvironmentContributingAction {
+import javax.annotation.Nonnull;
+
+import hudson.EnvVars;
+import hudson.model.AbstractBuild;
+import hudson.model.EnvironmentContributingAction;
+import hudson.model.Run;
+
+public class BuildInfoExporterAction implements EnvironmentContributingAction {
 
     public static final String JOB_NAME_VARIABLE = "LAST_TRIGGERED_JOB_NAME";
     public static final String ALL_JOBS_NAME_VARIABLE = "TRIGGERED_JOB_NAMES";
+    public static final String BUILD_URL_VARIABLE_PREFIX = "TRIGGERED_BUILD_URL_";
     public static final String BUILD_NUMBER_VARIABLE_PREFIX = "TRIGGERED_BUILD_NUMBER_";
     public static final String ALL_BUILD_NUMBER_VARIABLE_PREFIX = "TRIGGERED_BUILD_NUMBERS_";
     public static final String BUILD_RESULT_VARIABLE_PREFIX = "TRIGGERED_BUILD_RESULT_";
@@ -22,39 +26,69 @@ class BuildInfoExporterAction implements EnvironmentContributingAction {
 
     private List<BuildReference> builds;
 
-    public BuildInfoExporterAction(AbstractBuild<?, ?> parentBuild, BuildReference buildRef) {
+    public BuildInfoExporterAction(Run<?, ?> parentBuild, BuildReference buildRef) {
         super();
 
         this.builds = new ArrayList<BuildReference>();
-        this.builds.add(buildRef);
+        addBuildReferenceSafe(buildRef);
     }
 
-    static BuildInfoExporterAction addBuildInfoExporterAction(AbstractBuild<?, ?> parentBuild, String triggeredProject, int buildNumber, Result buildResult) {
-        BuildReference reference = new BuildReference(triggeredProject, buildNumber, buildResult);
+    public static BuildInfoExporterAction addBuildInfoExporterAction(@Nonnull Run<?, ?> parentBuild, String triggeredProjectName, int buildNumber, URL jobURL, BuildStatus buildResult) {
+        BuildReference reference = new BuildReference(triggeredProjectName, buildNumber, jobURL, buildResult);
 
         BuildInfoExporterAction action = parentBuild.getAction(BuildInfoExporterAction.class);
         if (action == null) {
             action = new BuildInfoExporterAction(parentBuild, reference);
-            parentBuild.getActions().add(action);
+            parentBuild.addAction(action);
         } else {
             action.addBuildReference(reference);
         }
         return action;
     }
 
+    /**
+     * Prevents duplicate build refs. The latest BuildReference wins (to reflect the latest Result).
+     */
+    private void addBuildReferenceSafe(BuildReference buildRef)
+    {
+        removeDuplicates(builds, buildRef);
+        builds.add(buildRef);
+    }
+
+    /**
+     * Finds and removes duplicates of <code>buildRef</code> in the <code>buildRefList</code> based on the <code>projectName</code> and <code>buildNumber</code> (only).
+     * @return true if duplicates found and removed, false if nothing found
+     */
+    private boolean removeDuplicates(List<BuildReference> buildRefList, BuildReference buildRef) {
+        List<BuildReference> duplicates = new ArrayList<BuildReference>();
+        for(BuildReference build : buildRefList) {
+            if(build.projectName.equals(buildRef.projectName) && build.buildNumber == buildRef.buildNumber) {
+                duplicates.add(build);
+            }
+        }
+        if(duplicates.size() > 0) {
+            buildRefList.removeAll(duplicates);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public void addBuildReference(BuildReference buildRef) {
-        this.builds.add(buildRef);
+        addBuildReferenceSafe(buildRef);
     }
 
     public static class BuildReference {
         public final String projectName;
         public final int buildNumber;
-        public final Result buildResult;
+        public final BuildStatus buildResult;
+        public final URL jobURL;
 
-        public BuildReference(String projectName, int buildNumber, Result buildResult) {
+        public BuildReference(String projectName, int buildNumber, URL jobURL, BuildStatus buildResult) {
             this.projectName = projectName;
             this.buildNumber = buildNumber;
             this.buildResult = buildResult;
+            this.jobURL = jobURL;
         }
     }
 
@@ -75,14 +109,14 @@ class BuildInfoExporterAction implements EnvironmentContributingAction {
 
     public void buildEnvVars(AbstractBuild<?, ?> build, EnvVars env) {
         for (String project : getProjectsWithBuilds()) {
-            String sanatizedBuildName = project.replaceAll("[^a-zA-Z0-9]+", "_");
+            String sanatizedProjectName = sanitizeProjectName(project);
             List<BuildReference> refs = getBuildRefs(project);
 
-            env.put(ALL_BUILD_NUMBER_VARIABLE_PREFIX + sanatizedBuildName, getBuildNumbersString(refs, ","));
-            env.put(BUILD_RUN_COUNT_PREFIX + sanatizedBuildName, Integer.toString(refs.size()));
+            env.put(ALL_BUILD_NUMBER_VARIABLE_PREFIX + sanatizedProjectName, getBuildNumbersString(refs, ","));
+            env.put(BUILD_RUN_COUNT_PREFIX + sanatizedProjectName, Integer.toString(refs.size()));
             for (BuildReference br : refs) {
                 if (br.buildNumber != 0) {
-                    String tiggeredBuildRunResultKey = BUILD_RESULT_VARIABLE_PREFIX + sanatizedBuildName + RUN + Integer.toString(br.buildNumber);
+                    String tiggeredBuildRunResultKey = BUILD_RESULT_VARIABLE_PREFIX + sanatizedProjectName + RUN + Integer.toString(br.buildNumber);
                     env.put(tiggeredBuildRunResultKey, br.buildResult.toString());
                 }
             }
@@ -94,10 +128,18 @@ class BuildInfoExporterAction implements EnvironmentContributingAction {
                 }
             }
             if (lastBuild != null) {
-                env.put(BUILD_NUMBER_VARIABLE_PREFIX + sanatizedBuildName, Integer.toString(lastBuild.buildNumber));
-                env.put(BUILD_RESULT_VARIABLE_PREFIX + sanatizedBuildName, lastBuild.buildResult.toString());
+                env.put(JOB_NAME_VARIABLE, lastBuild.projectName);
+                env.put(BUILD_NUMBER_VARIABLE_PREFIX + sanatizedProjectName, Integer.toString(lastBuild.buildNumber));
+                env.put(BUILD_URL_VARIABLE_PREFIX + sanatizedProjectName, lastBuild.jobURL.toString());
+                env.put(BUILD_RESULT_VARIABLE_PREFIX + sanatizedProjectName, lastBuild.buildResult.toString());
             }
         }
+    }
+
+    public static String sanitizeProjectName(String project)
+    {
+        if(project == null) return null;
+        return project.replaceAll("[^a-zA-Z0-9]+", "_");
     }
 
     private List<BuildReference> getBuildRefs(String project) {
@@ -134,15 +176,18 @@ class BuildInfoExporterAction implements EnvironmentContributingAction {
     }
 
     /**
-     * Gets the unique set of project names that have a linked build.
+     * Gets the unique set of project names that have a linked build.<br>
+     * The later triggered jobs are later in the list. E.g.<br>
+     * C, A, B -> C, A, B <br>
+     * C, A, B, A, C -> B, A, C <br> 
      *
      * @return Set of project names that have at least one build linked.
      */
     private Set<String> getProjectsWithBuilds() {
-        Set<String> projects = new HashSet<String>();
-
+        Set<String> projects = new LinkedHashSet<String>();
         for (BuildReference br : this.builds) {
             if (br.buildNumber != 0) {
+                if(projects.contains(br.projectName)) projects.remove(br.projectName); //Move to the end
                 projects.add(br.projectName);
             }
         }

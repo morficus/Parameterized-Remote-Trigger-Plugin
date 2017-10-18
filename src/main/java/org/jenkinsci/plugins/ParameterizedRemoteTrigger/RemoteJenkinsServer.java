@@ -1,23 +1,23 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import static org.apache.commons.lang.StringUtils.trimToEmpty;
+
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 
-import net.sf.json.JSONObject;
-
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
-import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
 
 /**
  * Holds everything regarding the remote server we wish to connect to, including validations and what not.
@@ -27,37 +27,47 @@ import hudson.util.ListBoxModel;
  */
 public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> {
 
-    private final URL             address;
-    private final String          displayName;
-    private final boolean         hasBuildTokenRootSupport;
-    private final String          username;
-    private final String          apiToken;
+    /**
+     * We need to keep this for compatibility - old config deserialization!
+     * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
+     */
+    private List<Auth> auth;
 
-    private CopyOnWriteList<Auth> auth = new CopyOnWriteList<Auth>();
+    private String     displayName;
+    private boolean    hasBuildTokenRootSupport;
+    private Auth2      auth2;
+    private URL        address;
 
     @DataBoundConstructor
-    public RemoteJenkinsServer(String address, String displayName, boolean hasBuildTokenRootSupport, JSONObject auth)
-            throws MalformedURLException {
+    public RemoteJenkinsServer() {
+        this.auth2 = new NoneAuth();
+    }
 
-        this.address = new URL(address);
-        this.displayName = displayName.trim();
+    @DataBoundSetter
+    public void setDisplayName(String displayName)
+    {
+        this.displayName = trimToEmpty(displayName);
+    }
+
+    @DataBoundSetter
+    public void setHasBuildTokenRootSupport(boolean hasBuildTokenRootSupport)
+    {
         this.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
-
-        // Holding on to both of these variables for legacy purposes. The seemingly 'dirty' getters for these properties
-        // are for the same reason.
-        this.username = "";
-        this.apiToken = "";
-
-        // this.auth = new Auth(auth);
-        this.auth.replaceBy(new Auth(auth));
-
     }
 
+    @DataBoundSetter
+    public void setAuth2(Auth2 auth2)
+    {
+        this.auth2 = (auth2 != null) ? auth2 : new NoneAuth();
+    }
+
+    @DataBoundSetter
+    public void setAddress(String address) throws MalformedURLException
+    {
+        this.address = new URL(address);
+    }
+    
     // Getters
-
-    public Auth[] getAuth() {
-        return auth.toArray(new Auth[this.auth.size()]);
-    }
 
     public String getDisplayName() {
         String displayName = null;
@@ -70,12 +80,32 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return displayName;
     }
 
-    public URL getAddress() {
-        return address;
+    public boolean getHasBuildTokenRootSupport() {
+        return hasBuildTokenRootSupport;
+    }
+    
+    public Auth2 getAuth2() {
+        migrateAuthToAuth2();
+        return auth2;
     }
 
-    public boolean getHasBuildTokenRootSupport() {
-        return this.hasBuildTokenRootSupport;
+    /**
+     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary. 
+     * @deprecated since 2.3.0-SNAPSHOT - get rid once all users migrated
+     */
+    private void migrateAuthToAuth2() {
+        if(auth2 == null) {
+            if(auth == null || auth.size() <= 0) {
+                auth2 = new NoneAuth(); 
+            } else {
+                auth2 = Auth.authToAuth2(auth);
+            }
+        }
+        auth = null;
+    }
+
+    public URL getAddress() {
+        return address;
     }
 
     @Override
@@ -86,33 +116,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @Extension
     public static class DescriptorImpl extends Descriptor<RemoteJenkinsServer> {
 
-        private JSONObject authenticationMode;
-
-        /**
-         * In order to load the persisted global configuration, you have to call load() in the constructor.
-         */
-        /*
-         * public DescriptorImpl() { load(); }
-         */
-
         public String getDisplayName() {
             return "";
-        }
-
-        public ListBoxModel doFillCredsItems() {
-            // StandardUsernameListBoxModel model = new StandardUsernameListBoxModel();
-
-            // Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
-            // model.withAll(CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, item, ACL.SYSTEM,
-            // Collections.<DomainRequirement>emptyList()));
-
-            return Auth.DescriptorImpl.doFillCredsItems();
-
-            // return model;
-        }
-
-        public JSONObject doFillAuthenticationMode() {
-            return this.authenticationMode.getJSONObject("authenticationType");
         }
 
         /**
@@ -134,7 +139,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
             // check if we have a valid, well-formed URL
             try {
                 host = new URL(address);
-                URI uri = host.toURI();
+                host.toURI();
             } catch (Exception e) {
                 return FormValidation.error("Malformed address (" + address + "), please double-check it.");
             }
@@ -150,6 +155,13 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
             return FormValidation.okWithMarkup("Address looks good");
         }
-    }
 
+        public static List<Auth2Descriptor> getAuth2Descriptors() {
+            return Auth2.all();
+        }
+
+        public static Auth2Descriptor getDefaultAuth2Descriptor() {
+            return NoneAuth.DESCRIPTOR;
+        }
+    }
 }
