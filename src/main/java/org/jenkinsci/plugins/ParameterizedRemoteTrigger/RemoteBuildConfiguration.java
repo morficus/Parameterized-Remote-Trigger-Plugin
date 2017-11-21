@@ -1158,6 +1158,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new UnauthorizedException(crumbProviderUrl);
             } else if(responseCode == 403) {
                 throw new ForbiddenException(crumbProviderUrl);
+            } else if(responseCode == 404) {
+                return null;
             } else {
                 String response = readInputStream(connection);
                 String[] split = response.split(":");
