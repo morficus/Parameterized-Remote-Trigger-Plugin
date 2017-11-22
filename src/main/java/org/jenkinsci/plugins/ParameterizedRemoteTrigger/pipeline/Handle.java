@@ -306,18 +306,10 @@ public class Handle implements Serializable {
 
     @Whitelisted
     @Override
-    public String toString()
-    {
+    public String toString() {
+
         StringBuilder sb = new StringBuilder(); 
-        
-        String remoteServerURL;
-        try {
-            remoteServerURL = remoteBuildConfiguration.findEffectiveRemoteHost(null).getAddress().toString();
-        }
-        catch (IOException e) {
-            remoteServerURL = e.getMessage();
-        }
-        
+        String remoteServerURL = remoteBuildConfiguration.getRemoteServer().getAddress().toString();
         sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), remoteServerURL, queueId));
         if(buildStatus != null) sb.append(String.format(", buildStatus=%s", buildStatus));
         if(buildData != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildData.getBuildNumber(), buildData.getURL()));
