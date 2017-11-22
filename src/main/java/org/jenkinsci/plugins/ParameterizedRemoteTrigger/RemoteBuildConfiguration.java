@@ -1159,14 +1159,18 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             } else if(responseCode == 403) {
                 throw new ForbiddenException(crumbProviderUrl);
             } else if(responseCode == 404) {
+                context.logger.println("CSRF protection is disabled on the remote server.");
                 return null;
-            } else {
+            } else if(responseCode == 200){
+                context.logger.println("CSRF protection is enabled on the remote server.");
                 String response = readInputStream(connection);
                 String[] split = response.split(":");
                 return new JenkinsCrumb(split[0], split[1]);
+            } else {
+                throw new RuntimeException(String.format("Unexpected response. Response code: %s. Response message: %s", responseCode, connection.getResponseMessage()));
             }
         } catch (FileNotFoundException e) {
-            //Crumb not activated in Jenkins
+            context.logger.println("CSRF protection is disabled on the remote server.");
             return null;
         }
     }
