@@ -751,7 +751,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
           if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildStatus);
 
           if (this.getEnhancedLogging()) {
-              String consoleOutput = getConsoleOutput(jobURL, "GET", context);
+              String consoleOutput = getConsoleOutput(jobURL, context);
 
               context.logger.println();
               context.logger.println("Console output of remote job:");
@@ -884,10 +884,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return buildStatus;
     }
 
-    private String getConsoleOutput(URL url, String requestType, BuildContext context)
+    private String getConsoleOutput(URL url, BuildContext context)
             throws IOException {
 
-            return getConsoleOutput( url, requestType, context, 1 );
+            return getConsoleOutput( url, context, 1 );
     }
 
     /**
@@ -913,7 +913,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             return sendHTTPCall( urlString, requestType, context, 1 ).getBody();
     }
 
-    private String getConsoleOutput(URL url, String requestType, BuildContext context, int numberOfAttempts)
+    private String getConsoleOutput(URL url, BuildContext context, int numberOfAttempts)
             throws IOException {
         RemoteJenkinsServer remoteServer = this.findEffectiveRemoteHost(context);
         int retryLimit = this.getConnectionRetryLimit();
@@ -928,8 +928,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         try {
             connection.setDoInput(true);
             connection.setRequestProperty("Accept", "application/json");
-            addCrumbToConnection(getCrumb(remoteServer, context), connection);
-            connection.setRequestMethod(requestType);
+            connection.setRequestMethod("GET");
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
@@ -967,7 +966,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
                 context.logger.println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit );
                 numberOfAttempts++;
-                consoleOutput = getConsoleOutput(url, requestType, context, numberOfAttempts);
+                consoleOutput = getConsoleOutput(url, context, numberOfAttempts);
             } else if(numberOfAttempts > retryLimit){
                 //reached the maximum number of retries, time to fail
                 this.failBuild(new Exception("Max number of connection retries have been exeeded."), context.logger);
@@ -1022,8 +1021,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         try {
             connection.setDoInput(true);
             connection.setRequestProperty("Accept", "application/json");
-            addCrumbToConnection(getCrumb(remoteServer, context), connection);
             connection.setRequestMethod(requestType);
+            addCrumbToConnection(connection, context);
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
@@ -1100,10 +1099,22 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return new ConnectionResponse(responseHeader, responseObject, responseCode);
     }
 
-    private void addCrumbToConnection(JenkinsCrumb crumb, HttpURLConnection connection)
+    /**
+     * For POST requests a crumb is needed. This methods gets a crumb and sets it in the header.
+     * https://wiki.jenkins.io/display/JENKINS/Remote+access+API#RemoteaccessAPI-CSRFProtection
+     * 
+     * @param connection
+     * @param context
+     * @throws IOException
+     */
+    private void addCrumbToConnection(HttpURLConnection connection, BuildContext context) throws IOException
     {
-        if (crumb != null) {
-            connection.setRequestProperty(crumb.getHeaderId(), crumb.getCrumbValue());
+        String method = connection.getRequestMethod();
+        if(method != null && method.equalsIgnoreCase("POST")) {
+            JenkinsCrumb crumb = getCrumb(context);
+            if (crumb.isEnabledOnRemote()) {
+                connection.setRequestProperty(crumb.getHeaderId(), crumb.getCrumbValue());
+            }
         }
     }
 
@@ -1141,12 +1152,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @param context
      *            the context of this Builder/BuildStep.
      * @return {@link JenkinsCrumb}
-     *            a JenkinsCrumb or null, if a Jenkins Crumb is not activated on the remote Jenkins server.
+     *            a JenkinsCrumb.
      * @throws IOException
      *            if the request failed.
      */
-    private JenkinsCrumb getCrumb(RemoteJenkinsServer remoteServer, BuildContext context) throws IOException
+    @Nonnull
+    private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
+        RemoteJenkinsServer remoteServer = findEffectiveRemoteHost(context);
         URL address = remoteServer.getAddress();
         URL crumbProviderUrl;
         try {
@@ -1160,7 +1173,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new ForbiddenException(crumbProviderUrl);
             } else if(responseCode == 404) {
                 context.logger.println("CSRF protection is disabled on the remote server.");
-                return null;
+                return new JenkinsCrumb();
             } else if(responseCode == 200){
                 context.logger.println("CSRF protection is enabled on the remote server.");
                 String response = readInputStream(connection);
@@ -1171,7 +1184,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             }
         } catch (FileNotFoundException e) {
             context.logger.println("CSRF protection is disabled on the remote server.");
-            return null;
+            return new JenkinsCrumb();
         }
     }
 
