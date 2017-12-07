@@ -10,20 +10,51 @@ public class JenkinsCrumb
 {
     String headerId;
     String crumbValue;
+    boolean isEnabledOnRemote;
 
+    /**
+     * New JenkinsCrumb object indicating that CSRF is disabled in the remote Jenkins (no crumb needed).
+     */
+    public JenkinsCrumb()
+    {
+        this.headerId = null;
+        this.crumbValue = null;
+        this.isEnabledOnRemote = false;
+    }
+
+    /**
+     * New JenkinsCrumb object with the header ID and crumb value to use in subsequent requests.
+     * @param headerId
+     * @param crumbValue
+     */
     public JenkinsCrumb(String headerId, String crumbValue)
     {
         this.headerId = headerId;
         this.crumbValue = crumbValue;
+        this.isEnabledOnRemote = true;
     }
 
+    /**
+     * @return the header ID to be used in the subsequent requests. Null if CSRF is disabled in the remote Jenkins.
+     */
     public String getHeaderId()
     {
         return headerId;
     }
 
+    /**
+     * @return the crumb value to be used in the header of subsequent requests. Null if CSRF is disabled in the remote Jenkins.
+     */
     public String getCrumbValue()
     {
         return crumbValue;
+    }
+
+    /**
+     * @return true if CSRF is enabled on the remote Jenkins, false otherwise. 
+     */
+    public boolean isEnabledOnRemote()
+    {
+        return isEnabledOnRemote;
     }
 }
