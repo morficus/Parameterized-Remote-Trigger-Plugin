@@ -7,6 +7,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
+import javax.annotation.CheckForNull;
+
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
@@ -31,11 +33,15 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
      * We need to keep this for compatibility - old config deserialization!
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
      */
+    @CheckForNull
     private List<Auth> auth;
 
+    @CheckForNull
     private String     displayName;
     private boolean    hasBuildTokenRootSupport;
+    @CheckForNull
     private Auth2      auth2;
+    @CheckForNull
     private URL        address;
 
     @DataBoundConstructor
@@ -66,9 +72,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     {
         this.address = new URL(address);
     }
-    
+
     // Getters
 
+    @CheckForNull
     public String getDisplayName() {
         String displayName = null;
 
@@ -83,7 +90,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     public boolean getHasBuildTokenRootSupport() {
         return hasBuildTokenRootSupport;
     }
-    
+
+    @CheckForNull
     public Auth2 getAuth2() {
         migrateAuthToAuth2();
         return auth2;
@@ -104,6 +112,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         auth = null;
     }
 
+    @CheckForNull
     public URL getAddress() {
         return address;
     }
