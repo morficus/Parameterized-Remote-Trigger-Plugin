@@ -11,11 +11,9 @@
     <f:dropdownDescriptorSelector field="auth2" title="Authentication" descriptors="${descriptor.getAuth2Descriptors()}" default="${descriptor.getDefaultAuth2Descriptor()}"/>
 
 
-    <f:entry title="Remote address and port" field="address" description="Remember to indicate the protocol (i.e.: http, https, etc)" >
+    <f:entry title="Remote Jenkins URL" field="address">
         <f:textbox />
     </f:entry>
-    <f:validateButton title="Validate Address" method="validateAddress" with="address" />
-
 
     <f:entry title="">
         <div style="float: left">  

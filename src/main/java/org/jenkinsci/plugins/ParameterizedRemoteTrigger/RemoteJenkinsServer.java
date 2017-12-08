@@ -152,13 +152,13 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
          *            Remote address to be validated
          * @return FormValidation object
          */
-        public FormValidation doValidateAddress(@QueryParameter String address) {
+        public FormValidation doCheckAddress(@QueryParameter String address) {
 
             URL host = null;
 
             // no empty addresses allowed
             if (address == null || address.trim().equals("")) {
-                return FormValidation.error("The remote address can not be left empty.");
+                return FormValidation.warning("The remote address can not be empty, or it must be overridden on the job configuration.");
             }
 
             // check if we have a valid, well-formed URL
@@ -166,7 +166,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
                 host = new URL(address);
                 host.toURI();
             } catch (Exception e) {
-                return FormValidation.error("Malformed address (" + address + "), please double-check it.");
+                return FormValidation.error("Malformed address (" + address + "). Remember to indicate the protocol, i.e. http, https, etc.");
             }
 
             // check that the host is reachable
@@ -175,10 +175,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
                 connection.setConnectTimeout(5000);
                 connection.connect();
             } catch (Exception e) {
-                return FormValidation.warning("Address looks good, but we were not able to connect to it");
+                return FormValidation.warning("Address looks good, but a connection could not be stablished.");
             }
 
-            return FormValidation.okWithMarkup("Address looks good");
+            return FormValidation.ok();
         }
 
         public static List<Auth2Descriptor> getAuth2Descriptors() {
