@@ -43,11 +43,15 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @CheckForNull
     private Auth2      auth2;
     @CheckForNull
-    private URL        address;
+    private String     address;
 
     @DataBoundConstructor
     public RemoteJenkinsServer() {
-        this.auth2 = new NoneAuth();
+        auth = null;
+        displayName = null;
+        hasBuildTokenRootSupport = false;
+        auth2 = new NoneAuth();
+        address = null;
     }
 
     @DataBoundSetter
@@ -69,9 +73,9 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     }
 
     @DataBoundSetter
-    public void setAddress(String address) throws MalformedURLException
+    public void setAddress(String address)
     {
-        this.address = new URL(address);
+        this.address = address;
     }
 
     // Getters
@@ -81,7 +85,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         String displayName = null;
 
         if (this.displayName == null || this.displayName.trim().equals("")) {
-            if (address != null) displayName = address.toString();
+            if (address != null) displayName = address;
             else displayName = null;
         } else {
             displayName = this.displayName;
@@ -115,7 +119,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     }
 
     @CheckForNull
-    public URL getAddress() {
+    public String getAddress() {
         return address;
     }
 
@@ -130,12 +134,17 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
      *             if the address of the remote server was not set
      */
     @Nonnull
-    public String getRemoteAddress() throws RuntimeException {
+    public String getRemoteAddress() {
         if (address == null) {
             throw new RuntimeException("The remote address can not be empty.");
         } else {
-            return address.toString();
+            try {
+                new URL(address);
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("Malformed address (" + address + "). Remember to indicate the protocol, i.e. http, https, etc.");
+            }
         }
+        return address;
     }
 
     @Extension
