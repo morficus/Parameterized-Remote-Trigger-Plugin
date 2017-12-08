@@ -485,7 +485,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         if (remoteServer.getHasBuildTokenRootSupport()) {
           // start building the proper URL based on known capabiltiies of the remote server
-            triggerUrlString = remoteServer.getAddress().toString();
+            triggerUrlString = remoteServer.getRemoteAddress();
             triggerUrlString += buildTokenRootUrl;
             triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
             query = addToQueryString(query, "job=" + encodeValue(jobNameOrUrl)); //TODO: does it work with full URL?
@@ -800,8 +800,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
             throws IOException {
 
-      URL remoteServerURL = remoteServer.getAddress();
-      String queueQuery = String.format("%s/queue/item/%s/api/json/", remoteServerURL, queueId);
+      String queueQuery = String.format("%s/queue/item/%s/api/json/", remoteServer.getRemoteAddress(), queueId);
       JSONObject queueResponse = sendHTTPCall(queueQuery, "GET", context);
 
       if (queueResponse.isNullObject())
@@ -1169,11 +1168,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
-        URL address = remoteServer.getAddress();
+        String address = remoteServer.getRemoteAddress();
         URL crumbProviderUrl;
         try {
             String xpathValue = URLEncoder.encode("concat(//crumbRequestField,\":\",//crumb)", "UTF-8");
-            crumbProviderUrl = new URL(address.toString().concat("/crumbIssuer/api/xml?xpath=").concat(xpathValue));
+            crumbProviderUrl = new URL(address.concat("/crumbIssuer/api/xml?xpath=").concat(xpathValue));
             HttpURLConnection connection = getAuthorizedConnection(context, crumbProviderUrl);
             int responseCode = connection.getResponseCode();
             if(responseCode == 401) {
@@ -1474,7 +1473,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         if(FormValidationUtils.isURL(_jobNameOrUrl)) {
             remoteJobUrl = _jobNameOrUrl;
         } else {
-            remoteJobUrl = remoteServer.getAddress().toString();
+            remoteJobUrl = remoteServer.getRemoteAddress();
             while(remoteJobUrl.endsWith("/")) remoteJobUrl = remoteJobUrl.substring(0, remoteJobUrl.length()-1);
 
             String[] split = _jobNameOrUrl.trim().split("/");

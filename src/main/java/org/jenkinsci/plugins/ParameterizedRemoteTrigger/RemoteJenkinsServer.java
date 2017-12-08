@@ -8,6 +8,7 @@ import java.net.URL;
 import java.util.List;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
@@ -80,7 +81,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         String displayName = null;
 
         if (this.displayName == null || this.displayName.trim().equals("")) {
-            displayName = this.getAddress().toString();
+            if (address != null) displayName = address.toString();
+            else displayName = null;
         } else {
             displayName = this.displayName;
         }
@@ -120,6 +122,20 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl) super.getDescriptor();
+    }
+
+    /**
+     * @return the remote server address
+     * @throws RuntimeException
+     *             if the address of the remote server was not set
+     */
+    @Nonnull
+    public String getRemoteAddress() throws RuntimeException {
+        if (address == null) {
+            throw new RuntimeException("The remote address can not be empty.");
+        } else {
+            return address.toString();
+        }
     }
 
     @Extension
