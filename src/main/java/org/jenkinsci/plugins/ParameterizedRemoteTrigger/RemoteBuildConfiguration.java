@@ -107,7 +107,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private boolean       loadParamsFromFile;
     private String        parameterFile;
 
-    private transient RemoteJenkinsServer remoteServer;
+    private transient RemoteJenkinsServer effectiveRemoteServer;
 
     @DataBoundConstructor
     public RemoteBuildConfiguration() {
@@ -126,7 +126,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         loadParamsFromFile = false;
         parameterFile = "";
 
-        remoteServer = null;
+        effectiveRemoteServer = null;
     }
 
     @DataBoundSetter
@@ -217,7 +217,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public RemoteJenkinsServer getEffectiveRemoteServer() {
-        return remoteServer;
+        return effectiveRemoteServer;
     }
 
     /**
@@ -483,15 +483,15 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         String triggerUrlString;
         String query = "";
 
-        if (remoteServer.getHasBuildTokenRootSupport()) {
+        if (effectiveRemoteServer.getHasBuildTokenRootSupport()) {
           // start building the proper URL based on known capabiltiies of the remote server
-            triggerUrlString = remoteServer.getRemoteAddress();
+            triggerUrlString = effectiveRemoteServer.getRemoteAddress();
             triggerUrlString += buildTokenRootUrl;
             triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
             query = addToQueryString(query, "job=" + encodeValue(jobNameOrUrl)); //TODO: does it work with full URL?
 
         } else {
-            triggerUrlString = generateJobUrl(remoteServer, jobNameOrUrl);
+            triggerUrlString = generateJobUrl(effectiveRemoteServer, jobNameOrUrl);
             triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
         }
 
@@ -533,7 +533,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      */
     private String buildGetUrl(String jobNameOrUrl, String securityToken, BuildContext context) throws IOException {
 
-        String urlString = generateJobUrl(remoteServer, jobNameOrUrl);
+        String urlString = generateJobUrl(effectiveRemoteServer, jobNameOrUrl);
         // don't try to include a security token in the URL if none is provided
         if (!isEmpty(securityToken)) {
             urlString += "?token=" + encodeValue(securityToken);
@@ -626,7 +626,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         logConfiguration(context, cleanedParams);
 
-        remoteServer = findEffectiveRemoteHost(context);
+        effectiveRemoteServer = findEffectiveRemoteHost(context);
 
         final JSONObject remoteJobMetadata = getRemoteJobMetadata(jobNameOrUrl, context);
         boolean isRemoteParameterized = isRemoteJobParameterized(remoteJobMetadata);
@@ -800,7 +800,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
             throws IOException {
 
-      String queueQuery = String.format("%s/queue/item/%s/api/json/", remoteServer.getRemoteAddress(), queueId);
+      String queueQuery = String.format("%s/queue/item/%s/api/json/", effectiveRemoteServer.getRemoteAddress(), queueId);
       JSONObject queueResponse = sendHTTPCall(queueQuery, "GET", context);
 
       if (queueResponse.isNullObject())
@@ -1156,7 +1156,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     /**
      * Tries to obtain a Jenkins Crumb from the remote Jenkins server.
      *
-     * @param remoteServer
+     * @param effectiveRemoteServer
      *            the remote Jenkins server.
      * @param context
      *            the context of this Builder/BuildStep.
@@ -1168,7 +1168,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
-        String address = remoteServer.getRemoteAddress();
+        String address = effectiveRemoteServer.getRemoteAddress();
         URL crumbProviderUrl;
         try {
             String xpathValue = URLEncoder.encode("concat(//crumbRequestField,\":\",//crumb)", "UTF-8");
@@ -1201,7 +1201,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         URLConnection connection = url.openConnection();
 
         //Set Authorization Header configured globally for remoteServer
-        Auth2 serverAuth = remoteServer.getAuth2();
+        Auth2 serverAuth = effectiveRemoteServer.getAuth2();
         if (serverAuth != null) serverAuth.setAuthorizationHeader(connection, context);
 
         //Override Authorization Header if configured locally
@@ -1215,7 +1215,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private void logAuthInformation(BuildContext context) throws IOException {
 
-        Auth2 serverAuth = remoteServer.getAuth2();
+        Auth2 serverAuth = effectiveRemoteServer.getAuth2();
         Auth2 localAuth = this.getAuth2();
         if(localAuth != null && !(localAuth instanceof NullAuth)) {
             context.logger.println(String.format("  Using job-level defined " + localAuth.toString((Item)context.run.getParent()) ));
@@ -1421,7 +1421,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private @Nonnull JSONObject getRemoteJobMetadata(String jobNameOrUrl, BuildContext context) throws IOException {
 
-        String remoteJobUrl = generateJobUrl(remoteServer, jobNameOrUrl);
+        String remoteJobUrl = generateJobUrl(effectiveRemoteServer, jobNameOrUrl);
         remoteJobUrl += "/api/json";
 
         ConnectionResponse response = sendHTTPCall( remoteJobUrl, "GET", context, 1 );
