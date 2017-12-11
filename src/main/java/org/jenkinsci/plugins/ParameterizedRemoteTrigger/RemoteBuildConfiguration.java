@@ -216,7 +216,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         }
     }
 
-    public RemoteJenkinsServer getRemoteServer() {
+    public RemoteJenkinsServer getEffectiveRemoteServer() {
         return remoteServer;
     }
 
