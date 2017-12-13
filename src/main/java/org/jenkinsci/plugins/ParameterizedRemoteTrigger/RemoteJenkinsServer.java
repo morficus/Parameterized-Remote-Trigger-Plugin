@@ -7,6 +7,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
@@ -31,16 +34,24 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
      * We need to keep this for compatibility - old config deserialization!
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
      */
+    @CheckForNull
     private List<Auth> auth;
 
+    @CheckForNull
     private String     displayName;
     private boolean    hasBuildTokenRootSupport;
+    @CheckForNull
     private Auth2      auth2;
-    private URL        address;
+    @CheckForNull
+    private String     address;
 
     @DataBoundConstructor
     public RemoteJenkinsServer() {
-        this.auth2 = new NoneAuth();
+        auth = null;
+        displayName = null;
+        hasBuildTokenRootSupport = false;
+        auth2 = new NoneAuth();
+        address = null;
     }
 
     @DataBoundSetter
@@ -62,18 +73,20 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     }
 
     @DataBoundSetter
-    public void setAddress(String address) throws MalformedURLException
+    public void setAddress(String address)
     {
-        this.address = new URL(address);
+        this.address = address;
     }
-    
+
     // Getters
 
+    @CheckForNull
     public String getDisplayName() {
         String displayName = null;
 
         if (this.displayName == null || this.displayName.trim().equals("")) {
-            displayName = this.getAddress().toString();
+            if (address != null) displayName = address;
+            else displayName = null;
         } else {
             displayName = this.displayName;
         }
@@ -83,7 +96,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     public boolean getHasBuildTokenRootSupport() {
         return hasBuildTokenRootSupport;
     }
-    
+
+    @CheckForNull
     public Auth2 getAuth2() {
         migrateAuthToAuth2();
         return auth2;
@@ -104,13 +118,33 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         auth = null;
     }
 
-    public URL getAddress() {
+    @CheckForNull
+    public String getAddress() {
         return address;
     }
 
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl) super.getDescriptor();
+    }
+
+    /**
+     * @return the remote server address
+     * @throws RuntimeException
+     *             if the address of the remote server was not set
+     */
+    @Nonnull
+    public String getRemoteAddress() {
+        if (address == null) {
+            throw new RuntimeException("The remote address can not be empty.");
+        } else {
+            try {
+                new URL(address);
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("Malformed address (" + address + "). Remember to indicate the protocol, i.e. http, https, etc.");
+            }
+        }
+        return address;
     }
 
     @Extension
@@ -127,13 +161,13 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
          *            Remote address to be validated
          * @return FormValidation object
          */
-        public FormValidation doValidateAddress(@QueryParameter String address) {
+        public FormValidation doCheckAddress(@QueryParameter String address) {
 
             URL host = null;
 
             // no empty addresses allowed
             if (address == null || address.trim().equals("")) {
-                return FormValidation.error("The remote address can not be left empty.");
+                return FormValidation.warning("The remote address can not be empty, or it must be overridden on the job configuration.");
             }
 
             // check if we have a valid, well-formed URL
@@ -141,7 +175,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
                 host = new URL(address);
                 host.toURI();
             } catch (Exception e) {
-                return FormValidation.error("Malformed address (" + address + "), please double-check it.");
+                return FormValidation.error("Malformed address (" + address + "). Remember to indicate the protocol, i.e. http, https, etc.");
             }
 
             // check that the host is reachable
@@ -150,10 +184,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
                 connection.setConnectTimeout(5000);
                 connection.connect();
             } catch (Exception e) {
-                return FormValidation.warning("Address looks good, but we were not able to connect to it");
+                return FormValidation.warning("Address looks good, but a connection could not be stablished.");
             }
 
-            return FormValidation.okWithMarkup("Address looks good");
+            return FormValidation.ok();
         }
 
         public static List<Auth2Descriptor> getAuth2Descriptors() {

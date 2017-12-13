@@ -24,8 +24,11 @@ public class JenkinsCrumb
 
     /**
      * New JenkinsCrumb object with the header ID and crumb value to use in subsequent requests.
+     *
      * @param headerId
+     *            the header ID to be used in the subsequent requests.
      * @param crumbValue
+     *            the crumb value to be used in the header of subsequent requests.
      */
     public JenkinsCrumb(String headerId, String crumbValue)
     {

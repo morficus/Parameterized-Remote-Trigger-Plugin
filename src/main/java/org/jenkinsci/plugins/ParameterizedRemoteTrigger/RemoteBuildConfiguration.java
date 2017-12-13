@@ -107,6 +107,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private boolean       loadParamsFromFile;
     private String        parameterFile;
 
+    private transient RemoteJenkinsServer effectiveRemoteServer;
+
     @DataBoundConstructor
     public RemoteBuildConfiguration() {
         remoteJenkinsName = null;
@@ -123,6 +125,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         enhancedLogging = false;
         loadParamsFromFile = false;
         parameterFile = "";
+
+        effectiveRemoteServer = null;
     }
 
     @DataBoundSetter
@@ -210,6 +214,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         } else {
           return new ArrayList<String>();
         }
+    }
+
+    public RemoteJenkinsServer getEffectiveRemoteServer() {
+        return effectiveRemoteServer;
     }
 
     /**
@@ -339,7 +347,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @throws MalformedURLException
      *            if <code>remoteJenkinsName</code> no valid URL or <code>job</code> an URL but nor valid.
      */
-    public @Nonnull RemoteJenkinsServer findEffectiveRemoteHost(BuildContext context) throws IOException {
+    protected @Nonnull RemoteJenkinsServer findEffectiveRemoteHost(BuildContext context) throws IOException {
         RemoteJenkinsServer globallyConfiguredServer = findRemoteHost(this.remoteJenkinsName);
         RemoteJenkinsServer server = globallyConfiguredServer;
         String expandedJob = getJobExpanded(context);
@@ -471,19 +479,19 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      */
     private String buildTriggerUrl(String jobNameOrUrl, String securityToken, Collection<String> params, boolean isRemoteJobParameterized,
                 BuildContext context) throws IOException {
+
         String triggerUrlString;
         String query = "";
-        RemoteJenkinsServer remoteServer = this.findEffectiveRemoteHost(context);
 
-        if (remoteServer.getHasBuildTokenRootSupport()) {
+        if (effectiveRemoteServer.getHasBuildTokenRootSupport()) {
           // start building the proper URL based on known capabiltiies of the remote server
-            triggerUrlString = remoteServer.getAddress().toString();
+            triggerUrlString = effectiveRemoteServer.getRemoteAddress();
             triggerUrlString += buildTokenRootUrl;
             triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
             query = addToQueryString(query, "job=" + encodeValue(jobNameOrUrl)); //TODO: does it work with full URL?
 
         } else {
-            triggerUrlString = generateJobUrl(remoteServer, jobNameOrUrl);
+            triggerUrlString = generateJobUrl(effectiveRemoteServer, jobNameOrUrl);
             triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
         }
 
@@ -524,8 +532,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      *            if there is an error identifying the remote host.
      */
     private String buildGetUrl(String jobNameOrUrl, String securityToken, BuildContext context) throws IOException {
-        RemoteJenkinsServer remoteServer = this.findEffectiveRemoteHost(context);
-        String urlString = generateJobUrl(remoteServer, jobNameOrUrl);
+
+        String urlString = generateJobUrl(effectiveRemoteServer, jobNameOrUrl);
         // don't try to include a security token in the URL if none is provided
         if (!isEmpty(securityToken)) {
             urlString += "?token=" + encodeValue(securityToken);
@@ -617,6 +625,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         }
 
         logConfiguration(context, cleanedParams);
+
+        effectiveRemoteServer = findEffectiveRemoteHost(context);
 
         final JSONObject remoteJobMetadata = getRemoteJobMetadata(jobNameOrUrl, context);
         boolean isRemoteParameterized = isRemoteJobParameterized(remoteJobMetadata);
@@ -788,10 +798,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      */
     @Nonnull
     private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
-            throws IOException
-    {
-      URL remoteServerURL = findEffectiveRemoteHost(context).getAddress();
-      String queueQuery = String.format("%s/queue/item/%s/api/json/", remoteServerURL, queueId);
+            throws IOException {
+
+      String queueQuery = String.format("%s/queue/item/%s/api/json/", effectiveRemoteServer.getRemoteAddress(), queueId);
       JSONObject queueResponse = sendHTTPCall(queueQuery, "GET", context);
 
       if (queueResponse.isNullObject())
@@ -915,14 +924,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private String getConsoleOutput(URL url, BuildContext context, int numberOfAttempts)
             throws IOException {
-        RemoteJenkinsServer remoteServer = this.findEffectiveRemoteHost(context);
+
         int retryLimit = this.getConnectionRetryLimit();
 
         String consoleOutput = null;
 
         URL buildUrl = new URL(url, "consoleText");
 
-        HttpURLConnection connection = getAuthorizedConnection(remoteServer, context, buildUrl);
+        HttpURLConnection connection = getAuthorizedConnection(context, buildUrl);
 
         int responseCode = 0;
         try {
@@ -1008,7 +1017,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      */
     private ConnectionResponse sendHTTPCall(String urlString, String requestType, BuildContext context, int numberOfAttempts)
             throws IOException {
-        RemoteJenkinsServer remoteServer = this.findEffectiveRemoteHost(context);
+
         int retryLimit = this.getConnectionRetryLimit();
 
         JSONObject responseObject = null;
@@ -1016,7 +1025,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         int responseCode = 0;
 
         URL url = new URL(urlString);
-        HttpURLConnection connection = getAuthorizedConnection(remoteServer, context, url);
+        HttpURLConnection connection = getAuthorizedConnection(context, url);
 
         try {
             connection.setDoInput(true);
@@ -1147,7 +1156,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     /**
      * Tries to obtain a Jenkins Crumb from the remote Jenkins server.
      *
-     * @param remoteServer
+     * @param effectiveRemoteServer
      *            the remote Jenkins server.
      * @param context
      *            the context of this Builder/BuildStep.
@@ -1159,13 +1168,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
-        RemoteJenkinsServer remoteServer = findEffectiveRemoteHost(context);
-        URL address = remoteServer.getAddress();
+        String address = effectiveRemoteServer.getRemoteAddress();
         URL crumbProviderUrl;
         try {
             String xpathValue = URLEncoder.encode("concat(//crumbRequestField,\":\",//crumb)", "UTF-8");
-            crumbProviderUrl = new URL(address.toString().concat("/crumbIssuer/api/xml?xpath=").concat(xpathValue));
-            HttpURLConnection connection = getAuthorizedConnection(remoteServer, context, crumbProviderUrl);
+            crumbProviderUrl = new URL(address.concat("/crumbIssuer/api/xml?xpath=").concat(xpathValue));
+            HttpURLConnection connection = getAuthorizedConnection(context, crumbProviderUrl);
             int responseCode = connection.getResponseCode();
             if(responseCode == 401) {
                 throw new UnauthorizedException(crumbProviderUrl);
@@ -1188,12 +1196,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         }
     }
 
-    private HttpURLConnection getAuthorizedConnection(RemoteJenkinsServer remoteServer, BuildContext context, URL url) throws IOException
+    private HttpURLConnection getAuthorizedConnection(BuildContext context, URL url) throws IOException
     {
         URLConnection connection = url.openConnection();
 
         //Set Authorization Header configured globally for remoteServer
-        Auth2 serverAuth = remoteServer.getAuth2();
+        Auth2 serverAuth = effectiveRemoteServer.getAuth2();
         if (serverAuth != null) serverAuth.setAuthorizationHeader(connection, context);
 
         //Override Authorization Header if configured locally
@@ -1206,7 +1214,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     private void logAuthInformation(BuildContext context) throws IOException {
-        Auth2 serverAuth = this.findEffectiveRemoteHost(context).getAuth2();
+
+        Auth2 serverAuth = effectiveRemoteServer.getAuth2();
         Auth2 localAuth = this.getAuth2();
         if(localAuth != null && !(localAuth instanceof NullAuth)) {
             context.logger.println(String.format("  Using job-level defined " + localAuth.toString((Item)context.run.getParent()) ));
@@ -1411,8 +1420,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     private @Nonnull JSONObject getRemoteJobMetadata(String jobNameOrUrl, BuildContext context) throws IOException {
-        RemoteJenkinsServer remoteServer = this.findEffectiveRemoteHost(context);
-        String remoteJobUrl = generateJobUrl(remoteServer, jobNameOrUrl);
+
+        String remoteJobUrl = generateJobUrl(effectiveRemoteServer, jobNameOrUrl);
         remoteJobUrl += "/api/json";
 
         ConnectionResponse response = sendHTTPCall( remoteJobUrl, "GET", context, 1 );
@@ -1464,7 +1473,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         if(FormValidationUtils.isURL(_jobNameOrUrl)) {
             remoteJobUrl = _jobNameOrUrl;
         } else {
-            remoteJobUrl = remoteServer.getAddress().toString();
+            remoteJobUrl = remoteServer.getRemoteAddress();
             while(remoteJobUrl.endsWith("/")) remoteJobUrl = remoteJobUrl.substring(0, remoteJobUrl.length()-1);
 
             String[] split = _jobNameOrUrl.trim().split("/");

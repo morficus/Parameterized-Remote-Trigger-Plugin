@@ -130,7 +130,7 @@ public class RemoteBuildConfigurationTest {
         config.setJob("MyJob");
         config.setRemoteJenkinsUrl("http://test:8080");
         assertEquals("MyJob", config.getJob());
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -141,7 +141,7 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("remoteJenkinsName");
         assertEquals("MyJob", config.getJob());
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -152,7 +152,7 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("remoteJenkinsName");
         assertEquals("A/B/C/D/MyJob", config.getJob());
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -160,7 +160,7 @@ public class RemoteBuildConfigurationTest {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("http://test:8080/job/folder/job/MyJob");
         assertEquals("http://test:8080/job/folder/job/MyJob", config.getJob()); //The value configured for "job"
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -170,7 +170,7 @@ public class RemoteBuildConfigurationTest {
         config.setJob("http://testA:8080/job/folder/job/MyJobA");
         config.setRemoteJenkinsUrl("http://testB:8080");
         assertEquals("http://testA:8080/job/folder/job/MyJobA", config.getJob()); //The value configured for "job"
-        assertEquals("http://testA:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://testA:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -182,7 +182,7 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("remoteJenkinsName");
         assertEquals("http://testA:8080/job/folder/job/MyJobA", config.getJob()); //The value configured for "job"
-        assertEquals("http://testA:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://testA:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -207,12 +207,12 @@ public class RemoteBuildConfigurationTest {
         config = mockGlobalRemoteHost(config, "remoteJenkinsName", "http://globallyConfigured:8080");
 
         config.setRemoteJenkinsName("remoteJenkinsName");
-        assertEquals("http://globallyConfigured:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://globallyConfigured:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
 
         //Now override remote host URL
         config.setRemoteJenkinsUrl("http://locallyOverridden:8080");
         assertEquals("MyJob", config.getJob());
-        assertEquals("http://locallyOverridden:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://locallyOverridden:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -249,7 +249,7 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("notConfiguredRemoteHost");
         config.setRemoteJenkinsUrl("http://locallyOverridden:8080");
-        assertEquals("http://locallyOverridden:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://locallyOverridden:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -259,7 +259,7 @@ public class RemoteBuildConfigurationTest {
         config = mockGlobalRemoteHost(config, "remoteJenkinsName", "http://globallyConfigured:8080");
 
         config.setRemoteJenkinsName("notConfiguredRemoteHost");
-        assertEquals("http://localJobUrl:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://localJobUrl:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -267,7 +267,7 @@ public class RemoteBuildConfigurationTest {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("MyJob");
         config.setRemoteJenkinsUrl("http://hostname:8080");
-        assertEquals("http://hostname:8080", config.findEffectiveRemoteHost(null).getAddress().toString());
+        assertEquals("http://hostname:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -348,8 +348,8 @@ public class RemoteBuildConfigurationTest {
         try {
             RemoteJenkinsServer missingUrl = new RemoteJenkinsServer();
             RemoteBuildConfiguration.generateJobUrl(missingUrl, "JobName");
-            Assert.fail("Expected NullPointerException");
-        } catch(NullPointerException e) {}
+            Assert.fail("Expected RuntimeException");
+        } catch(RuntimeException e) {}
 
     }
 
