@@ -973,7 +973,7 @@ public class RemoteBuildConfiguration extends Builder {
             try {
                 is = connection.getInputStream();
                 if (is == null) { // when other than 404 error, ex. 401, or 500
-                	is = connection.getErrorStream();
+                    is = connection.getErrorStream();
                 }
             } catch (FileNotFoundException e) {
                 // In case of a e.g. 404 status
