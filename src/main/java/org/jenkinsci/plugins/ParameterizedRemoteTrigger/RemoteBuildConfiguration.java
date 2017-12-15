@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
 
 /**
  * 
@@ -968,13 +969,22 @@ public class RemoteBuildConfiguration extends Builder {
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
             connection.connect();
-            
+
+            listener.getLogger().println("ResponseCode: " + connection.getResponseCode());
             InputStream is;
             try {
                 is = connection.getInputStream();
+                if (is == null) { // when other than 404 error, ex. 401, or 500
+                    listener.getLogger().println("InputStream is null, using ErrorStream");
+                    is = connection.getErrorStream();
+                }
             } catch (FileNotFoundException e) {
                 // In case of a e.g. 404 status
                 is = connection.getErrorStream();
+                if (is == null) {
+                    listener.getLogger().println("ErrorStream is null, is=\"\"");
+                    is = IOUtils.toInputStream("");
+                }
             }
             
             BufferedReader rd = new BufferedReader(new InputStreamReader(is));
