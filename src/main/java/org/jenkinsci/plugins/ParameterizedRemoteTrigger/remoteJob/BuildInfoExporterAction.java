@@ -51,8 +51,10 @@ public class BuildInfoExporterAction implements EnvironmentContributingAction {
      */
     private void addBuildReferenceSafe(BuildReference buildRef)
     {
-        removeDuplicates(builds, buildRef);
-        builds.add(buildRef);
+        synchronized (builds) {
+            removeDuplicates(builds, buildRef);
+            builds.add(buildRef);
+        }
     }
 
     /**
@@ -144,8 +146,10 @@ public class BuildInfoExporterAction implements EnvironmentContributingAction {
 
     private List<BuildReference> getBuildRefs(String project) {
         List<BuildReference> refs = new ArrayList<BuildReference>();
-        for (BuildReference br : builds) {
-            if (br.projectName.equals(project)) refs.add(br);
+        synchronized (builds) {
+            for (BuildReference br : builds) {
+                if (br.projectName.equals(project)) refs.add(br);
+            }
         }
         return refs;
     }
@@ -185,10 +189,12 @@ public class BuildInfoExporterAction implements EnvironmentContributingAction {
      */
     private Set<String> getProjectsWithBuilds() {
         Set<String> projects = new LinkedHashSet<String>();
-        for (BuildReference br : this.builds) {
-            if (br.buildNumber != 0) {
-                if(projects.contains(br.projectName)) projects.remove(br.projectName); //Move to the end
-                projects.add(br.projectName);
+        synchronized (builds) {
+            for (BuildReference br : this.builds) {
+                if (br.buildNumber != 0) {
+                    if(projects.contains(br.projectName)) projects.remove(br.projectName); //Move to the end
+                    projects.add(br.projectName);
+                }
             }
         }
         return projects;
