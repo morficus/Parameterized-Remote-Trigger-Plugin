@@ -90,7 +90,6 @@ public class BuildInfoExporterActionTest {
 	}
 	
 	private void checkEnv(EnvVars env) {
-		Assert.assertEquals("Job"+PARALLEL_JOBS, env.get("LAST_TRIGGERED_JOB_NAME"));
 		for(int i = 1; i <= PARALLEL_JOBS; i++) {
 			Assert.assertEquals("TRIGGERED_BUILD_NUMBERS_Job"+i, ""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
 			Assert.assertEquals("TRIGGERED_BUILD_NUMBERS_Job"+i, ""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
