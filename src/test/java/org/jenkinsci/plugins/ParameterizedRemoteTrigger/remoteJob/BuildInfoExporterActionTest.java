@@ -1,10 +1,9 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -93,12 +92,12 @@ public class BuildInfoExporterActionTest {
 	private void checkEnv(EnvVars env) {
 		Assert.assertEquals("Job"+PARALLEL_JOBS, env.get("LAST_TRIGGERED_JOB_NAME"));
 		for(int i = 1; i <= PARALLEL_JOBS; i++) {
-			Assert.assertEquals(""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
-			Assert.assertEquals(""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
-			Assert.assertEquals("SUCCESS", env.get("TRIGGERED_BUILD_RESULT_Job"+i));
-			Assert.assertEquals("SUCCESS", env.get("TRIGGERED_BUILD_RESULT_Job" + i + "_RUN_"+i));
-			Assert.assertEquals("1", env.get("TRIGGERED_BUILD_RUN_COUNT_Job"+i));
-			Assert.assertEquals("http://jenkins/jobs/Job"+i, env.get("TRIGGERED_BUILD_URL_Job"+i));
+			Assert.assertEquals("TRIGGERED_BUILD_NUMBERS_Job"+i, ""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
+			Assert.assertEquals("TRIGGERED_BUILD_NUMBERS_Job"+i, ""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
+			Assert.assertEquals("TRIGGERED_BUILD_RESULT_Job"+i, "SUCCESS", env.get("TRIGGERED_BUILD_RESULT_Job"+i));
+			Assert.assertEquals("TRIGGERED_BUILD_RESULT_Job" + i + "_RUN_"+i, "SUCCESS", env.get("TRIGGERED_BUILD_RESULT_Job" + i + "_RUN_"+i));
+			Assert.assertEquals("TRIGGERED_BUILD_RUN_COUNT_Job"+i, "1", env.get("TRIGGERED_BUILD_RUN_COUNT_Job"+i));
+			Assert.assertEquals("TRIGGERED_BUILD_URL_Job"+i, "http://jenkins/jobs/Job"+i, env.get("TRIGGERED_BUILD_URL_Job"+i));
 		}
 	}
 	
@@ -118,9 +117,12 @@ public class BuildInfoExporterActionTest {
 			System.out.println("AddActionCallable finished for Job" + i);
 
 			BuildInfoExporterAction action = parentBuild.getAction(BuildInfoExporterAction.class);
-			boolean success = action.getProjectsWithBuilds().contains(jobName);
-			System.out.println("AddActionCallable was " + (success ? "" : "NOT ") + "successful for Job" + i);
-			if(!success) Assert.fail("AddActionCallable was " + (success ? "" : "NOT ") + "successful for Job" + i);
+			Set<String> projectsWithBuilds = action.getProjectsWithBuilds();
+			boolean success = projectsWithBuilds.contains(jobName);
+			String message = String.format("AddActionCallable %s for %s (projects in list: %s)",
+					(success ? "was successful " : "failed"), "Job"+i, projectsWithBuilds.size()) ;
+			System.out.println(message);
+			if(!success) Assert.fail(message);
 			return success;
 		}
 	}
