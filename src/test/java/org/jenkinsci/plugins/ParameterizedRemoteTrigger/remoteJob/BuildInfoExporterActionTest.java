@@ -32,6 +32,10 @@ public class BuildInfoExporterActionTest {
 	private final static int PARALLEL_JOBS = 100;
 	private final static int POOL_SIZE = 50;
 
+	/**
+	 * Same as {@link #testAddBuildInfoExporterAction_parallel()} but sequentially.
+	 * @throws IOException
+	 */
 	@Test
 	public void testAddBuildInfoExporterAction_sequential() throws IOException {
 		Run<?, ?> parentBuild = new FreeStyleBuild(new FreeStyleProject((ItemGroup<TopLevelItem>) Jenkins.getInstance(), "ParentJob"));
@@ -45,7 +49,8 @@ public class BuildInfoExporterActionTest {
 	}
 
 	/**
-	 * We had ConcurrentModificationExceptions in the past.
+	 * We had ConcurrentModificationExceptions in the past. This test executes {@link BuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)}
+	 * and  {@link BuildInfoExporterAction#buildEnvVars(hudson.model.AbstractBuild, EnvVars)} in parallel to provoke a ConcurrentModificationException (which should not occur anymore).
 	 */
 	@Test
 	public void testAddBuildInfoExporterAction_parallel() throws IOException, InterruptedException, ExecutionException {
@@ -68,7 +73,11 @@ public class BuildInfoExporterActionTest {
 	}
 
 
-	private void sleep(int i) {
+	/**
+	 * Sleeps millis millisseconds and swallows any InterruptedExceptions.
+	 * @param millis
+	 */
+	private void sleep(int millis) {
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException e) {
@@ -76,6 +85,13 @@ public class BuildInfoExporterActionTest {
 		}
 	}
 
+	/**
+	 * Checks if all futures are done. Additionally calls {@link Future#get()} to check if an Exception occured.
+	 * @param addFutures
+	 * @return
+	 * @throws InterruptedException
+	 * @throws ExecutionException
+	 */
 	private boolean isDone(Future<?>[] addFutures) throws InterruptedException, ExecutionException {
 		boolean done = true;
 		for(Future<?> addFuture : addFutures) {
@@ -89,6 +105,10 @@ public class BuildInfoExporterActionTest {
 		return done;
 	}
 	
+	/**
+	 * Checks if the env contains all expected variables
+	 * @param env
+	 */
 	private void checkEnv(EnvVars env) {
 		for(int i = 1; i <= PARALLEL_JOBS; i++) {
 			Assert.assertEquals("TRIGGERED_BUILD_NUMBERS_Job"+i, ""+i, env.get("TRIGGERED_BUILD_NUMBERS_Job"+i));
@@ -100,6 +120,10 @@ public class BuildInfoExporterActionTest {
 		}
 	}
 	
+	/**
+	 * Calls {@link BuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)} a single time.
+	 * This Callable is typically executed multiple tiles in parallel to provoke a ConcurrentModificationException (which should not occur anymore).
+	 */
 	private static class AddActionCallable implements Callable<Boolean> {
 		Run<?, ?> parentBuild;
 		private int i;
@@ -126,6 +150,10 @@ public class BuildInfoExporterActionTest {
 		}
 	}
 
+	/**
+	 * Calls  {@link BuildInfoExporterAction#buildEnvVars(hudson.model.AbstractBuild, EnvVars)} repeatedly until all AddActionCallables finished.
+	 * This way we try to provoke a ConcurrentModificationException (which should not occur anymore).
+	 */
 	private static class BuildEnvVarsCallable implements Callable<EnvVars> {
 		Run<?, ?> parentBuild;
 
