@@ -801,10 +801,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             throws IOException {
 
       String queueQuery = String.format("%s/queue/item/%s/api/json/", effectiveRemoteServer.getRemoteAddress(), queueId);
-      JSONObject queueResponse = sendHTTPCall(queueQuery, "GET", context);
+      ConnectionResponse response = sendHTTPCall( queueQuery, "GET", context, 1 );
+      JSONObject queueResponse = response.getBody(); 
 
-      if (queueResponse.isNullObject())
-          throw new AbortException("Unexpected queue item response.");
+      if (queueResponse == null || queueResponse.isNullObject()) {
+          throw new AbortException(String.format("Unexpected queue item response: code %s for request %s", response.getResponseCode(), queueQuery));
+      }
 
       QueueItemData queueItem = new QueueItemData(queueResponse);
 
