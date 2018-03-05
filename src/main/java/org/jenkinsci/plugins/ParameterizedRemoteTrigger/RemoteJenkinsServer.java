@@ -28,7 +28,7 @@ import hudson.util.FormValidation;
  * @author Maurice W.
  * 
  */
-public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> {
+public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> implements Cloneable {
 
     /**
      * We need to keep this for compatibility - old config deserialization!
@@ -197,5 +197,55 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         public static Auth2Descriptor getDefaultAuth2Descriptor() {
             return NoneAuth.DESCRIPTOR;
         }
+    }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        RemoteJenkinsServer clone = new RemoteJenkinsServer();
+        clone.setAddress(address);
+        clone.setAuth2(auth2);
+        clone.setDisplayName(displayName);
+        clone.setHasBuildTokenRootSupport(hasBuildTokenRootSupport);
+        return clone;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((address == null) ? 0 : address.hashCode());
+        result = prime * result + ((auth2 == null) ? 0 : auth2.hashCode());
+        result = prime * result + ((displayName == null) ? 0 : displayName.hashCode());
+        result = prime * result + (hasBuildTokenRootSupport ? 1231 : 1237);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (! (obj instanceof RemoteJenkinsServer))
+            return false;
+        RemoteJenkinsServer other = (RemoteJenkinsServer) obj;
+        if (address == null) {
+            if (other.address != null)
+                return false;
+        } else if (!address.equals(other.address))
+            return false;
+        if (auth2 == null) {
+            if (other.auth2 != null)
+                return false;
+        } else if (!auth2.equals(other.auth2))
+            return false;
+        if (displayName == null) {
+            if (other.displayName != null)
+                return false;
+        } else if (!displayName.equals(other.displayName))
+            return false;
+        if (hasBuildTokenRootSupport != other.hasBuildTokenRootSupport)
+            return false;
+        return true;
     }
 }

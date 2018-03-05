@@ -404,8 +404,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         for (RemoteJenkinsServer host : this.getDescriptor().remoteSites) {
             // if we find a match, then stop looping
             if (displayName.equals(host.getDisplayName())) {
-                server = host;
-                break;
+                try {
+                    server = (RemoteJenkinsServer)host.clone();
+                    break;
+                } catch(CloneNotSupportedException e) {
+                    // Clone is supported by RemoteJenkinsServer
+                    throw new RuntimeException(e);
+                }
             }
         }
         return server;
