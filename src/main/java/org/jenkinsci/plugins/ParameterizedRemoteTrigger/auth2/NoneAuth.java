@@ -49,4 +49,25 @@ public class NoneAuth extends Auth2 {
         }
     }
 
+	@Override
+	public Auth2 clone() throws CloneNotSupportedException {
+		return new NoneAuth();
+	}
+
+	@Override
+	public int hashCode() {
+		return "NoneAuth".hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		return true;
+	}	
+
 }

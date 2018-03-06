@@ -49,4 +49,26 @@ public class NullAuth extends Auth2 {
         }
     }
 
+    
+	@Override
+	public Auth2 clone() throws CloneNotSupportedException {
+		return new NullAuth();
+	}
+
+	@Override
+	public int hashCode() {
+		return "NullAuth".hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		return true;
+	}	
+
 }
