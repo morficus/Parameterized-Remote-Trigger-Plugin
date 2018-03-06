@@ -51,7 +51,7 @@ public class NullAuth extends Auth2 {
 
     
 	@Override
-	public Auth2 clone() throws CloneNotSupportedException {
+	public NullAuth clone() throws CloneNotSupportedException {
 		return new NullAuth();
 	}
 
