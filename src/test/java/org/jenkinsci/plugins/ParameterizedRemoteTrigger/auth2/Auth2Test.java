@@ -59,14 +59,14 @@ public class Auth2Test {
 		verifyEqualsHashCode(original, clone, true);
 	}
 
-	private void verifyEqualsHashCode(Auth2 server, Auth2 clone, boolean expectToBeSame) throws CloneNotSupportedException {
-        assertNotEquals("Still same object after clone", System.identityHashCode(server), System.identityHashCode(clone));
+	private void verifyEqualsHashCode(Auth2 original, Auth2 clone, boolean expectToBeSame) throws CloneNotSupportedException {
+        assertNotEquals("Still same object after clone", System.identityHashCode(original), System.identityHashCode(clone));
         if(expectToBeSame) {
-    		assertTrue("clone not equals() server", clone.equals(server));
-            assertEquals("clone has different hashCode() than server", server.hashCode(), clone.hashCode());
+    		assertTrue("clone not equals() original", clone.equals(original));
+            assertEquals("clone has different hashCode() than original", original.hashCode(), clone.hashCode());
         } else {
-    		assertFalse("clone still equals() server", clone.equals(server));
-            assertNotEquals("clone still has same hashCode() than server", server.hashCode(), clone.hashCode());
+    		assertFalse("clone still equals() original", clone.equals(original));
+            assertNotEquals("clone still has same hashCode() than original", original.hashCode(), clone.hashCode());
         }
 	}
 }

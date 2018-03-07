@@ -66,7 +66,7 @@ public class NullAuth extends Auth2 {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!this.getClass().isInstance(obj))
 			return false;
 		return true;
 	}	

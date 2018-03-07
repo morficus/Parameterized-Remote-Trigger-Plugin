@@ -15,6 +15,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.Base64Utils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.jelly.ThisTagLibrary;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
@@ -184,7 +185,7 @@ public class CredentialsAuth extends Auth2 {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!this.getClass().isInstance(obj))
 			return false;
 		CredentialsAuth other = (CredentialsAuth) obj;
 		if (credentials == null) {
