@@ -392,11 +392,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     /**
-     * Lookup up a Remote Jenkins Server based on display name
+     * Lookup up the globally configured Remote Jenkins Server based on display name
      *
      * @param displayName
      *            Name of the configuration you are looking for
-     * @return A RemoteJenkinsServer object
+     * @return A deep-copy of the RemoteJenkinsServer object configured globally
      */
     private RemoteJenkinsServer findRemoteHost(String displayName) {
         if(isEmpty(displayName)) return null;
@@ -404,8 +404,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         for (RemoteJenkinsServer host : this.getDescriptor().remoteSites) {
             // if we find a match, then stop looping
             if (displayName.equals(host.getDisplayName())) {
-                server = host;
-                break;
+                try {
+                    server = host.clone();
+                    break;
+                } catch(CloneNotSupportedException e) {
+                    // Clone is supported by RemoteJenkinsServer
+                    throw new RuntimeException(e);
+                }
             }
         }
         return server;

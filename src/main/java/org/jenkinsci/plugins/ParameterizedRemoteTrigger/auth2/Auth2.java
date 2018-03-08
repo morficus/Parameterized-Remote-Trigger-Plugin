@@ -13,7 +13,7 @@ import hudson.model.Descriptor;
 import hudson.model.Item;
 import jenkins.model.Jenkins;
 
-public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Serializable {
+public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Serializable, Cloneable {
 
     private static final long serialVersionUID = -3217381962636283564L;
 
@@ -81,5 +81,15 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
      * @return a string representing the authorization.
      */
     public abstract String toString(Item item);
+
+
+    @Override
+    public abstract Auth2 clone() throws CloneNotSupportedException;
+
+    @Override
+    public abstract int hashCode();
+
+    @Override
+    public abstract boolean equals(Object obj);
 
 }
