@@ -15,7 +15,6 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.Base64Utils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.jelly.ThisTagLibrary;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
