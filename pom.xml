@@ -7,14 +7,14 @@
   </parent>
 
   <properties>
-    <jenkins.version>1.577</jenkins.version>
+    <jenkins.version>1.642.3</jenkins.version>
     <java.level>7</java.level>
     <jenkins-test-harness.version>2.1</jenkins-test-harness.version>
     <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
 
   <artifactId>Parameterized-Remote-Trigger</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>3.0.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>Parameterized Remote Trigger Plugin</name>
   <description>This plugin gives you the ability to trigger parameterized builds on a remote Jenkins server as part of your build.</description>
