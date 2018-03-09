@@ -15,6 +15,7 @@ import javax.annotation.ParametersAreNullableByDefault;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildStatus;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
@@ -46,6 +47,7 @@ public class Handle implements Serializable {
     private String jobDisplayName;
     private String jobFullDisplayName;
     private String jobUrl;
+    private String remoteServerURL;
 
     /**
      * The current local Item (Job, Pipeline,...) where this plugin is currently used.
@@ -61,7 +63,8 @@ public class Handle implements Serializable {
      */
     private String lastLog;
 
-    public Handle(RemoteBuildConfiguration remoteBuildConfiguration, String queueId, @Nonnull String currentItem)
+	
+    public Handle(RemoteBuildConfiguration remoteBuildConfiguration, String queueId, @Nonnull String currentItem, @Nonnull RemoteJenkinsServer effectiveRemoteServer)
     {
         this.remoteBuildConfiguration = remoteBuildConfiguration;
         this.queueId = queueId;
@@ -69,6 +72,7 @@ public class Handle implements Serializable {
         this.buildStatus = null;
         this.lastLog = "";
         this.currentItem = currentItem;
+        this.remoteServerURL = effectiveRemoteServer.getRemoteAddress();
         if(trimToNull(currentItem) == null) throw new IllegalArgumentException("currentItem null");
     }
 
@@ -309,7 +313,6 @@ public class Handle implements Serializable {
     public String toString() {
 
         StringBuilder sb = new StringBuilder(); 
-        String remoteServerURL = remoteBuildConfiguration.getEffectiveRemoteServer().getRemoteAddress();
         sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), remoteServerURL, queueId));
         if(buildStatus != null) sb.append(String.format(", buildStatus=%s", buildStatus));
         if(buildData != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildData.getBuildNumber(), buildData.getURL()));

@@ -38,6 +38,10 @@ public class BuildContext
     @Nonnull
     public final PrintStream logger;
 
+    @Nullable
+    public RemoteJenkinsServer effectiveRemoteServer;
+
+    
     /**
      * The current Item (job, pipeline,...) where the plugin is used from.
      *
