@@ -13,6 +13,8 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -47,11 +49,6 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     @DataBoundConstructor
     public RemoteJenkinsServer() {
-        auth = null;
-        displayName = null;
-        hasBuildTokenRootSupport = false;
-        auth2 = new NoneAuth();
-        address = null;
     }
 
     @DataBoundSetter
@@ -161,6 +158,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
          *            Remote address to be validated
          * @return FormValidation object
          */
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckAddress(@QueryParameter String address) {
 
             URL host = null;

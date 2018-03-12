@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import static org.apache.commons.io.IOUtils.closeQuietly;
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
@@ -45,6 +46,8 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtil
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.TokenMacroUtils;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -452,7 +455,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @param item
      */
     private String addToQueryString(String queryString, String item) {
-        if (queryString == null || queryString.equals("")) {
+        if (isBlank(queryString)) {
             return item;
         } else {
             return queryString + "&" + item;
@@ -1561,6 +1564,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             return super.configure(req, formData);
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckJob(
                     @QueryParameter("job") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
@@ -1570,6 +1574,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsUrl(
                     @QueryParameter("remoteJenkinsUrl") final String value,
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
@@ -1579,6 +1584,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsName(
                     @QueryParameter("remoteJenkinsName") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
@@ -1588,6 +1594,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public ListBoxModel doFillRemoteJenkinsNameItems() {
             ListBoxModel model = new ListBoxModel();
 
