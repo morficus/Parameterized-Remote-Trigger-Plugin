@@ -157,13 +157,6 @@ public class Handle implements Serializable {
         return queueId;
     }
 
-//    /**
-//     * @return The full name of the item (Job, Pipeline,...) where we are currently running in locally.
-//     */
-//    public String getCurrentItem() {
-//        return currentItem;
-//    }
-
     /**
      * Get the build URL of the remote build.
      *
