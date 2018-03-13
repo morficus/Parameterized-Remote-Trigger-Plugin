@@ -1202,14 +1202,15 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     {
         URLConnection connection = url.openConnection();
 
-        //Set Authorization Header configured globally for remoteServer
         Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
-        if (serverAuth != null) serverAuth.setAuthorizationHeader(connection, context);
+        Auth2 overrideAuth = this.getAuth2();
 
-        //Override Authorization Header if configured locally
-        Auth2 auth = this.getAuth2();
-        if(auth != null && !(auth instanceof NullAuth)) {
-            auth.setAuthorizationHeader(connection, context);
+        if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
+            //Override Authorization Header if configured locally
+        	overrideAuth.setAuthorizationHeader(connection, context);
+        } else if (serverAuth != null) {
+            //Set Authorization Header configured globally for remoteServer
+        	serverAuth.setAuthorizationHeader(connection, context);
         }
 
         return (HttpURLConnection)connection;

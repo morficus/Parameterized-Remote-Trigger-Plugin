@@ -201,7 +201,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     public RemoteJenkinsServer clone() throws CloneNotSupportedException {
         RemoteJenkinsServer clone = new RemoteJenkinsServer();
         clone.address = address;
-        clone.auth2 = auth2.clone();
+        clone.auth2 = (auth2 == null) ? null : auth2.clone();
         clone.displayName = displayName;
         clone.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
         return clone;
