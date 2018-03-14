@@ -7,6 +7,7 @@ import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Item;
 
@@ -52,7 +53,7 @@ public class NullAuth extends Auth2 {
     
 	@Override
 	public NullAuth clone() throws CloneNotSupportedException {
-		return new NullAuth();
+		return (NullAuth)super.clone();
 	}
 
 	@Override
@@ -61,6 +62,7 @@ public class NullAuth extends Auth2 {
 	}
 	
 	@Override
+	@SuppressFBWarnings("EQ_UNUSUAL")
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

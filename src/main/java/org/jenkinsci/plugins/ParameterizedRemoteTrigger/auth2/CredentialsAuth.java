@@ -165,7 +165,7 @@ public class CredentialsAuth extends Auth2 {
     
 	@Override
 	public CredentialsAuth clone() throws CloneNotSupportedException {
-		CredentialsAuth clone = new CredentialsAuth();
+		CredentialsAuth clone = (CredentialsAuth)super.clone();
 		clone.credentials = credentials;
 		return clone;
 	}

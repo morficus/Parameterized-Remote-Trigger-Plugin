@@ -79,7 +79,7 @@ public class TokenAuth extends Auth2 {
 
 	@Override
 	public TokenAuth clone() throws CloneNotSupportedException {
-		TokenAuth clone = new TokenAuth();
+		TokenAuth clone = (TokenAuth)super.clone();
 		clone.apiToken = apiToken;
 		clone.userName = userName;
 		return clone;
