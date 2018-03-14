@@ -1571,7 +1571,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName) {
             RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, remoteJenkinsName, value);
-            if(result.isAffected(AffectedField.jobNameOrUrl)) return result.formValidation;
+            if(result.isAffected(AffectedField.JOB_NAME_OR_URL)) return result.formValidation;
             return FormValidation.ok();
         }
 
@@ -1581,7 +1581,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
                     @QueryParameter("job") final String job) {
             RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(value, remoteJenkinsName, job);
-            if(result.isAffected(AffectedField.remoteJenkinsUrl)) return result.formValidation;
+            if(result.isAffected(AffectedField.REMOTE_JENKINS_URL)) return result.formValidation;
             return FormValidation.ok();
         }
 
@@ -1591,7 +1591,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
                     @QueryParameter("job") final String job) {
             RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, value, job);
-            if(result.isAffected(AffectedField.remoteJenkinsName)) return result.formValidation;
+            if(result.isAffected(AffectedField.REMOTE_JENKINS_NAME)) return result.formValidation;
             return FormValidation.ok();
         }
 
