@@ -7,6 +7,7 @@ import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Item;
 
@@ -23,7 +24,9 @@ public class NoneAuth extends Auth2 {
 
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
-        connection.setRequestProperty("Authorization", null);
+    	//TODO: Should remove potential existing header, but URLConnection does not provide means to do so.
+    	//      Setting null worked in the past, but is not valid with newer versions (of Jetty).
+    	//connection.setRequestProperty("Authorization", null);
     }
 
     @Override
@@ -51,7 +54,7 @@ public class NoneAuth extends Auth2 {
 
 	@Override
 	public NoneAuth clone() throws CloneNotSupportedException {
-		return new NoneAuth();
+		return (NoneAuth)super.clone();
 	}
 
 	@Override
@@ -60,6 +63,7 @@ public class NoneAuth extends Auth2 {
 	}
 	
 	@Override
+	@SuppressFBWarnings("EQ_UNUSUAL")
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

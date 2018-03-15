@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import static org.apache.commons.io.IOUtils.closeQuietly;
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
@@ -45,6 +46,8 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtil
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.TokenMacroUtils;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -452,7 +455,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @param item
      */
     private String addToQueryString(String queryString, String item) {
-        if (queryString == null || queryString.equals("")) {
+        if (isBlank(queryString)) {
             return item;
         } else {
             return queryString + "&" + item;
@@ -1199,14 +1202,15 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     {
         URLConnection connection = url.openConnection();
 
-        //Set Authorization Header configured globally for remoteServer
         Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
-        if (serverAuth != null) serverAuth.setAuthorizationHeader(connection, context);
+        Auth2 overrideAuth = this.getAuth2();
 
-        //Override Authorization Header if configured locally
-        Auth2 auth = this.getAuth2();
-        if(auth != null && !(auth instanceof NullAuth)) {
-            auth.setAuthorizationHeader(connection, context);
+        if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
+            //Override Authorization Header if configured locally
+        	overrideAuth.setAuthorizationHeader(connection, context);
+        } else if (serverAuth != null) {
+            //Set Authorization Header configured globally for remoteServer
+        	serverAuth.setAuthorizationHeader(connection, context);
         }
 
         return (HttpURLConnection)connection;
@@ -1561,33 +1565,37 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             return super.configure(req, formData);
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckJob(
                     @QueryParameter("job") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName) {
             RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, remoteJenkinsName, value);
-            if(result.isAffected(AffectedField.jobNameOrUrl)) return result.formValidation;
+            if(result.isAffected(AffectedField.JOB_NAME_OR_URL)) return result.formValidation;
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsUrl(
                     @QueryParameter("remoteJenkinsUrl") final String value,
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
                     @QueryParameter("job") final String job) {
             RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(value, remoteJenkinsName, job);
-            if(result.isAffected(AffectedField.remoteJenkinsUrl)) return result.formValidation;
+            if(result.isAffected(AffectedField.REMOTE_JENKINS_URL)) return result.formValidation;
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsName(
                     @QueryParameter("remoteJenkinsName") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
                     @QueryParameter("job") final String job) {
             RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, value, job);
-            if(result.isAffected(AffectedField.remoteJenkinsName)) return result.formValidation;
+            if(result.isAffected(AffectedField.REMOTE_JENKINS_NAME)) return result.formValidation;
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public ListBoxModel doFillRemoteJenkinsNameItems() {
             ListBoxModel model = new ListBoxModel();
 

@@ -7,13 +7,17 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+
 import hudson.util.FormValidation;
 
+@Restricted(NoExternalUse.class)
 public class FormValidationUtils
 {
 
     public static enum AffectedField {
-        jobNameOrUrl, remoteJenkinsUrl, remoteJenkinsName
+        JOB_NAME_OR_URL, REMOTE_JENKINS_URL, REMOTE_JENKINS_NAME
     }
 
     public static class RemoteURLCombinationsResult {
@@ -52,36 +56,36 @@ public class FormValidationUtils
         if(isEmpty(jobNameOrUrl)) {
             return new RemoteURLCombinationsResult( 
                         FormValidation.error("'Remote Job Name or URL' ('job') not specified"),
-                        AffectedField.jobNameOrUrl);
+                        AffectedField.JOB_NAME_OR_URL);
         } else if(!isEmpty(remoteJenkinsUrl) && !isURL(remoteJenkinsUrl)) {
                 return new RemoteURLCombinationsResult(
                             FormValidation.error("Invalid URL in 'Override remote host URL' ('remoteJenkinsUrl')"),
-                            AffectedField.remoteJenkinsUrl);
+                            AffectedField.REMOTE_JENKINS_URL);
         } else if(!remoteUrl_setAndValidUrl && !remoteName_setAndValid && !job_setAndValidUrl) {
             //Root URL or full job URL not specified at all
             if(job_containsVariable) {
-                return new RemoteURLCombinationsResult(FormValidation.warning(TEXT_WARNING_JOB_VARIABLE), AffectedField.jobNameOrUrl);
+                return new RemoteURLCombinationsResult(FormValidation.warning(TEXT_WARNING_JOB_VARIABLE), AffectedField.JOB_NAME_OR_URL);
             } else {
                 return new RemoteURLCombinationsResult(FormValidation.error(TEXT_ERROR_NO_URL_AT_ALL),
-                            AffectedField.jobNameOrUrl, AffectedField.remoteJenkinsName, AffectedField.remoteJenkinsUrl);
+                            AffectedField.JOB_NAME_OR_URL, AffectedField.REMOTE_JENKINS_NAME, AffectedField.REMOTE_JENKINS_URL);
             }
         } else if(job_setAndValidUrl) {
             return RemoteURLCombinationsResult.OK();
         } else if(remoteUrl_setAndValidUrl && job_setAndNoUrl) {
             if(job_containsVariable) {
-                return new RemoteURLCombinationsResult(FormValidation.warning(TEXT_WARNING_JOB_VARIABLE), AffectedField.jobNameOrUrl);
+                return new RemoteURLCombinationsResult(FormValidation.warning(TEXT_WARNING_JOB_VARIABLE), AffectedField.JOB_NAME_OR_URL);
             } else {
                 return RemoteURLCombinationsResult.OK();
             }
         } else if(remoteName_setAndValid && job_setAndNoUrl) {
             if(job_containsVariable) {
-                return new RemoteURLCombinationsResult(FormValidation.warning(TEXT_WARNING_JOB_VARIABLE), AffectedField.jobNameOrUrl);
+                return new RemoteURLCombinationsResult(FormValidation.warning(TEXT_WARNING_JOB_VARIABLE), AffectedField.JOB_NAME_OR_URL);
             } else {
                 return RemoteURLCombinationsResult.OK();
             }
         } else {
             return new RemoteURLCombinationsResult(FormValidation.error(TEXT_ERROR_NO_URL_AT_ALL),
-                        AffectedField.jobNameOrUrl, AffectedField.remoteJenkinsName, AffectedField.remoteJenkinsUrl);
+                        AffectedField.JOB_NAME_OR_URL, AffectedField.REMOTE_JENKINS_NAME, AffectedField.REMOTE_JENKINS_URL);
         }
     }
 

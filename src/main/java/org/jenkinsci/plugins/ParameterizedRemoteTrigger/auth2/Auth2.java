@@ -30,31 +30,6 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
     }
 
     /**
-     * Tries to identify a user. Depending on the Auth2 type it might be null.
-     *
-     * @param auth
-     *            authorization to trigger jobs in the remote server
-     * @return the user name
-     * @throws CredentialsNotFoundException 
-     *            if the credentials are not found
-     */
-    public static String identifyUser(Auth2 auth) throws CredentialsNotFoundException
-    {
-        if (auth == null) {
-            return null;
-        }
-        else if (auth instanceof TokenAuth) {
-            return ((TokenAuth) auth).getUserName();
-        }
-        else if (auth instanceof CredentialsAuth) {
-            return ((CredentialsAuth) auth).getUserName(null);
-        }
-        else {
-            return null;
-        }
-    }
-
-    /**
      * Depending on the purpose the Auth2 implementation has to override the
      * <code>Authorization</code> header of the connection appropriately. It might also ignore this
      * step or remove an existing <code>Authorization</code> header.
@@ -84,7 +59,9 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
 
 
     @Override
-    public abstract Auth2 clone() throws CloneNotSupportedException;
+    public Auth2 clone() throws CloneNotSupportedException {
+    	return (Auth2)super.clone();
+    };
 
     @Override
     public abstract int hashCode();
