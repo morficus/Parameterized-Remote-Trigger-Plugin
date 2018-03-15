@@ -54,7 +54,7 @@ public class JenkinsCrumb
     }
 
     /**
-     * @return true if CSRF is enabled on the remote Jenkins, false otherwise. 
+     * @return true if CSRF is enabled on the remote Jenkins, false otherwise.
      */
     public boolean isEnabledOnRemote()
     {

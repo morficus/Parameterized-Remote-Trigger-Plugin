@@ -11,7 +11,7 @@ import org.apache.commons.io.IOUtils;
  * Wrapper to provide a <code>PrintStream</code> for writing content to
  * and a corresponding <code>getContent()</code> method to get the content
  * which has been written to the PrintStream.
- * 
+ *
  * The reason is from the async Pipeline <code>Handle</code> we don't have
  * an active <code>TaskListener.getLogger()</code> anymore this means everything
  * written to the PrintStream (logger) will not be printed to the Pipeline log.
@@ -43,7 +43,7 @@ public class PrintStreamWrapper
     public String getContent() throws IOException {
         String string = byteStream.toString("UTF-8");
         close();
-        return string; 
+        return string;
     }
 
     /**

@@ -58,15 +58,15 @@ public class BuildInfoExporterActionTest {
         ExecutorService executor = Executors.newFixedThreadPool(POOL_SIZE);
 
         //Start parallel threads adding BuildInfoExporterActions AND one thread reading in parallel
-        Future<?>[] addFutures = new Future<?>[PARALLEL_JOBS]; 
+        Future<?>[] addFutures = new Future<?>[PARALLEL_JOBS];
         for (int i = 1; i <= PARALLEL_JOBS; i++) {
             addFutures[i-1] = executor.submit(new AddActionCallable(parentBuild, i));
         }
         Future<?> envFuture = executor.submit(new BuildEnvVarsCallable(parentBuild));
-        
+
         //Wait until all finished
         while(!isDone(addFutures) && !envFuture.isDone()) sleep(100);
-        
+
         //Check result
         EnvVars env = (EnvVars)envFuture.get();
         checkEnv(env);
@@ -104,7 +104,7 @@ public class BuildInfoExporterActionTest {
         }
         return done;
     }
-    
+
     /**
      * Checks if the env contains all expected variables
      * @param env
@@ -119,7 +119,7 @@ public class BuildInfoExporterActionTest {
             Assert.assertEquals("TRIGGERED_BUILD_URL_Job"+i, "http://jenkins/jobs/Job"+i, env.get("TRIGGERED_BUILD_URL_Job"+i));
         }
     }
-    
+
     /**
      * Calls {@link BuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)} a single time.
      * This Callable is typically executed multiple tiles in parallel to provoke a ConcurrentModificationException (which should not occur anymore).

@@ -41,7 +41,7 @@ public class BuildContext
     @Nullable
     public RemoteJenkinsServer effectiveRemoteServer;
 
-    
+
     /**
      * The current Item (job, pipeline,...) where the plugin is used from.
      *
@@ -92,5 +92,5 @@ public class BuildContext
             throw new IllegalArgumentException("Both null, Run and Current Item!");
         }
     }
-    
+
 }

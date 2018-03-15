@@ -186,7 +186,7 @@ public class BuildInfoExporterAction implements EnvironmentContributingAction {
      * Gets the unique set of project names that have a linked build.<br>
      * The later triggered jobs are later in the list. E.g.<br>
      * C, A, B -&gt; C, A, B <br>
-     * C, A, B, A, C -&gt; B, A, C <br> 
+     * C, A, B, A, C -&gt; B, A, C <br>
      *
      * @return Set of project names that have at least one build linked.
      */

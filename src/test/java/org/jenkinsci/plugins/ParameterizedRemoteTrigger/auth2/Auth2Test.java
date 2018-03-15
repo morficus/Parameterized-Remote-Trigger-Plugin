@@ -15,7 +15,7 @@ public class Auth2Test {
         original.setCredentials("original");
         CredentialsAuth clone = original.clone();
         verifyEqualsHashCode(original, clone);
-        
+
         //Test changing clone
         clone.setCredentials("changed");
         verifyEqualsHashCode(original, clone, false);
@@ -30,7 +30,7 @@ public class Auth2Test {
         original.setUserName("original");
         TokenAuth clone = original.clone();
         verifyEqualsHashCode(original, clone);
-        
+
         //Test changing clone
         clone.setApiToken("changed");
         clone.setUserName("changed");

@@ -54,7 +54,7 @@ public class Handle implements Serializable {
      */
     private final String currentItem;
 
-    /* 
+    /*
      * The latest log entries from the last called method.
      * Unfortunately the TaskListener.getLogger() from the StepContext does
      * not write to the pipeline log anymore since the RemoteBuildPipelineStep
@@ -305,7 +305,7 @@ public class Handle implements Serializable {
     @Override
     public String toString() {
 
-        StringBuilder sb = new StringBuilder(); 
+        StringBuilder sb = new StringBuilder();
         sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), remoteServerURL, queueId));
         if(buildStatus != null) sb.append(String.format(", buildStatus=%s", buildStatus));
         if(buildData != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildData.getBuildNumber(), buildData.getURL()));
@@ -383,7 +383,7 @@ public class Handle implements Serializable {
 
     public void setJobMetadata(JSONObject remoteJobMetadata)
     {
-        this.jobName = getParameterFromJobMetadata(remoteJobMetadata, "name"); 
+        this.jobName = getParameterFromJobMetadata(remoteJobMetadata, "name");
         this.jobFullName = getParameterFromJobMetadata(remoteJobMetadata, "fullName");
         this.jobDisplayName = getParameterFromJobMetadata(remoteJobMetadata, "displayName");
         this.jobFullDisplayName = getParameterFromJobMetadata(remoteJobMetadata, "fullDisplayName");

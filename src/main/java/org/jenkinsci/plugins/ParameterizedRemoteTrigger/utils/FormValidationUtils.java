@@ -29,7 +29,7 @@ public class FormValidationUtils
             this.formValidation = formValidation;
             this.affectedFields = affectedFields;
         }
-        
+
         public boolean isAffected(AffectedField field) {
             return Arrays.asList(affectedFields).contains(field);
         }
@@ -38,7 +38,7 @@ public class FormValidationUtils
         {
             return new RemoteURLCombinationsResult(FormValidation.ok(), AffectedField.values());
         }
-        
+
     }
 
     public static RemoteURLCombinationsResult checkRemoteURLCombinations(String remoteJenkinsUrl, String remoteJenkinsName, String jobNameOrUrl) {
@@ -52,9 +52,9 @@ public class FormValidationUtils
         boolean job_containsVariable = isEmpty(jobNameOrUrl) ? false : jobNameOrUrl.indexOf("$") >= 0;
         final String TEXT_WARNING_JOB_VARIABLE = "You are using a variable in the 'Remote Job Name or URL' ('job') field. You have to make sure the value at runtime results in the full job URL";
         final String TEXT_ERROR_NO_URL_AT_ALL = "You have to configure either 'Select a remote host' ('remoteJenkinsName'), 'Override remote host URL' ('remoteJenkinsUrl') or specify a full job URL 'Remote Job Name or URL' ('job')";
-        
+
         if(isEmpty(jobNameOrUrl)) {
-            return new RemoteURLCombinationsResult( 
+            return new RemoteURLCombinationsResult(
                         FormValidation.error("'Remote Job Name or URL' ('job') not specified"),
                         AffectedField.JOB_NAME_OR_URL);
         } else if(!isEmpty(remoteJenkinsUrl) && !isURL(remoteJenkinsUrl)) {
@@ -100,10 +100,10 @@ public class FormValidationUtils
         if(isEmpty(trimToNull(string))) return false;
         String stringLower = string.toLowerCase();
         if(stringLower.startsWith("http://") || stringLower.startsWith("https://")) {
-            if(stringLower.indexOf("://") >= stringLower.length()-3) {                
+            if(stringLower.indexOf("://") >= stringLower.length()-3) {
                 return false; //URL ends after protocol
             }
-            if(stringLower.indexOf("$") >= 0) {                
+            if(stringLower.indexOf("$") >= 0) {
                 return false; //We interpret $ in URLs as variables which need to be replaced. TODO: What about URI standard which allows $?
             }
             try {

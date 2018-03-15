@@ -26,9 +26,9 @@ import hudson.util.FormValidation;
 
 /**
  * Holds everything regarding the remote server we wish to connect to, including validations and what not.
- * 
+ *
  * @author Maurice W.
- * 
+ *
  */
 public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> implements Cloneable {
 
@@ -101,13 +101,13 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     }
 
     /**
-     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary. 
+     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary.
      * @deprecated since 2.3.0-SNAPSHOT - get rid once all users migrated
      */
     private void migrateAuthToAuth2() {
         if(auth2 == null) {
             if(auth == null || auth.size() <= 0) {
-                auth2 = new NoneAuth(); 
+                auth2 = new NoneAuth();
             } else {
                 auth2 = Auth.authToAuth2(auth);
             }
@@ -153,7 +153,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
         /**
          * Validates the given address to see that it's well-formed, and is reachable.
-         * 
+         *
          * @param address
          *            Remote address to be validated
          * @return FormValidation object

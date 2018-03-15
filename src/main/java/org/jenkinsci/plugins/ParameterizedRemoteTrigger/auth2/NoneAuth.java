@@ -61,7 +61,7 @@ public class NoneAuth extends Auth2 {
     public int hashCode() {
         return "NoneAuth".hashCode();
     }
-    
+
     @Override
     @SuppressFBWarnings("EQ_UNUSUAL")
     public boolean equals(Object obj) {

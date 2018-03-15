@@ -223,7 +223,7 @@ public class RemoteBuildPipelineStep extends Step {
   public String getRemoteJenkinsUrl() {
       return remoteBuildConfig.getRemoteJenkinsUrl();
   }
-  
+
   public String getJob() {
       return remoteBuildConfig.getJob();
   }

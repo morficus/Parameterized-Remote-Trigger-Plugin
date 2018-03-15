@@ -198,7 +198,7 @@ public class RemoteBuildConfigurationTest {
         } catch(AbortException e) {
             assertEquals("Parameter 'Remote Job Name or URL' ('job' variable in Pipeline) not specified.", e.getMessage());
         }
-    }    
+    }
 
     @Test @WithoutJenkins
     public void testRemoteUrlOverridesRemoteName() throws IOException {

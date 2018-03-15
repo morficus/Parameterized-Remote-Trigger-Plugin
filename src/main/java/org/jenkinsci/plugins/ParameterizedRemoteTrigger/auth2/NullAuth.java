@@ -50,7 +50,7 @@ public class NullAuth extends Auth2 {
         }
     }
 
-    
+
     @Override
     public NullAuth clone() throws CloneNotSupportedException {
         return (NullAuth)super.clone();
@@ -60,7 +60,7 @@ public class NullAuth extends Auth2 {
     public int hashCode() {
         return "NullAuth".hashCode();
     }
-    
+
     @Override
     @SuppressFBWarnings("EQ_UNUSUAL")
     public boolean equals(Object obj) {
