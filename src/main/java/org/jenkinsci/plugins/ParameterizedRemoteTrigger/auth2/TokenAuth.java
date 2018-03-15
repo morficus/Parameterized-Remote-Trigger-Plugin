@@ -77,43 +77,43 @@ public class TokenAuth extends Auth2 {
         }
     }
 
-	@Override
-	public TokenAuth clone() throws CloneNotSupportedException {
-		TokenAuth clone = (TokenAuth)super.clone();
-		clone.apiToken = apiToken;
-		clone.userName = userName;
-		return clone;
-	}
+    @Override
+    public TokenAuth clone() throws CloneNotSupportedException {
+        TokenAuth clone = (TokenAuth)super.clone();
+        clone.apiToken = apiToken;
+        clone.userName = userName;
+        return clone;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((apiToken == null) ? 0 : apiToken.hashCode());
-		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((apiToken == null) ? 0 : apiToken.hashCode());
+        result = prime * result + ((userName == null) ? 0 : userName.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (!this.getClass().isInstance(obj))
-			return false;
-		TokenAuth other = (TokenAuth) obj;
-		if (apiToken == null) {
-			if (other.apiToken != null)
-				return false;
-		} else if (!apiToken.equals(other.apiToken))
-			return false;
-		if (userName == null) {
-			if (other.userName != null)
-				return false;
-		} else if (!userName.equals(other.userName))
-			return false;
-		return true;
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (!this.getClass().isInstance(obj))
+            return false;
+        TokenAuth other = (TokenAuth) obj;
+        if (apiToken == null) {
+            if (other.apiToken != null)
+                return false;
+        } else if (!apiToken.equals(other.apiToken))
+            return false;
+        if (userName == null) {
+            if (other.userName != null)
+                return false;
+        } else if (!userName.equals(other.userName))
+            return false;
+        return true;
+    }
 
 }

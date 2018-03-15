@@ -63,7 +63,7 @@ public class Handle implements Serializable {
      */
     private String lastLog;
 
-	
+
     public Handle(RemoteBuildConfiguration remoteBuildConfiguration, String queueId, @Nonnull String currentItem, @Nonnull RemoteJenkinsServer effectiveRemoteServer)
     {
         this.remoteBuildConfiguration = remoteBuildConfiguration;

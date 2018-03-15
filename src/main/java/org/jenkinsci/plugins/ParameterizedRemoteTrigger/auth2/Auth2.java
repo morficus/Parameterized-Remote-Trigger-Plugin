@@ -60,7 +60,7 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
 
     @Override
     public Auth2 clone() throws CloneNotSupportedException {
-    	return (Auth2)super.clone();
+        return (Auth2)super.clone();
     };
 
     @Override

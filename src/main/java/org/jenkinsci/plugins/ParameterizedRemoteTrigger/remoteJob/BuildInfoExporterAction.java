@@ -38,13 +38,13 @@ public class BuildInfoExporterAction implements EnvironmentContributingAction {
 
         BuildInfoExporterAction action;
         synchronized(parentBuild) {
-	        action = parentBuild.getAction(BuildInfoExporterAction.class);
-	        if (action == null) {
-	            action = new BuildInfoExporterAction(parentBuild, reference);
-	            parentBuild.addAction(action);
-	        } else {
-	            action.addBuildReference(reference);
-	        }
+            action = parentBuild.getAction(BuildInfoExporterAction.class);
+            if (action == null) {
+                action = new BuildInfoExporterAction(parentBuild, reference);
+                parentBuild.addAction(action);
+            } else {
+                action.addBuildReference(reference);
+            }
         }
         return action;
     }
