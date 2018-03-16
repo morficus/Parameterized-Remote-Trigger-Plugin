@@ -51,6 +51,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 
 public class RemoteBuildPipelineStep extends Step {
 
@@ -152,7 +153,10 @@ public class RemoteBuildPipelineStep extends Step {
         }
 
         public ListBoxModel doFillRemoteJenkinsNameItems() {
-            return RemoteBuildConfiguration.getDescriptorStatic().doFillRemoteJenkinsNameItems();
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) throw new NullPointerException("Jenkins instance can not be null");
+            RemoteBuildConfiguration.DescriptorImpl descriptor = (RemoteBuildConfiguration.DescriptorImpl) jenkins.getDescriptor(RemoteBuildConfiguration.class);
+            return descriptor.doFillRemoteJenkinsNameItems();
         }
 
         public FormValidation doCheckJob(
