@@ -1590,6 +1590,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         }
 
         @Restricted(NoExternalUse.class)
+        @Nonnull
         public ListBoxModel doFillRemoteJenkinsNameItems() {
             ListBoxModel model = new ListBoxModel();
 

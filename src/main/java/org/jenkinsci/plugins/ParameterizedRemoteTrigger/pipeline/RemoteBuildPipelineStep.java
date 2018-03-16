@@ -27,6 +27,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
@@ -40,6 +42,8 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -152,13 +156,17 @@ public class RemoteBuildPipelineStep extends Step {
             return set;
         }
 
+        @Restricted(NoExternalUse.class)
+        @Nonnull
         public ListBoxModel doFillRemoteJenkinsNameItems() {
             Jenkins jenkins = Jenkins.getInstance();
-            if (jenkins == null) throw new NullPointerException("Jenkins instance can not be null");
+            if (jenkins == null) return new ListBoxModel(0);
             RemoteBuildConfiguration.DescriptorImpl descriptor = (RemoteBuildConfiguration.DescriptorImpl) jenkins.getDescriptor(RemoteBuildConfiguration.class);
+            if(descriptor == null) throw new RuntimeException("Could not get descriptor for RemoteBuildConfiguration");
             return descriptor.doFillRemoteJenkinsNameItems();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckJob(
                     @QueryParameter("job") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
@@ -168,6 +176,7 @@ public class RemoteBuildPipelineStep extends Step {
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsUrl(
                     @QueryParameter("remoteJenkinsUrl") final String value,
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
@@ -177,6 +186,7 @@ public class RemoteBuildPipelineStep extends Step {
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsName(
                     @QueryParameter("remoteJenkinsName") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
