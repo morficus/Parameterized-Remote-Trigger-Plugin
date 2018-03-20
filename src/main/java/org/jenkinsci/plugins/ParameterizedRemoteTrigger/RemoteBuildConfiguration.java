@@ -32,6 +32,7 @@ import javax.annotation.ParametersAreNullableByDefault;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.ForbiddenException;
@@ -112,21 +113,29 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     @DataBoundConstructor
     public RemoteBuildConfiguration() {
-        remoteJenkinsName = null;
-        remoteJenkinsUrl = null;
-        auth = null;
-        auth2 = new NullAuth();
-        shouldNotFailBuild = false;
-        preventRemoteBuildQueue = false;
         pollInterval = DEFAULT_POLLINTERVALL;
-        blockBuildUntilComplete = false;
-        job = null;
         token = "";
         parameters = "";
-        enhancedLogging = false;
-        loadParamsFromFile = false;
         parameterFile = "";
     }
+
+    /**
+     * see https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
+     */
+    @SuppressWarnings("deprecation")
+    protected Object readResolve() {
+        //migrate Auth To Auth2
+        if(auth2 == null) {
+            if(auth == null || auth.size() <= 0) {
+                auth2 = new NullAuth();
+            } else {
+                auth2 = Auth.authToAuth2(auth);
+            }
+        }
+        auth = null;
+        return this;
+    }
+
 
     @DataBoundSetter
     public void setRemoteJenkinsName(String remoteJenkinsName)
@@ -1317,6 +1326,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     /**
+     * TODO: Remove - only used in tests
      * @return the list of authorizations.
      * @deprecated since 2.3.0-SNAPSHOT - use {@link #getAuth2()} instead.
      */
@@ -1328,23 +1338,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public Auth2 getAuth2() {
-        migrateAuthToAuth2();
         return this.auth2;
-    }
-
-    /**
-     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary.
-     * @deprecated since 2.3.0-SNAPSHOT - get rid once all users migrated
-     */
-    private void migrateAuthToAuth2() {
-        if(auth2 == null) {
-            if(auth == null || auth.size() <= 0) {
-                auth2 = new NullAuth();
-            } else {
-                auth2 = Auth.authToAuth2(auth);
-            }
-        }
-        auth = null;
     }
 
     public boolean getShouldNotFailBuild() {

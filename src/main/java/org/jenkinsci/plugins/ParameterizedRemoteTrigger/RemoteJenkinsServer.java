@@ -37,7 +37,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
      */
     @CheckForNull
-    private List<Auth> auth;
+    private transient List<Auth> auth;
 
     @CheckForNull
     private String     displayName;
@@ -51,6 +51,24 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     public RemoteJenkinsServer() {
     }
 
+    /**
+     * see https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
+     */
+    @SuppressWarnings("deprecation")
+    protected Object readResolve() {
+        //migrate Auth To Auth2
+        if(auth2 == null) {
+            if(auth == null || auth.size() <= 0) {
+                auth2 = new NoneAuth(); 
+            } else {
+                auth2 = Auth.authToAuth2(auth);
+            }
+        }
+        auth = null;
+        return this;
+    }
+    
+    
     @DataBoundSetter
     public void setDisplayName(String displayName)
     {
@@ -96,23 +114,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     @CheckForNull
     public Auth2 getAuth2() {
-        migrateAuthToAuth2();
         return auth2;
-    }
-
-    /**
-     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary.
-     * @deprecated since 2.3.0-SNAPSHOT - get rid once all users migrated
-     */
-    private void migrateAuthToAuth2() {
-        if(auth2 == null) {
-            if(auth == null || auth.size() <= 0) {
-                auth2 = new NoneAuth();
-            } else {
-                auth2 = Auth.authToAuth2(auth);
-            }
-        }
-        auth = null;
     }
 
     @CheckForNull
