@@ -54,11 +54,6 @@ public class NullAuth extends Auth2 {
     }
 
     @Override
-    public NullAuth clone() throws CloneNotSupportedException {
-        return (NullAuth)super.clone();
-    }
-
-    @Override
     public int hashCode() {
         return "NullAuth".hashCode();
     }

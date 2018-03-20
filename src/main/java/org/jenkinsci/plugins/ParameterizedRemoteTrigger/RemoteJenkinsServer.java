@@ -207,10 +207,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @Override
     public RemoteJenkinsServer clone() throws CloneNotSupportedException {
         RemoteJenkinsServer clone = (RemoteJenkinsServer)super.clone();
-        clone.address = address;
         clone.auth2 = (auth2 == null) ? null : auth2.clone();
-        clone.displayName = displayName;
-        clone.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
         return clone;
     }
 

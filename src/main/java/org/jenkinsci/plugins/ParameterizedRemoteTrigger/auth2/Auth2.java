@@ -63,10 +63,4 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
         return (Auth2)super.clone();
     };
 
-    @Override
-    public abstract int hashCode();
-
-    @Override
-    public abstract boolean equals(Object obj);
-
 }

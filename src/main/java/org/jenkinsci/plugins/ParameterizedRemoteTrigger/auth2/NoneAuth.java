@@ -56,11 +56,6 @@ public class NoneAuth extends Auth2 {
     }
 
     @Override
-    public NoneAuth clone() throws CloneNotSupportedException {
-        return (NoneAuth)super.clone();
-    }
-
-    @Override
     public int hashCode() {
         return "NoneAuth".hashCode();
     }

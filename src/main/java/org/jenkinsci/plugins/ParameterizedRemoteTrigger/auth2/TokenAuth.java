@@ -78,14 +78,6 @@ public class TokenAuth extends Auth2 {
     }
 
     @Override
-    public TokenAuth clone() throws CloneNotSupportedException {
-        TokenAuth clone = (TokenAuth)super.clone();
-        clone.apiToken = apiToken;
-        clone.userName = userName;
-        return clone;
-    }
-
-    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -106,13 +98,15 @@ public class TokenAuth extends Auth2 {
         if (apiToken == null) {
             if (other.apiToken != null)
                 return false;
-        } else if (!apiToken.equals(other.apiToken))
+        } else if (!apiToken.equals(other.apiToken)) {
             return false;
+        }
         if (userName == null) {
             if (other.userName != null)
                 return false;
-        } else if (!userName.equals(other.userName))
+        } else if (!userName.equals(other.userName)) {
             return false;
+        }
         return true;
     }
 
