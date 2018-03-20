@@ -13,7 +13,6 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -33,6 +32,11 @@ import hudson.util.FormValidation;
  */
 public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> implements Cloneable {
 
+    /**
+     * Default for this class is No Authentication
+     */
+    private final static Auth2 DEFAULT_AUTH = NoneAuth.INSTANCE;
+  
     /**
      * We need to keep this for compatibility - old config deserialization!
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
@@ -60,7 +64,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         //migrate Auth To Auth2
         if(auth2 == null) {
             if(auth == null || auth.size() <= 0) {
-                auth2 = NoneAuth.INSTANCE; 
+                auth2 = DEFAULT_AUTH; 
             } else {
                 auth2 = Auth.authToAuth2(auth);
             }
@@ -85,7 +89,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @DataBoundSetter
     public void setAuth2(Auth2 auth2)
     {
-        this.auth2 = (auth2 != null) ? auth2 : NoneAuth.INSTANCE;
+        this.auth2 = (auth2 != null) ? auth2 : DEFAULT_AUTH;
     }
 
     @DataBoundSetter

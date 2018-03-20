@@ -85,6 +85,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private static final long serialVersionUID = -4059001060991775146L;
 
+    /**
+     * Default for this class is "no auth configured" since we do not want to override potential global config
+     */
+    private final static Auth2 DEFAULT_AUTH = NullAuth.INSTANCE;
+
+    
     private static final int      DEFAULT_POLLINTERVALL = 10;
     private static final String   paramerizedBuildUrl   = "/buildWithParameters";
     private static final String   normalBuildUrl        = "/build";
@@ -127,7 +133,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         //migrate Auth To Auth2
         if(auth2 == null) {
             if(auth == null || auth.size() <= 0) {
-                auth2 = NullAuth.INSTANCE;
+                auth2 = DEFAULT_AUTH;
             } else {
                 auth2 = Auth.authToAuth2(auth);
             }
@@ -1338,7 +1344,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public Auth2 getAuth2() {
-        return (auth2 != null) ? auth2 : NullAuth.INSTANCE;
+        return (auth2 != null) ? auth2 : DEFAULT_AUTH;
     }
 
     public boolean getShouldNotFailBuild() {
