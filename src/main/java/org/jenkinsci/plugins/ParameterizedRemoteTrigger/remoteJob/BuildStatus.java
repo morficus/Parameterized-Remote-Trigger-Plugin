@@ -32,27 +32,27 @@ public enum BuildStatus
     RUNNING("RUNNING"),
 
     /**
-     * Status corresponding to the Jenkins Result.ABORTED 
+     * Status corresponding to the Jenkins Result.ABORTED
      */
     ABORTED(Result.ABORTED),
 
     /**
-     * Status corresponding to the Jenkins Result.FAILURE 
+     * Status corresponding to the Jenkins Result.FAILURE
      */
     FAILURE(Result.FAILURE),
 
     /**
-     * Status corresponding to the Jenkins Result.NOT_BUILT 
+     * Status corresponding to the Jenkins Result.NOT_BUILT
      */
     NOT_BUILT(Result.NOT_BUILT),
 
     /**
-     * Status corresponding to the Jenkins Result.SUCCESS 
+     * Status corresponding to the Jenkins Result.SUCCESS
      */
     SUCCESS(Result.SUCCESS),
 
     /**
-     * Status corresponding to the Jenkins Result.UNSTABLE 
+     * Status corresponding to the Jenkins Result.UNSTABLE
      */
     UNSTABLE(Result.UNSTABLE);
 

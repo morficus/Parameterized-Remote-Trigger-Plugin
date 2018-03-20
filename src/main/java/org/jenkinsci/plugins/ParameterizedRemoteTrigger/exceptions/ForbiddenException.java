@@ -19,5 +19,5 @@ public class ForbiddenException extends IOException
     {
         return "Server returned 403 - Forbidden. User does not have enough permissions for this request: " + url;
     }
-        
+
 }

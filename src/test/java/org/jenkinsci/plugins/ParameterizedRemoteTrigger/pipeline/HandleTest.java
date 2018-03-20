@@ -27,6 +27,6 @@ public class HandleTest
     else
       assertFalse("Help contains '" + checkString + "': \"" + help + "\"", help.contains(checkString));
   }
-  
-  
+
+
 }

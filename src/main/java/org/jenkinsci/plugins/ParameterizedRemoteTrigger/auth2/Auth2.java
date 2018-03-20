@@ -52,7 +52,7 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
      *            the Item (Job, Pipeline,...) we are currently running in.
      *            The item is required to also get Credentials which are defined in the items scope and not Jenkins globally.
      *            Value can be null, but Credentials e.g. configured on a Folder will not be found in this case,
-     *            only globally configured Credentials. 
+     *            only globally configured Credentials.
      * @return a string representing the authorization.
      */
     public abstract String toString(Item item);
@@ -60,7 +60,7 @@ public abstract class Auth2 extends AbstractDescribableImpl<Auth2> implements Se
 
     @Override
     public Auth2 clone() throws CloneNotSupportedException {
-    	return (Auth2)super.clone();
+        return (Auth2)super.clone();
     };
 
     @Override

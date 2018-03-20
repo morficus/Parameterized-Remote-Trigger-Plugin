@@ -802,7 +802,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
       String queueQuery = String.format("%s/queue/item/%s/api/json/", context.effectiveRemoteServer.getRemoteAddress(), queueId);
       ConnectionResponse response = sendHTTPCall( queueQuery, "GET", context, 1 );
-      JSONObject queueResponse = response.getBody(); 
+      JSONObject queueResponse = response.getBody();
 
       if (queueResponse == null || queueResponse.isNullObject()) {
           throw new AbortException(String.format("Unexpected queue item response: code %s for request %s", response.getResponseCode(), queueQuery));
@@ -1045,11 +1045,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new ForbiddenException(url);
             } else {
                 String response = trimToNull(readInputStream(connection));
-    
+
                 // JSONSerializer serializer = new JSONSerializer();
                 // need to parse the data we get back into struct
                 //listener.getLogger().println("Called URL: '" + urlString +  "', got response: '" + response.toString() + "'");
-    
+
                 //Solving issue reported in this comment: https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/3#issuecomment-39369194
                 //Seems like in Jenkins version 1.547, when using "/build" (job API for non-parameterized jobs), it returns a string indicating the status.
                 //But in newer versions of Jenkins, it just returns an empty response.
@@ -1113,7 +1113,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     /**
      * For POST requests a crumb is needed. This methods gets a crumb and sets it in the header.
      * https://wiki.jenkins.io/display/JENKINS/Remote+access+API#RemoteaccessAPI-CSRFProtection
-     * 
+     *
      * @param connection
      * @param context
      * @throws IOException
@@ -1207,10 +1207,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
             //Override Authorization Header if configured locally
-        	overrideAuth.setAuthorizationHeader(connection, context);
+            overrideAuth.setAuthorizationHeader(connection, context);
         } else if (serverAuth != null) {
             //Set Authorization Header configured globally for remoteServer
-        	serverAuth.setAuthorizationHeader(connection, context);
+            serverAuth.setAuthorizationHeader(connection, context);
         }
 
         return (HttpURLConnection)connection;
@@ -1369,7 +1369,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     public String getJob() {
         return job;
     }
-    
+
     /**
      * @return job value with expanded env vars.
      * @throws IOException

@@ -24,9 +24,9 @@ public class NoneAuth extends Auth2 {
 
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
-    	//TODO: Should remove potential existing header, but URLConnection does not provide means to do so.
-    	//      Setting null worked in the past, but is not valid with newer versions (of Jetty).
-    	//connection.setRequestProperty("Authorization", null);
+        //TODO: Should remove potential existing header, but URLConnection does not provide means to do so.
+        //      Setting null worked in the past, but is not valid with newer versions (of Jetty).
+        //connection.setRequestProperty("Authorization", null);
     }
 
     @Override
@@ -52,26 +52,26 @@ public class NoneAuth extends Auth2 {
         }
     }
 
-	@Override
-	public NoneAuth clone() throws CloneNotSupportedException {
-		return (NoneAuth)super.clone();
-	}
+    @Override
+    public NoneAuth clone() throws CloneNotSupportedException {
+        return (NoneAuth)super.clone();
+    }
 
-	@Override
-	public int hashCode() {
-		return "NoneAuth".hashCode();
-	}
-	
-	@Override
-	@SuppressFBWarnings("EQ_UNUSUAL")
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (!this.getClass().isInstance(obj))
-			return false;
-		return true;
-	}	
+    @Override
+    public int hashCode() {
+        return "NoneAuth".hashCode();
+    }
+
+    @Override
+    @SuppressFBWarnings("EQ_UNUSUAL")
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (!this.getClass().isInstance(obj))
+            return false;
+        return true;
+    }
 
 }

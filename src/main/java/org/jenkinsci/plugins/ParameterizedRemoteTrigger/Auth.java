@@ -39,8 +39,8 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
     public static final String  API_TOKEN          = "apiToken";
     public static final String  CREDENTIALS_PLUGIN = "credentialsPlugin";
 
-	private static final Auth2 NONE_AUTH = new NoneAuth();
-	private static final Auth2 NULL_AUTH = new NullAuth();
+    private static final Auth2 NONE_AUTH = new NoneAuth();
+    private static final Auth2 NULL_AUTH = new NullAuth();
 
     private final String authType;
     private final String username;
@@ -77,7 +77,7 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
 
     public String getUser(){
         if (authType.equals(API_TOKEN)){
-            return username;	
+            return username;
         } else if (authType.equals(CREDENTIALS_PLUGIN)){
             UsernamePasswordCredentials creds = getCredentials();
             return creds != null ? creds.getUsername() : "";
