@@ -18,10 +18,13 @@ public class NullAuth extends Auth2 {
     @Extension
     public static final Auth2Descriptor DESCRIPTOR = new NullAuthDescriptor();
 
+    public static final NullAuth INSTANCE = new NullAuth();
+
+
     @DataBoundConstructor
     public NullAuth() {
     }
-
+    
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
         //Ignore
@@ -49,7 +52,6 @@ public class NullAuth extends Auth2 {
             return "Don't Set/Override";
         }
     }
-
 
     @Override
     public NullAuth clone() throws CloneNotSupportedException {

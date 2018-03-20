@@ -43,14 +43,14 @@ public class Auth2Test {
 
     @Test
     public void testNullAuthCloneBehaviour() throws CloneNotSupportedException {
-        NullAuth original = new NullAuth();
+        NullAuth original = NullAuth.INSTANCE;
         NullAuth clone = original.clone();
         verifyEqualsHashCode(original, clone);
     }
 
     @Test
     public void testNoneAuthCloneBehaviour() throws CloneNotSupportedException {
-        NoneAuth original = new NoneAuth();
+        NoneAuth original = NoneAuth.INSTANCE;
         NoneAuth clone = original.clone();
         verifyEqualsHashCode(original, clone);
     }

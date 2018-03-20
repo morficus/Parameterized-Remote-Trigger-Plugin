@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -51,7 +52,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     public RemoteJenkinsServer() {
     }
 
-    /**
+    /*
      * see https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
      */
     @SuppressWarnings("deprecation")
@@ -59,7 +60,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         //migrate Auth To Auth2
         if(auth2 == null) {
             if(auth == null || auth.size() <= 0) {
-                auth2 = new NoneAuth(); 
+                auth2 = NoneAuth.INSTANCE; 
             } else {
                 auth2 = Auth.authToAuth2(auth);
             }
@@ -84,7 +85,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @DataBoundSetter
     public void setAuth2(Auth2 auth2)
     {
-        this.auth2 = (auth2 != null) ? auth2 : new NoneAuth();
+        this.auth2 = (auth2 != null) ? auth2 : NoneAuth.INSTANCE;
     }
 
     @DataBoundSetter
@@ -114,7 +115,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     @CheckForNull
     public Auth2 getAuth2() {
-        return auth2;
+        return (auth2 != null) ? auth2 : NoneAuth.INSTANCE;
     }
 
     @CheckForNull

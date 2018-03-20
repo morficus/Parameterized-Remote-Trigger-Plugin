@@ -119,7 +119,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         parameterFile = "";
     }
 
-    /**
+    /*
      * see https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
      */
     @SuppressWarnings("deprecation")
@@ -127,7 +127,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         //migrate Auth To Auth2
         if(auth2 == null) {
             if(auth == null || auth.size() <= 0) {
-                auth2 = new NullAuth();
+                auth2 = NullAuth.INSTANCE;
             } else {
                 auth2 = Auth.authToAuth2(auth);
             }
@@ -1338,7 +1338,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public Auth2 getAuth2() {
-        return this.auth2;
+        return (auth2 != null) ? auth2 : NullAuth.INSTANCE;
     }
 
     public boolean getShouldNotFailBuild() {
