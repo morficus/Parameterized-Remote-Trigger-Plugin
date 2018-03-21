@@ -49,8 +49,10 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Descriptor;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
@@ -159,9 +161,8 @@ public class RemoteBuildPipelineStep extends Step {
         @Restricted(NoExternalUse.class)
         @Nonnull
         public ListBoxModel doFillRemoteJenkinsNameItems() {
-            Jenkins jenkins = Jenkins.getInstance();
-            if (jenkins == null) return new ListBoxModel(0);
-            RemoteBuildConfiguration.DescriptorImpl descriptor = (RemoteBuildConfiguration.DescriptorImpl) jenkins.getDescriptor(RemoteBuildConfiguration.class);
+            RemoteBuildConfiguration.DescriptorImpl descriptor = Descriptor.findByDescribableClassName(
+                        ExtensionList.lookup(RemoteBuildConfiguration.DescriptorImpl.class), RemoteBuildConfiguration.class.getName());
             if(descriptor == null) throw new RuntimeException("Could not get descriptor for RemoteBuildConfiguration");
             return descriptor.doFillRemoteJenkinsNameItems();
         }
