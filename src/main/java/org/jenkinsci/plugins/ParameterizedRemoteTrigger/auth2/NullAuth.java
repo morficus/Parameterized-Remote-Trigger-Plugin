@@ -20,11 +20,10 @@ public class NullAuth extends Auth2 {
 
     public static final NullAuth INSTANCE = new NullAuth();
 
-
     @DataBoundConstructor
     public NullAuth() {
     }
-    
+
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
         //Ignore

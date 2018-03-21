@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 import static org.apache.commons.io.IOUtils.closeQuietly;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.trimToEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
 import java.io.BufferedReader;
@@ -32,7 +33,6 @@ import javax.annotation.ParametersAreNullableByDefault;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.ForbiddenException;
@@ -120,9 +120,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @DataBoundConstructor
     public RemoteBuildConfiguration() {
         pollInterval = DEFAULT_POLLINTERVALL;
-        token = "";
-        parameters = "";
-        parameterFile = "";
     }
 
     /*
@@ -220,13 +217,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public List<String> getParameterList(BuildContext context) {
-        if (parameters != null && !parameters.isEmpty()){
-          String[] params = parameters.split("\n");
-          return new ArrayList<String>(Arrays.asList(params));
-        } else if (loadParamsFromFile){
-          return loadExternalParameterFile(context);
+        String params = getParameters();
+        if (!params.isEmpty()) {
+            String[] parameterArray = params.split("\n");
+            return new ArrayList<String>(Arrays.asList(parameterArray));
+        } else if (loadParamsFromFile) {
+            return loadExternalParameterFile(context);
         } else {
-          return new ArrayList<String>();
+            return new ArrayList<String>();
         }
     }
 
@@ -243,7 +241,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         List<String> parameterList = new ArrayList<String>();
         try {
 
-            String filePath = String.format("%s/%s", context.workspace, parameterFile);
+            String filePath = String.format("%s/%s", context.workspace, getParameterFile());
             String sCurrentLine;
 
             context.logger.println(String.format("Loading parameters from file %s", filePath));
@@ -1331,18 +1329,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return true;
     }
 
-    /**
-     * TODO: Remove - only used in tests
-     * @return the list of authorizations.
-     * @deprecated since 2.3.0-SNAPSHOT - use {@link #getAuth2()} instead.
-     */
-    public List<Auth> getAuth(){
-        Auth oldAuth = Auth.auth2ToAuth(auth2);
-        ArrayList<Auth> list = new ArrayList<Auth>();
-        list.add(oldAuth);
-        return list;
-    }
-
     public Auth2 getAuth2() {
         return (auth2 != null) ? auth2 : DEFAULT_AUTH;
     }
@@ -1367,7 +1353,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @return the configured <code>job</code> value. Can be a job name or full job URL.
      */
     public String getJob() {
-        return job;
+        return trimToEmpty(job);
     }
 
     /**
@@ -1380,11 +1366,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public String getToken() {
-        return token;
+        return trimToEmpty(token);
     }
 
     public String getParameters() {
-        return parameters;
+        return trimToEmpty(parameters);
     }
 
     public boolean getEnhancedLogging() {
@@ -1396,7 +1382,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public String getParameterFile() {
-        return parameterFile;
+        return trimToEmpty(parameterFile);
     }
 
     public int getConnectionRetryLimit() {
