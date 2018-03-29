@@ -1161,7 +1161,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
          String line;
          StringBuilder response = new StringBuilder();
          while ((line = rd.readLine()) != null) {
-             response.append(line).append(NL);
+             if(response.length() > 0) response.append(NL);
+             response.append(line);
          }
          return response.toString();
 
