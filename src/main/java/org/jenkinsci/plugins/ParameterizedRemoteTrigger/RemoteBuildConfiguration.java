@@ -1495,12 +1495,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return (DescriptorImpl) super.getDescriptor();
     }
 
-    public static DescriptorImpl getDescriptorStatic() {
-        Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) throw new NullPointerException("Jenkins instance can not be null");
-        return (RemoteBuildConfiguration.DescriptorImpl) jenkins.getDescriptor(RemoteBuildConfiguration.class);
-    }
-
     // This indicates to Jenkins that this is an implementation of an extension
     // point.
     @Extension
@@ -1596,6 +1590,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         }
 
         @Restricted(NoExternalUse.class)
+        @Nonnull
         public ListBoxModel doFillRemoteJenkinsNameItems() {
             ListBoxModel model = new ListBoxModel();
 
