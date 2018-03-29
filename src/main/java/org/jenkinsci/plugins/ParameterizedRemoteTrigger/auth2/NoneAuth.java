@@ -61,15 +61,8 @@ public class NoneAuth extends Auth2 {
     }
 
     @Override
-    @SuppressFBWarnings("EQ_UNUSUAL")
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (!this.getClass().isInstance(obj))
-            return false;
-        return true;
+        return this.getClass().isInstance(obj);
     }
 
 }

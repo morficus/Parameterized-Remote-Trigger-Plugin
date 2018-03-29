@@ -27,6 +27,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
@@ -40,17 +42,22 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Descriptor;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 
 public class RemoteBuildPipelineStep extends Step {
 
@@ -151,10 +158,16 @@ public class RemoteBuildPipelineStep extends Step {
             return set;
         }
 
+        @Restricted(NoExternalUse.class)
+        @Nonnull
         public ListBoxModel doFillRemoteJenkinsNameItems() {
-            return RemoteBuildConfiguration.getDescriptorStatic().doFillRemoteJenkinsNameItems();
+            RemoteBuildConfiguration.DescriptorImpl descriptor = Descriptor.findByDescribableClassName(
+                        ExtensionList.lookup(RemoteBuildConfiguration.DescriptorImpl.class), RemoteBuildConfiguration.class.getName());
+            if(descriptor == null) throw new RuntimeException("Could not get descriptor for RemoteBuildConfiguration");
+            return descriptor.doFillRemoteJenkinsNameItems();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckJob(
                     @QueryParameter("job") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
@@ -164,6 +177,7 @@ public class RemoteBuildPipelineStep extends Step {
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsUrl(
                     @QueryParameter("remoteJenkinsUrl") final String value,
                     @QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
@@ -173,6 +187,7 @@ public class RemoteBuildPipelineStep extends Step {
             return FormValidation.ok();
         }
 
+        @Restricted(NoExternalUse.class)
         public FormValidation doCheckRemoteJenkinsName(
                     @QueryParameter("remoteJenkinsName") final String value,
                     @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,

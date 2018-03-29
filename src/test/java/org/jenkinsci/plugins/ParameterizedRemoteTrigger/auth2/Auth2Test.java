@@ -49,10 +49,22 @@ public class Auth2Test {
     }
 
     @Test
+    public void testNullAuthEqualsWithNull() throws CloneNotSupportedException {
+        NullAuth original = new NullAuth();
+        assertFalse(original.equals(null));
+    }
+
+    @Test
     public void testNoneAuthCloneBehaviour() throws CloneNotSupportedException {
         NoneAuth original = NoneAuth.INSTANCE;
         NoneAuth clone = (NoneAuth)original.clone();
         verifyEqualsHashCode(original, clone);
+    }
+
+    @Test
+    public void testNoneAuthEqualsWithNull() throws CloneNotSupportedException {
+        NoneAuth original = new NoneAuth();
+        assertFalse(original.equals(null));
     }
 
     private void verifyEqualsHashCode(Auth2 original, Auth2 clone) throws CloneNotSupportedException {
