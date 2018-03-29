@@ -37,6 +37,7 @@
        <plugin>
          <groupId>org.jenkins-ci.tools</groupId>
          <artifactId>maven-hpi-plugin</artifactId>
+         <extensions>true</extensions>
          <!--  https://wiki.jenkins-ci.org/display/JENKINS/Marking+a+new+plugin+version+as+incompatible+with+older+versions -->
          <configuration>
            <compatibleSinceVersion>3.0.0-SNAPSHOT</compatibleSinceVersion>
