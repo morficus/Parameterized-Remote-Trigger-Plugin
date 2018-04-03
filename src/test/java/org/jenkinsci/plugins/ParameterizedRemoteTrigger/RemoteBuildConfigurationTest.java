@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
-import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL;
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL_UNIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -17,7 +16,6 @@ import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.RemoteBuildPipelineStep;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
