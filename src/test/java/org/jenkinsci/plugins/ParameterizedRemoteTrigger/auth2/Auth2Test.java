@@ -13,7 +13,7 @@ public class Auth2Test {
     public void testCredentialsAuthCloneBehaviour() throws CloneNotSupportedException {
         CredentialsAuth original = new CredentialsAuth();
         original.setCredentials("original");
-        CredentialsAuth clone = original.clone();
+        CredentialsAuth clone = (CredentialsAuth)original.clone();
         verifyEqualsHashCode(original, clone);
 
         //Test changing clone
@@ -28,7 +28,7 @@ public class Auth2Test {
         TokenAuth original = new TokenAuth();
         original.setApiToken("original");
         original.setUserName("original");
-        TokenAuth clone = original.clone();
+        TokenAuth clone = (TokenAuth)original.clone();
         verifyEqualsHashCode(original, clone);
 
         //Test changing clone
@@ -43,8 +43,8 @@ public class Auth2Test {
 
     @Test
     public void testNullAuthCloneBehaviour() throws CloneNotSupportedException {
-        NullAuth original = new NullAuth();
-        NullAuth clone = original.clone();
+        NullAuth original = NullAuth.INSTANCE;
+        NullAuth clone = (NullAuth)original.clone();
         verifyEqualsHashCode(original, clone);
     }
 
@@ -56,8 +56,8 @@ public class Auth2Test {
 
     @Test
     public void testNoneAuthCloneBehaviour() throws CloneNotSupportedException {
-        NoneAuth original = new NoneAuth();
-        NoneAuth clone = original.clone();
+        NoneAuth original = NoneAuth.INSTANCE;
+        NoneAuth clone = (NoneAuth)original.clone();
         verifyEqualsHashCode(original, clone);
     }
 

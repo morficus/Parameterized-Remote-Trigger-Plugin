@@ -18,6 +18,8 @@ public class NullAuth extends Auth2 {
     @Extension
     public static final Auth2Descriptor DESCRIPTOR = new NullAuthDescriptor();
 
+    public static final NullAuth INSTANCE = new NullAuth();
+
     @DataBoundConstructor
     public NullAuth() {
     }
@@ -48,12 +50,6 @@ public class NullAuth extends Auth2 {
         public String getDisplayName() {
             return "Don't Set/Override";
         }
-    }
-
-
-    @Override
-    public NullAuth clone() throws CloneNotSupportedException {
-        return (NullAuth)super.clone();
     }
 
     @Override

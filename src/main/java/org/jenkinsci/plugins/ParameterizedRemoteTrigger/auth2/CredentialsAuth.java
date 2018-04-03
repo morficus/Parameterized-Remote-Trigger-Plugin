@@ -161,15 +161,6 @@ public class CredentialsAuth extends Auth2 {
         }
     }
 
-
-
-    @Override
-    public CredentialsAuth clone() throws CloneNotSupportedException {
-        CredentialsAuth clone = (CredentialsAuth)super.clone();
-        clone.credentials = credentials;
-        return clone;
-    }
-
     @Override
     public int hashCode() {
         final int prime = 31;

@@ -77,7 +77,6 @@ public class RemoteBuildConfigurationTest {
       RemoteBuildConfiguration config = new RemoteBuildConfiguration();
       config.setJob("job");
 
-      assertEquals(1, config.getAuth().size());
       assertEquals(false, config.getBlockBuildUntilComplete()); //False in Job
       assertEquals(false, config.getEnhancedLogging());
       assertEquals("job", config.getJob());

@@ -39,9 +39,6 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
     public static final String  API_TOKEN          = "apiToken";
     public static final String  CREDENTIALS_PLUGIN = "credentialsPlugin";
 
-    private static final Auth2 NONE_AUTH = new NoneAuth();
-    private static final Auth2 NULL_AUTH = new NullAuth();
-
     private final String authType;
     private final String username;
     private final String apiToken;
@@ -181,14 +178,14 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
     }
 
     public static Auth2 authToAuth2(List<Auth> oldAuth) {
-        if(oldAuth == null || oldAuth.size() <= 0) return new NullAuth();
+        if(oldAuth == null || oldAuth.size() <= 0) return NullAuth.INSTANCE;
         return authToAuth2(oldAuth.get(0));
     }
 
     public static Auth2 authToAuth2(Auth oldAuth) {
         String authType = oldAuth.getAuthType();
         if (Auth.NONE.equals(authType)) {
-            return NONE_AUTH;
+            return NoneAuth.INSTANCE;
         } else if (Auth.API_TOKEN.equals(authType)) {
             TokenAuth newAuth = new TokenAuth();
             newAuth.setUserName(oldAuth.getUsername());
@@ -199,7 +196,7 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
             newAuth.setCredentials(oldAuth.getCreds());
             return newAuth;
         } else {
-            return NULL_AUTH;
+            return NullAuth.INSTANCE;
         }
     }
 }

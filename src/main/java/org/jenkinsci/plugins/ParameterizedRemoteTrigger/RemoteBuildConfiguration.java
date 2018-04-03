@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 import static org.apache.commons.io.IOUtils.closeQuietly;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.trimToEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
 import java.io.BufferedReader;
@@ -84,6 +85,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private static final long serialVersionUID = -4059001060991775146L;
 
+    /**
+     * Default for this class is "no auth configured" since we do not want to override potential global config
+     */
+    private final static Auth2 DEFAULT_AUTH = NullAuth.INSTANCE;
+
+    
     private static final int      DEFAULT_POLLINTERVALL = 10;
     private static final String   paramerizedBuildUrl   = "/buildWithParameters";
     private static final String   normalBuildUrl        = "/build";
@@ -112,21 +119,26 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     @DataBoundConstructor
     public RemoteBuildConfiguration() {
-        remoteJenkinsName = null;
-        remoteJenkinsUrl = null;
-        auth = null;
-        auth2 = new NullAuth();
-        shouldNotFailBuild = false;
-        preventRemoteBuildQueue = false;
         pollInterval = DEFAULT_POLLINTERVALL;
-        blockBuildUntilComplete = false;
-        job = null;
-        token = "";
-        parameters = "";
-        enhancedLogging = false;
-        loadParamsFromFile = false;
-        parameterFile = "";
     }
+
+    /*
+     * see https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
+     */
+    @SuppressWarnings("deprecation")
+    protected Object readResolve() {
+        //migrate Auth To Auth2
+        if(auth2 == null) {
+            if(auth == null || auth.size() <= 0) {
+                auth2 = DEFAULT_AUTH;
+            } else {
+                auth2 = Auth.authToAuth2(auth);
+            }
+        }
+        auth = null;
+        return this;
+    }
+
 
     @DataBoundSetter
     public void setRemoteJenkinsName(String remoteJenkinsName)
@@ -205,13 +217,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public List<String> getParameterList(BuildContext context) {
-        if (parameters != null && !parameters.isEmpty()){
-          String[] params = parameters.split("\n");
-          return new ArrayList<String>(Arrays.asList(params));
-        } else if (loadParamsFromFile){
-          return loadExternalParameterFile(context);
+        String params = getParameters();
+        if (!params.isEmpty()) {
+            String[] parameterArray = params.split("\n");
+            return new ArrayList<String>(Arrays.asList(parameterArray));
+        } else if (loadParamsFromFile) {
+            return loadExternalParameterFile(context);
         } else {
-          return new ArrayList<String>();
+            return new ArrayList<String>();
         }
     }
 
@@ -228,7 +241,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         List<String> parameterList = new ArrayList<String>();
         try {
 
-            String filePath = String.format("%s/%s", context.workspace, parameterFile);
+            String filePath = String.format("%s/%s", context.workspace, getParameterFile());
             String sCurrentLine;
 
             context.logger.println(String.format("Loading parameters from file %s", filePath));
@@ -1316,35 +1329,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return true;
     }
 
-    /**
-     * @return the list of authorizations.
-     * @deprecated since 2.3.0-SNAPSHOT - use {@link #getAuth2()} instead.
-     */
-    public List<Auth> getAuth(){
-        Auth oldAuth = Auth.auth2ToAuth(auth2);
-        ArrayList<Auth> list = new ArrayList<Auth>();
-        list.add(oldAuth);
-        return list;
-    }
-
     public Auth2 getAuth2() {
-        migrateAuthToAuth2();
-        return this.auth2;
-    }
-
-    /**
-     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary.
-     * @deprecated since 2.3.0-SNAPSHOT - get rid once all users migrated
-     */
-    private void migrateAuthToAuth2() {
-        if(auth2 == null) {
-            if(auth == null || auth.size() <= 0) {
-                auth2 = new NullAuth();
-            } else {
-                auth2 = Auth.authToAuth2(auth);
-            }
-        }
-        auth = null;
+        return (auth2 != null) ? auth2 : DEFAULT_AUTH;
     }
 
     public boolean getShouldNotFailBuild() {
@@ -1367,7 +1353,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @return the configured <code>job</code> value. Can be a job name or full job URL.
      */
     public String getJob() {
-        return job;
+        return trimToEmpty(job);
     }
 
     /**
@@ -1380,11 +1366,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public String getToken() {
-        return token;
+        return trimToEmpty(token);
     }
 
     public String getParameters() {
-        return parameters;
+        return trimToEmpty(parameters);
     }
 
     public boolean getEnhancedLogging() {
@@ -1396,7 +1382,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     }
 
     public String getParameterFile() {
-        return parameterFile;
+        return trimToEmpty(parameterFile);
     }
 
     public int getConnectionRetryLimit() {

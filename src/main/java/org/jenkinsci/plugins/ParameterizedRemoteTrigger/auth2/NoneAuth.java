@@ -18,6 +18,9 @@ public class NoneAuth extends Auth2 {
     @Extension
     public static final Auth2Descriptor DESCRIPTOR = new NoneAuthDescriptor();
 
+    public static final NoneAuth INSTANCE = new NoneAuth();
+    
+
     @DataBoundConstructor
     public NoneAuth() {
     }
@@ -50,11 +53,6 @@ public class NoneAuth extends Auth2 {
         public String getDisplayName() {
             return "No Authentication";
         }
-    }
-
-    @Override
-    public NoneAuth clone() throws CloneNotSupportedException {
-        return (NoneAuth)super.clone();
     }
 
     @Override

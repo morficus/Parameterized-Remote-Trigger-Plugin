@@ -33,11 +33,16 @@ import hudson.util.FormValidation;
 public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> implements Cloneable {
 
     /**
+     * Default for this class is No Authentication
+     */
+    private final static Auth2 DEFAULT_AUTH = NoneAuth.INSTANCE;
+  
+    /**
      * We need to keep this for compatibility - old config deserialization!
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
      */
     @CheckForNull
-    private List<Auth> auth;
+    private transient List<Auth> auth;
 
     @CheckForNull
     private String     displayName;
@@ -51,6 +56,24 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     public RemoteJenkinsServer() {
     }
 
+    /*
+     * see https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
+     */
+    @SuppressWarnings("deprecation")
+    protected Object readResolve() {
+        //migrate Auth To Auth2
+        if(auth2 == null) {
+            if(auth == null || auth.size() <= 0) {
+                auth2 = DEFAULT_AUTH; 
+            } else {
+                auth2 = Auth.authToAuth2(auth);
+            }
+        }
+        auth = null;
+        return this;
+    }
+    
+    
     @DataBoundSetter
     public void setDisplayName(String displayName)
     {
@@ -66,7 +89,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @DataBoundSetter
     public void setAuth2(Auth2 auth2)
     {
-        this.auth2 = (auth2 != null) ? auth2 : new NoneAuth();
+        this.auth2 = (auth2 != null) ? auth2 : DEFAULT_AUTH;
     }
 
     @DataBoundSetter
@@ -96,23 +119,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     @CheckForNull
     public Auth2 getAuth2() {
-        migrateAuthToAuth2();
-        return auth2;
-    }
-
-    /**
-     * Migrates old <code>Auth</code> to <code>Auth2</code> if necessary.
-     * @deprecated since 2.3.0-SNAPSHOT - get rid once all users migrated
-     */
-    private void migrateAuthToAuth2() {
-        if(auth2 == null) {
-            if(auth == null || auth.size() <= 0) {
-                auth2 = new NoneAuth();
-            } else {
-                auth2 = Auth.authToAuth2(auth);
-            }
-        }
-        auth = null;
+        return (auth2 != null) ? auth2 : NoneAuth.INSTANCE;
     }
 
     @CheckForNull
@@ -200,10 +207,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @Override
     public RemoteJenkinsServer clone() throws CloneNotSupportedException {
         RemoteJenkinsServer clone = (RemoteJenkinsServer)super.clone();
-        clone.address = address;
         clone.auth2 = (auth2 == null) ? null : auth2.clone();
-        clone.displayName = displayName;
-        clone.hasBuildTokenRootSupport = hasBuildTokenRootSupport;
         return clone;
     }
 
