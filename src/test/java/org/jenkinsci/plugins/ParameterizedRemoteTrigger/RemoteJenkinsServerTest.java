@@ -1,15 +1,13 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.CredentialsAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.TokenAuth;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
 import org.junit.Test;
 
 
@@ -58,9 +56,11 @@ public class RemoteJenkinsServerTest {
 
         //Test if clone is deep-copy or if server fields can be modified
         TokenAuth cloneAuth = (TokenAuth)clone.getAuth2();
+        assertNotNull(cloneAuth);
         cloneAuth.setApiToken("changed");
         cloneAuth.setUserName("changed");
         TokenAuth serverAuth = (TokenAuth)server.getAuth2();
+        assertNotNull(serverAuth);
         assertEquals("auth.apiToken", TOKEN, serverAuth.getApiToken());
         assertEquals("auth.userName", USER, serverAuth.getUserName());
 

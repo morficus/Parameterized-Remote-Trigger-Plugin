@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -17,7 +18,7 @@ public class ConnectionResponse
     @Nonnull
     private final Map<String,List<String>> header;
 
-    @Nullable
+    @Nullable @CheckForNull
     private final JSONObject body;
 
     @Nonnull

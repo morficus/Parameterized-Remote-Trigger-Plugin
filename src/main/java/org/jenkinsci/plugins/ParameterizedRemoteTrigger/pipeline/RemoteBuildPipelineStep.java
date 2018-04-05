@@ -57,7 +57,6 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 
 public class RemoteBuildPipelineStep extends Step {
 

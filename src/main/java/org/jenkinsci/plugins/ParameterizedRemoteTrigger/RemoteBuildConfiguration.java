@@ -28,7 +28,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNullableByDefault;
 
 import org.apache.commons.lang.StringUtils;
@@ -406,7 +408,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      *            Name of the configuration you are looking for
      * @return A deep-copy of the RemoteJenkinsServer object configured globally
      */
-    private RemoteJenkinsServer findRemoteHost(String displayName) {
+    private @Nullable @CheckForNull RemoteJenkinsServer findRemoteHost(String displayName) {
         if(isEmpty(displayName)) return null;
         RemoteJenkinsServer server = null;
         for (RemoteJenkinsServer host : this.getDescriptor().remoteSites) {
@@ -496,6 +498,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         String triggerUrlString;
         String query = "";
 
+        if(context.effectiveRemoteServer == null) {
+            throw new AbortException("context.effectiveRemoteServer is null");
+        }
+        
         if (context.effectiveRemoteServer.getHasBuildTokenRootSupport()) {
           // start building the proper URL based on known capabiltiies of the remote server
             triggerUrlString = context.effectiveRemoteServer.getRemoteAddress();
@@ -687,6 +693,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         ConnectionResponse responseRemoteJob = sendHTTPCall(triggerUrlString, "POST", context, 1);
         QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
+        
+        if(context.effectiveRemoteServer == null) {
+            throw new AbortException("context.effectiveRemoteServer is null");
+        }
         Handle handle = new Handle(this, queueItem.getId(), context.currentItem, context.effectiveRemoteServer);
         handle.setJobMetadata(remoteJobMetadata);
         return handle;
@@ -813,6 +823,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
             throws IOException {
 
+      if(context.effectiveRemoteServer == null) {
+          throw new AbortException("context.effectiveRemoteServer null");
+      }
       String queueQuery = String.format("%s/queue/item/%s/api/json/", context.effectiveRemoteServer.getRemoteAddress(), queueId);
       ConnectionResponse response = sendHTTPCall( queueQuery, "GET", context, 1 );
       JSONObject queueResponse = response.getBody();
@@ -1184,6 +1197,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
+        if(context.effectiveRemoteServer == null) {
+            throw new AbortException("context.effectiveRemoteServer null");
+        }
         String address = context.effectiveRemoteServer.getRemoteAddress();
         URL crumbProviderUrl;
         try {
@@ -1216,7 +1232,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     {
         URLConnection connection = url.openConnection();
 
-        Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
+        Auth2 serverAuth = (context.effectiveRemoteServer == null) ? null : context.effectiveRemoteServer.getAuth2();
         Auth2 overrideAuth = this.getAuth2();
 
         if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
@@ -1232,12 +1248,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private void logAuthInformation(BuildContext context) throws IOException {
 
-        Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
+        Auth2 serverAuth = (context.effectiveRemoteServer == null) ? null : context.effectiveRemoteServer.getAuth2();
         Auth2 localAuth = this.getAuth2();
         if(localAuth != null && !(localAuth instanceof NullAuth)) {
-            context.logger.println(String.format("  Using job-level defined " + localAuth.toString((Item)context.run.getParent()) ));
+            String authString = (context.run == null) ? localAuth.getDescriptor().getDisplayName() : localAuth.toString((Item)context.run.getParent());
+            context.logger.println(String.format("  Using job-level defined " + authString ));
         } else if(serverAuth != null && !(serverAuth instanceof NullAuth)) {
-            context.logger.println(String.format("  Using globally defined " + serverAuth.toString((Item)context.run.getParent()) ));
+            String authString = (context.run == null) ? serverAuth.getDescriptor().getDisplayName() : serverAuth.toString((Item)context.run.getParent());
+            context.logger.println(String.format("  Using globally defined " + authString));
         } else {
             context.logger.println("  No credentials configured");
         }
@@ -1268,8 +1286,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                     String.format("    - remoteJenkinsUrl:        %s", _remoteJenkinsUrl));
         }
         if(_auth != null && !(_auth instanceof NullAuth)) {
+            String authString = context.run == null ? _auth.getDescriptor().getDisplayName() : _auth.toString((Item)context.run.getParent());
             context.logger.println(
-                    String.format("    - auth:                    %s", _auth.toString((Item)context.run.getParent())));
+                    String.format("    - auth:                    %s", authString));
         }
         context.logger.println(
                     String.format("    - parameters:              %s", _parameters));
