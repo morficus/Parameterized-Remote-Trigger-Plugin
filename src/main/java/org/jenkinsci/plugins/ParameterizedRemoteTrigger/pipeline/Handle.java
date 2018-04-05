@@ -16,6 +16,8 @@ import javax.annotation.ParametersAreNullableByDefault;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildStatus;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
@@ -375,9 +377,21 @@ public class Handle implements Serializable {
         PrintStreamWrapper log = new PrintStreamWrapper();
         try {
             BuildContext context = new BuildContext(log.getPrintStream(), this.currentItem);
+            context.effectiveRemoteServer = new RemoteJenkinsServer();
+            context.effectiveRemoteServer.setAuth2(getEffectiveAuthentication());
             return remoteBuildConfiguration.sendHTTPCall(fileUrl.toString(), "GET", context);
         } finally {
             lastLog = log.getContent();
+        }
+    }
+
+    private Auth2 getEffectiveAuthentication() {
+        Auth2 overrideAuth = remoteBuildConfiguration.getAuth2();
+        if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
+            return overrideAuth;
+        } else {
+            RemoteJenkinsServer globalAuth = remoteBuildConfiguration.findRemoteHost(remoteBuildConfiguration.getRemoteJenkinsName());
+            return globalAuth == null ? null : globalAuth.getAuth2();
         }
     }
 

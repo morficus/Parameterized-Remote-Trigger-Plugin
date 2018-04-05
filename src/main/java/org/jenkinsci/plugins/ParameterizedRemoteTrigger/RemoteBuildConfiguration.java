@@ -408,7 +408,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      *            Name of the configuration you are looking for
      * @return A deep-copy of the RemoteJenkinsServer object configured globally
      */
-    private @Nullable @CheckForNull RemoteJenkinsServer findRemoteHost(String displayName) {
+    public @Nullable @CheckForNull RemoteJenkinsServer findRemoteHost(String displayName) {
         if(isEmpty(displayName)) return null;
         RemoteJenkinsServer server = null;
         for (RemoteJenkinsServer host : this.getDescriptor().remoteSites) {
