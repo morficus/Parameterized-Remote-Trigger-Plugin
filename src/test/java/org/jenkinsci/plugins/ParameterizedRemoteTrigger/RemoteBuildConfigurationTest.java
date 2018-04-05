@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL_UNIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -9,7 +10,9 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.RemoteBuildPipelineStep;
@@ -20,6 +23,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
@@ -53,22 +57,32 @@ public class RemoteBuildConfigurationTest {
 
         FreeStyleProject remoteProject = jenkinsRule.createFreeStyleProject();
         remoteProject.addProperty(new ParametersDefinitionProperty(
-                new StringParameterDefinition("parameterName1", "value1"),
-                new StringParameterDefinition("parameterName2", "value2")));
+                new StringParameterDefinition("parameterName1", "default1"),
+                new StringParameterDefinition("parameterName2", "default2")));
 
         FreeStyleProject project = jenkinsRule.createFreeStyleProject();
         RemoteBuildConfiguration configuration = new RemoteBuildConfiguration();
         configuration.setJob(remoteProject.getFullName());
         configuration.setRemoteJenkinsName(remoteJenkinsServer.getDisplayName());
         configuration.setPreventRemoteBuildQueue(false);
+        configuration.setBlockBuildUntilComplete(true);
         configuration.setPollInterval(1);
         configuration.setEnhancedLogging(true);
-        configuration.setParameters("");
+        configuration.setParameters("parameterName1=value1" + NL_UNIX + "parameterName2=value2");
 
         project.getBuildersList().add(configuration);
 
+        //Trigger build
         jenkinsRule.waitUntilNoActivity();
         jenkinsRule.buildAndAssertSuccess(project);
+        
+        //Check results
+        List<String> log = IOUtils.readLines(project.getLastBuild().getLogInputStream());
+        assertTrue(log.toString(), log.toString().contains("Started by user anonymous, Building in workspace"));
+        
+        EnvVars remoteEnv = remoteProject.getLastBuild().getEnvironment(null);
+        assertEquals("value1", remoteEnv.get("parameterName1"));
+        assertEquals("value2", remoteEnv.get("parameterName2"));
     }
 
     @Test @WithoutJenkins

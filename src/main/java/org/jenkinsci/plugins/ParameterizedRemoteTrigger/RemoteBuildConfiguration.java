@@ -5,6 +5,7 @@ import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
+import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -69,7 +70,6 @@ import hudson.tasks.Builder;
 import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
@@ -575,7 +575,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             e.getMessage(),
             this.getShouldNotFailBuild() ? " But the build will continue." : ""));
         if(enhancedLogging) {
-          msg.append("\n").append(ExceptionUtils.getFullStackTrace(e));
+          msg.append(NL).append(ExceptionUtils.getFullStackTrace(e));
         }
         if(logger != null) logger.println("ERROR: " + msg.toString());
         if (!this.getShouldNotFailBuild()) {
@@ -1159,6 +1159,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
          String line;
          StringBuilder response = new StringBuilder();
          while ((line = rd.readLine()) != null) {
+             if(response.length() > 0) response.append(NL);
              response.append(line);
          }
          return response.toString();
