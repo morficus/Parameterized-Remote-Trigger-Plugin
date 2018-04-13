@@ -10,19 +10,17 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNullableByDefault;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildStatus;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
@@ -49,12 +47,12 @@ public class Handle implements Serializable {
     private String jobDisplayName;
     private String jobFullDisplayName;
     private String jobUrl;
-    private String remoteServerURL;
 
     /**
      * The current local Item (Job, Pipeline,...) where this plugin is currently used.
      */
     private final String currentItem;
+    private final RemoteJenkinsServer effectiveRemoteServer;
 
     /*
      * The latest log entries from the last called method.
@@ -74,7 +72,7 @@ public class Handle implements Serializable {
         this.buildStatus = null;
         this.lastLog = "";
         this.currentItem = currentItem;
-        this.remoteServerURL = effectiveRemoteServer.getRemoteAddress();
+        this.effectiveRemoteServer = effectiveRemoteServer;
         if(trimToNull(currentItem) == null) throw new IllegalArgumentException("currentItem null");
     }
 
@@ -262,7 +260,7 @@ public class Handle implements Serializable {
               //TODO: This currently blocks
               BuildData buildData = getBuildData(queueId, log.getPrintStream());
               String jobLocation = buildData.getURL() + "api/json/";
-              BuildContext context = new BuildContext(log.getPrintStream(), this.currentItem);
+              BuildContext context = new BuildContext(log.getPrintStream(), effectiveRemoteServer, this.currentItem);
               buildStatus = remoteBuildConfiguration.getBuildStatus(jobLocation, context);
               finished = isFinishedBuildStatus(buildStatus);
               if(!blockUntilFinished) break;
@@ -308,7 +306,7 @@ public class Handle implements Serializable {
     public String toString() {
 
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), remoteServerURL, queueId));
+        sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), effectiveRemoteServer.getRemoteAddress(), queueId));
         if(buildStatus != null) sb.append(String.format(", buildStatus=%s", buildStatus));
         if(buildData != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildData.getBuildNumber(), buildData.getURL()));
         sb.append("]");
@@ -345,7 +343,7 @@ public class Handle implements Serializable {
         //Return if we already have the buildData
         if(buildData != null) return buildData;
 
-        BuildContext context = new BuildContext(logger, this.currentItem);
+        BuildContext context = new BuildContext(logger, effectiveRemoteServer, this.currentItem);
         BuildData build = remoteBuildConfiguration.getBuildData(queueId, context);
         this.buildData = build;
         return build;
@@ -376,22 +374,10 @@ public class Handle implements Serializable {
 
         PrintStreamWrapper log = new PrintStreamWrapper();
         try {
-            BuildContext context = new BuildContext(log.getPrintStream(), this.currentItem);
-            context.effectiveRemoteServer = new RemoteJenkinsServer();
-            context.effectiveRemoteServer.setAuth2(getEffectiveAuthentication());
+            BuildContext context = new BuildContext(log.getPrintStream(), effectiveRemoteServer, this.currentItem);
             return remoteBuildConfiguration.sendHTTPCall(fileUrl.toString(), "GET", context);
         } finally {
             lastLog = log.getContent();
-        }
-    }
-
-    private Auth2 getEffectiveAuthentication() {
-        Auth2 overrideAuth = remoteBuildConfiguration.getAuth2();
-        if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
-            return overrideAuth;
-        } else {
-            RemoteJenkinsServer globalAuth = remoteBuildConfiguration.findRemoteHost(remoteBuildConfiguration.getRemoteJenkinsName());
-            return globalAuth == null ? null : globalAuth.getAuth2();
         }
     }
 

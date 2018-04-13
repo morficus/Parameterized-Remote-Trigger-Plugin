@@ -4,7 +4,6 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 
 import java.io.PrintStream;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNullableByDefault;
@@ -25,21 +24,12 @@ import hudson.model.TaskListener;
  * must not be null.
  */
 @ParametersAreNullableByDefault
-public class BuildContext
+public class BuildContext extends BasicBuildContext
 {
-    @Nullable @CheckForNull
-    public final Run<?, ?> run;
-
-    @Nullable @CheckForNull
-    public final FilePath workspace;
-
-    @Nullable @CheckForNull
-    public final TaskListener listener;
-
     @Nonnull
     public final PrintStream logger;
 
-    @Nullable @CheckForNull
+    @Nonnull
     public RemoteJenkinsServer effectiveRemoteServer;
 
     /**
@@ -49,33 +39,23 @@ public class BuildContext
     public final String currentItem;
 
 
-    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nullable String currentItem, @Nullable RemoteJenkinsServer effectiveRemoteServer) {
-        this.run = run;
-        this.workspace = workspace;
-        this.listener = listener;
+    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nonnull RemoteJenkinsServer effectiveRemoteServer, @Nullable String currentItem) {
+        super(run, workspace, listener);
         this.logger = logger;
-        this.currentItem = getCurrentItem(run, currentItem);
         this.effectiveRemoteServer = effectiveRemoteServer;
+        this.currentItem = getCurrentItem(run, currentItem);
     }
 
-    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nullable String currentItem) {
-        this(run, workspace, listener, logger, null, null);
-    }
-    
-    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger) {
-        this(run, workspace, listener, logger, null, null);
+    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nonnull RemoteJenkinsServer effectiveRemoteServer) {
+        this(run, workspace, listener, logger, effectiveRemoteServer, null);
     }
 
-    public BuildContext(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull TaskListener listener)
+    public BuildContext(@Nonnull PrintStream logger, @Nonnull RemoteJenkinsServer effectiveRemoteServer, @Nullable String currentItem)
     {
-        this(run, workspace, listener, listener.getLogger(), null, null);
+        this(null, null, null, logger, effectiveRemoteServer, currentItem);
     }
 
-    public BuildContext(@Nonnull PrintStream logger, String currentItem)
-    {
-        this(null, null, null, logger, currentItem, null);
-    }
-
+    @Nonnull
     private String getCurrentItem(Run<?, ?> run, String currentItem)
     {
         String runItem = null;

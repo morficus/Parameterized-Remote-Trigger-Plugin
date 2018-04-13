@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BasicBuildContext;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 
 public class TokenMacroUtils
 {
 
-    public static String applyTokenMacroReplacements(String input, BuildContext context) throws IOException
+    public static String applyTokenMacroReplacements(String input, BasicBuildContext context) throws IOException
     {
         try {
             if (isUseTokenMacro(context)) {
@@ -27,7 +27,7 @@ public class TokenMacroUtils
         return input;
     }
 
-    public static List<String> applyTokenMacroReplacements(List<String> inputs, BuildContext context) throws IOException
+    public static List<String> applyTokenMacroReplacements(List<String> inputs, BasicBuildContext context) throws IOException
     {
         List<String> outputs = new ArrayList<String>();
         for (String input : inputs) {
@@ -36,7 +36,7 @@ public class TokenMacroUtils
         return outputs;
     }
 
-    public static boolean isUseTokenMacro(BuildContext context)
+    public static boolean isUseTokenMacro(BasicBuildContext context)
     {
         return context != null && context.run != null && context.workspace != null && context.listener != null;
     }

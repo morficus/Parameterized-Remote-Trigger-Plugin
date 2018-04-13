@@ -29,8 +29,10 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BasicBuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
@@ -221,7 +223,8 @@ public class RemoteBuildPipelineStep extends Step {
             Run<?, ?> build = stepContext.get(Run.class);
             FilePath workspace = stepContext.get(FilePath.class);
             TaskListener listener = stepContext.get(TaskListener.class);
-            BuildContext context = new BuildContext(build, workspace, listener);
+            RemoteJenkinsServer effectiveRemoteServer = remoteBuildConfig.findEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
+            BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
             Handle handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
             if(remoteBuildConfig.getBlockBuildUntilComplete()) {
                 remoteBuildConfig.performWaitForBuild(context, handle);

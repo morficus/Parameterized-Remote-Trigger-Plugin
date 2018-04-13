@@ -103,7 +103,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * We need to keep this for compatibility - old config deserialization!
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
      */
-    private transient List<Auth>    auth;
+    private transient List<Auth> auth;
 
     private String        remoteJenkinsName;
     private String        remoteJenkinsUrl;
@@ -118,6 +118,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private boolean       enhancedLogging;
     private boolean       loadParamsFromFile;
     private String        parameterFile;
+
 
     @DataBoundConstructor
     public RemoteBuildConfiguration() {
@@ -357,7 +358,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @throws MalformedURLException
      *            if <code>remoteJenkinsName</code> no valid URL or <code>job</code> an URL but nor valid.
      */
-    protected @Nonnull RemoteJenkinsServer findEffectiveRemoteHost(BuildContext context) throws IOException {
+    @Nonnull
+    public RemoteJenkinsServer findEffectiveRemoteHost(BasicBuildContext context) throws IOException {
         RemoteJenkinsServer globallyConfiguredServer = findRemoteHost(this.remoteJenkinsName);
         RemoteJenkinsServer server = globallyConfiguredServer;
         String expandedJob = getJobExpanded(context);
@@ -614,7 +616,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
           throws InterruptedException, IOException
     {
-        BuildContext context = new BuildContext(build, workspace, listener);
+        RemoteJenkinsServer effectiveRemoteServer = findEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
+        BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
         Handle handle = performTriggerAndGetQueueId(context);
         performWaitForBuild(context, handle);
     }
@@ -644,8 +647,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         }
 
         logConfiguration(context, cleanedParams);
-
-        context.effectiveRemoteServer = findEffectiveRemoteHost(context);
 
         final JSONObject remoteJobMetadata = getRemoteJobMetadata(jobNameOrUrl, context);
         boolean isRemoteParameterized = isRemoteJobParameterized(remoteJobMetadata);
@@ -693,10 +694,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         ConnectionResponse responseRemoteJob = sendHTTPCall(triggerUrlString, "POST", context, 1);
         QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
-        
-        if(context.effectiveRemoteServer == null) {
-            throw new AbortException("context.effectiveRemoteServer is null");
-        }
+
         Handle handle = new Handle(this, queueItem.getId(), context.currentItem, context.effectiveRemoteServer);
         handle.setJobMetadata(remoteJobMetadata);
         return handle;
@@ -1232,7 +1230,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     {
         URLConnection connection = url.openConnection();
 
-        Auth2 serverAuth = (context.effectiveRemoteServer == null) ? null : context.effectiveRemoteServer.getAuth2();
+        Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
         Auth2 overrideAuth = this.getAuth2();
 
         if(overrideAuth != null && !(overrideAuth instanceof NullAuth)) {
@@ -1248,7 +1246,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private void logAuthInformation(BuildContext context) throws IOException {
 
-        Auth2 serverAuth = (context.effectiveRemoteServer == null) ? null : context.effectiveRemoteServer.getAuth2();
+        Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
         Auth2 localAuth = this.getAuth2();
         if(localAuth != null && !(localAuth instanceof NullAuth)) {
             String authString = (context.run == null) ? localAuth.getDescriptor().getDisplayName() : localAuth.toString((Item)context.run.getParent());
@@ -1381,7 +1379,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      * @throws IOException
      *             if there is an error replacing tokens.
      */
-    private String getJobExpanded(BuildContext context) throws IOException {
+    private String getJobExpanded(BasicBuildContext context) throws IOException {
         return TokenMacroUtils.applyTokenMacroReplacements(getJob(), context);
     }
 
