@@ -5,7 +5,6 @@ import java.io.Serializable;
 import java.net.URLConnection;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.CredentialsNotFoundException;
 
 import hudson.DescriptorExtensionList;
 import hudson.model.AbstractDescribableImpl;
