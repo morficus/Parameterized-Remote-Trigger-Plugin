@@ -500,10 +500,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         String triggerUrlString;
         String query = "";
 
-        if(context.effectiveRemoteServer == null) {
-            throw new AbortException("context.effectiveRemoteServer is null");
-        }
-        
         if (context.effectiveRemoteServer.getHasBuildTokenRootSupport()) {
           // start building the proper URL based on known capabiltiies of the remote server
             triggerUrlString = context.effectiveRemoteServer.getRemoteAddress();
@@ -821,9 +817,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
             throws IOException {
 
-      if(context.effectiveRemoteServer == null) {
-          throw new AbortException("context.effectiveRemoteServer null");
-      }
       String queueQuery = String.format("%s/queue/item/%s/api/json/", context.effectiveRemoteServer.getRemoteAddress(), queueId);
       ConnectionResponse response = sendHTTPCall( queueQuery, "GET", context, 1 );
       JSONObject queueResponse = response.getBody();
@@ -1195,9 +1188,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
-        if(context.effectiveRemoteServer == null) {
-            throw new AbortException("context.effectiveRemoteServer null");
-        }
         String address = context.effectiveRemoteServer.getRemoteAddress();
         URL crumbProviderUrl;
         try {
