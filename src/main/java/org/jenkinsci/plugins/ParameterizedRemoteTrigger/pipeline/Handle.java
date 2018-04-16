@@ -12,6 +12,7 @@ import java.net.URL;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNullableByDefault;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
@@ -35,23 +36,35 @@ public class Handle implements Serializable {
 
     private static final long serialVersionUID = 4418782245518194292L;
 
+    @Nonnull
     private final RemoteBuildConfiguration remoteBuildConfiguration;
+    @Nonnull
     private final String queueId;
 
     //Available once moved from queue to an executor
+    @Nullable
     private BuildData buildData;
+    @Nullable
     private BuildStatus buildStatus;
 
+    @Nullable
     private String jobName;
+    @Nullable
     private String jobFullName;
+    @Nullable
     private String jobDisplayName;
+    @Nullable
     private String jobFullDisplayName;
+    @Nullable
     private String jobUrl;
 
     /**
      * The current local Item (Job, Pipeline,...) where this plugin is currently used.
      */
+    @Nonnull
     private final String currentItem;
+
+    @Nonnull
     private final RemoteJenkinsServer effectiveRemoteServer;
 
     /*
@@ -61,18 +74,25 @@ public class Handle implements Serializable {
      * already finished.
      * TODO: Once we found a way to log to the pipeline log directly we can switch
      */
+    @Nonnull
     private String lastLog;
 
 
-    public Handle(RemoteBuildConfiguration remoteBuildConfiguration, String queueId, @Nonnull String currentItem, @Nonnull RemoteJenkinsServer effectiveRemoteServer)
+    public Handle(@Nonnull RemoteBuildConfiguration remoteBuildConfiguration, @Nonnull String queueId, @Nonnull String currentItem,
+        @Nonnull RemoteJenkinsServer effectiveRemoteServer, @Nonnull JSONObject remoteJobMetadata)
     {
         this.remoteBuildConfiguration = remoteBuildConfiguration;
         this.queueId = queueId;
         this.buildData = null;
         this.buildStatus = null;
-        this.lastLog = "";
+        this.jobName = getParameterFromJobMetadata(remoteJobMetadata, "name");
+        this.jobFullName = getParameterFromJobMetadata(remoteJobMetadata, "fullName");
+        this.jobDisplayName = getParameterFromJobMetadata(remoteJobMetadata, "displayName");
+        this.jobFullDisplayName = getParameterFromJobMetadata(remoteJobMetadata, "fullDisplayName");
+        this.jobUrl = getParameterFromJobMetadata(remoteJobMetadata, "url");
         this.currentItem = currentItem;
         this.effectiveRemoteServer = effectiveRemoteServer;
+        this.lastLog = "";
         if(trimToNull(currentItem) == null) throw new IllegalArgumentException("currentItem null");
     }
 
@@ -125,26 +145,31 @@ public class Handle implements Serializable {
         return remoteBuildConfiguration.getJob();
     }
 
+    @CheckForNull
     public String getJobName()
     {
         return jobName;
     }
 
+    @CheckForNull
     public String getJobFullName()
     {
         return jobFullName;
     }
 
+    @CheckForNull
     public String getJobDisplayName()
     {
         return jobDisplayName;
     }
 
+    @CheckForNull
     public String getJobFullDisplayName()
     {
         return jobFullDisplayName;
     }
 
+    @CheckForNull
     public String getJobUrl()
     {
         return jobUrl;
@@ -153,6 +178,7 @@ public class Handle implements Serializable {
     /**
      * @return the name of the remote job.
      */
+    @Nonnull
     public String getQueueId() {
         return queueId;
     }
@@ -169,7 +195,7 @@ public class Handle implements Serializable {
      * @throws InterruptedException
      *            if any thread has interrupted the current thread.
      */
-    @CheckForNull
+    @Nonnull
     @Whitelisted
     public URL getBuildUrl() throws IOException, InterruptedException {
         //Return if we already have the buildData
@@ -225,7 +251,7 @@ public class Handle implements Serializable {
      * @throws InterruptedException
      *            if any thread has interrupted the current thread.
      */
-    @CheckForNull
+    @Nonnull
     @Whitelisted
     public BuildStatus getBuildStatus() throws IOException, InterruptedException {
         return getBuildStatus(false);
@@ -243,11 +269,13 @@ public class Handle implements Serializable {
      * @throws InterruptedException
      *            if any thread has interrupted the current thread.
      */
+    @Nonnull
     @Whitelisted
     public BuildStatus getBuildStatusBlocking() throws IOException, InterruptedException {
         return getBuildStatus(true);
     }
 
+    @Nonnull
     private BuildStatus getBuildStatus(boolean blockUntilFinished) throws IOException, InterruptedException {
       //Return if buildStatus exists and is final (does not change anymore)
       if(buildStatus != null && isFinishedBuildStatus(buildStatus)) return buildStatus;
@@ -289,6 +317,7 @@ public class Handle implements Serializable {
      *
      * @return The latest log entries from the last called method.
      */
+    @Nonnull
     @Whitelisted
     public String lastLog() {
         String log = lastLog.trim();
@@ -338,6 +367,7 @@ public class Handle implements Serializable {
         return sb.toString();
     }
 
+    @Nonnull
     private BuildData getBuildData(String queueId, PrintStream logger) throws IOException, InterruptedException
     {
         //Return if we already have the buildData
@@ -369,7 +399,6 @@ public class Handle implements Serializable {
         if(isEmpty(filename)) return null;
 
         URL remoteBuildUrl = getBuildUrl();
-        if(remoteBuildUrl == null) return null;
         URL fileUrl = new URL(remoteBuildUrl, "artifact/" + filename);
 
         PrintStreamWrapper log = new PrintStreamWrapper();
@@ -381,15 +410,7 @@ public class Handle implements Serializable {
         }
     }
 
-    public void setJobMetadata(JSONObject remoteJobMetadata)
-    {
-        this.jobName = getParameterFromJobMetadata(remoteJobMetadata, "name");
-        this.jobFullName = getParameterFromJobMetadata(remoteJobMetadata, "fullName");
-        this.jobDisplayName = getParameterFromJobMetadata(remoteJobMetadata, "displayName");
-        this.jobFullDisplayName = getParameterFromJobMetadata(remoteJobMetadata, "fullDisplayName");
-        this.jobUrl = getParameterFromJobMetadata(remoteJobMetadata, "url");
-    }
-
+    @CheckForNull
     private String getParameterFromJobMetadata(JSONObject remoteJobMetadata, String string)
     {
         try {

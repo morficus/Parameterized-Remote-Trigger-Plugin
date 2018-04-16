@@ -691,9 +691,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         ConnectionResponse responseRemoteJob = sendHTTPCall(triggerUrlString, "POST", context, 1);
         QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
 
-        Handle handle = new Handle(this, queueItem.getId(), context.currentItem, context.effectiveRemoteServer);
-        handle.setJobMetadata(remoteJobMetadata);
-        return handle;
+        return new Handle(this, queueItem.getId(), context.currentItem, context.effectiveRemoteServer, remoteJobMetadata);
     }
 
     /**
@@ -883,6 +881,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return buildData;
     }
 
+    @Nonnull
     public BuildStatus getBuildStatus(String buildUrlString, BuildContext context) throws IOException {
         BuildStatus buildStatus = BuildStatus.UNKNOWN;
 
