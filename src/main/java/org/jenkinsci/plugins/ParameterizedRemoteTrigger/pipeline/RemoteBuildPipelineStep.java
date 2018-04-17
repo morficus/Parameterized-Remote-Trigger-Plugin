@@ -223,7 +223,7 @@ public class RemoteBuildPipelineStep extends Step {
             Run<?, ?> build = stepContext.get(Run.class);
             FilePath workspace = stepContext.get(FilePath.class);
             TaskListener listener = stepContext.get(TaskListener.class);
-            RemoteJenkinsServer effectiveRemoteServer = remoteBuildConfig.findEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
+            RemoteJenkinsServer effectiveRemoteServer = remoteBuildConfig.evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
             BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
             Handle handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
             if(remoteBuildConfig.getBlockBuildUntilComplete()) {

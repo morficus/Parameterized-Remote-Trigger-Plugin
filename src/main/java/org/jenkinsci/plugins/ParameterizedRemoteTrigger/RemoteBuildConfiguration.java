@@ -359,7 +359,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      *            if <code>remoteJenkinsName</code> no valid URL or <code>job</code> an URL but nor valid.
      */
     @Nonnull
-    public RemoteJenkinsServer findEffectiveRemoteHost(BasicBuildContext context) throws IOException {
+    public RemoteJenkinsServer evaluateEffectiveRemoteHost(BasicBuildContext context) throws IOException {
         RemoteJenkinsServer globallyConfiguredServer = findRemoteHost(this.remoteJenkinsName);
         RemoteJenkinsServer server = globallyConfiguredServer;
         String expandedJob = getJobExpanded(context);
@@ -612,7 +612,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
           throws InterruptedException, IOException
     {
-        RemoteJenkinsServer effectiveRemoteServer = findEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
+        RemoteJenkinsServer effectiveRemoteServer = evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
         BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
         Handle handle = performTriggerAndGetQueueId(context);
         performWaitForBuild(context, handle);
