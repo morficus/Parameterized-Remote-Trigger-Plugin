@@ -24,53 +24,38 @@ import hudson.model.TaskListener;
  * must not be null.
  */
 @ParametersAreNullableByDefault
-public class BuildContext
+public class BuildContext extends BasicBuildContext
 {
-    @Nullable
-    public final Run<?, ?> run;
-
-    @Nullable
-    public final FilePath workspace;
-
-    @Nullable
-    public final TaskListener listener;
-
     @Nonnull
     public final PrintStream logger;
 
-    @Nullable
+    @Nonnull
     public RemoteJenkinsServer effectiveRemoteServer;
-
 
     /**
      * The current Item (job, pipeline,...) where the plugin is used from.
-     *
      */
     @Nonnull
     public final String currentItem;
 
-    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nullable String currentItem) {
-        this.run = run;
-        this.workspace = workspace;
-        this.listener = listener;
+
+    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nonnull RemoteJenkinsServer effectiveRemoteServer, @Nullable String currentItem) {
+        super(run, workspace, listener);
         this.logger = logger;
+        this.effectiveRemoteServer = effectiveRemoteServer;
         this.currentItem = getCurrentItem(run, currentItem);
     }
 
-    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger) {
-        this(run, workspace, listener, logger, null);
+    public BuildContext(@Nullable Run<?, ?> run, @Nullable FilePath workspace, @Nullable TaskListener listener, @Nonnull PrintStream logger, @Nonnull RemoteJenkinsServer effectiveRemoteServer) {
+        this(run, workspace, listener, logger, effectiveRemoteServer, null);
     }
 
-    public BuildContext(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull TaskListener listener)
+    public BuildContext(@Nonnull PrintStream logger, @Nonnull RemoteJenkinsServer effectiveRemoteServer, @Nullable String currentItem)
     {
-        this(run, workspace, listener, listener.getLogger());
+        this(null, null, null, logger, effectiveRemoteServer, currentItem);
     }
 
-    public BuildContext(@Nonnull PrintStream logger, String currentItem)
-    {
-        this(null, null, null, logger, currentItem);
-    }
-
+    @Nonnull
     private String getCurrentItem(Run<?, ?> run, String currentItem)
     {
         String runItem = null;

@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import static org.apache.commons.lang.StringUtils.trimToEmpty;
 
+import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -30,13 +31,15 @@ import hudson.util.FormValidation;
  * @author Maurice W.
  *
  */
-public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> implements Cloneable {
+public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsServer> implements Cloneable, Serializable {
+
+    private static final long serialVersionUID = -9211781849078964416L;
 
     /**
      * Default for this class is No Authentication
      */
-    private final static Auth2 DEFAULT_AUTH = NoneAuth.INSTANCE;
-  
+    private static final Auth2 DEFAULT_AUTH = NoneAuth.INSTANCE;
+
     /**
      * We need to keep this for compatibility - old config deserialization!
      * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
@@ -72,8 +75,8 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         auth = null;
         return this;
     }
-    
-    
+
+
     @DataBoundSetter
     public void setDisplayName(String displayName)
     {

@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL_UNIX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
@@ -15,37 +16,76 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.TokenAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.RemoteBuildPipelineStep;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 import hudson.AbortException;
 import hudson.EnvVars;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
+import hudson.model.User;
+import hudson.security.HudsonPrivateSecurityRealm;
+import hudson.security.SecurityRealm;
+import hudson.security.AuthorizationStrategy.Unsecured;
 import hudson.security.csrf.DefaultCrumbIssuer;
+import hudson.util.LogTaskListener;
+import jenkins.model.Jenkins;
 
 public class RemoteBuildConfigurationTest {
+
     @Rule
     public JenkinsRule jenkinsRule = new JenkinsRule();
 
+    private User testUser;
+    private String testUserToken;
+
+    private void disableAuth() {
+        jenkinsRule.jenkins.setAuthorizationStrategy(Unsecured.UNSECURED);
+        jenkinsRule.jenkins.setSecurityRealm(SecurityRealm.NO_AUTHENTICATION);
+        jenkinsRule.jenkins.setCrumbIssuer(null);
+    }
+
+    private void enableAuth() throws IOException {
+        MockAuthorizationStrategy mockAuth = new MockAuthorizationStrategy();
+        jenkinsRule.jenkins.setAuthorizationStrategy(mockAuth);
+        
+        HudsonPrivateSecurityRealm hudsonPrivateSecurityRealm = new HudsonPrivateSecurityRealm(false, false, null);
+        jenkinsRule.jenkins.setSecurityRealm(hudsonPrivateSecurityRealm); //jenkinsRule.createDummySecurityRealm());
+        testUser = hudsonPrivateSecurityRealm.createAccount("test", "test");
+        testUserToken = testUser.getProperty(jenkins.security.ApiTokenProperty.class).getApiToken();
+        
+        mockAuth.grant(Jenkins.ADMINISTER).everywhere().toAuthenticated();
+    }
+    
+    
     @Test
     public void testRemoteBuild() throws Exception {
-        jenkinsRule.jenkins.setCrumbIssuer(null);
-        _testRemoteBuild();
+        disableAuth();
+        _testRemoteBuild(false);
+    }
+
+    @Test
+    public void testRemoteBuildWithAuthentication() throws Exception {
+        enableAuth();
+        _testRemoteBuild(true);
     }
 
     @Test
     public void testRemoteBuildWithCrumb() throws Exception {
+        disableAuth();
         jenkinsRule.jenkins.setCrumbIssuer(new DefaultCrumbIssuer(false));
-        _testRemoteBuild();
+        _testRemoteBuild(false);
     }
 
-    private void _testRemoteBuild() throws Exception {
+    private void _testRemoteBuild(boolean authenticate) throws Exception {
 
         String remoteUrl = jenkinsRule.getURL().toString();
         RemoteJenkinsServer remoteJenkinsServer = new RemoteJenkinsServer();
@@ -69,6 +109,12 @@ public class RemoteBuildConfigurationTest {
         configuration.setPollInterval(1);
         configuration.setEnhancedLogging(true);
         configuration.setParameters("parameterName1=value1" + NL_UNIX + "parameterName2=value2");
+        if(authenticate) {
+            TokenAuth tokenAuth = new TokenAuth();
+            tokenAuth.setUserName(testUser.getId());
+            tokenAuth.setApiToken(testUserToken);
+            configuration.setAuth2(tokenAuth);
+        }
 
         project.getBuildersList().add(configuration);
 
@@ -77,10 +123,14 @@ public class RemoteBuildConfigurationTest {
         jenkinsRule.buildAndAssertSuccess(project);
         
         //Check results
-        List<String> log = IOUtils.readLines(project.getLastBuild().getLogInputStream());
-        assertTrue(log.toString(), log.toString().contains("Started by user anonymous, Building in workspace"));
+        FreeStyleBuild lastBuild2 = project.getLastBuild();
+        assertNotNull(lastBuild2);
+        List<String> log = IOUtils.readLines(lastBuild2.getLogInputStream());
+        assertTrue(log.toString(), log.toString().contains("Started by user " + (authenticate ? "test" : "anonymous") + ", Building in workspace"));
         
-        EnvVars remoteEnv = remoteProject.getLastBuild().getEnvironment(null);
+        FreeStyleBuild lastBuild = remoteProject.getLastBuild();
+        assertNotNull("lastBuild null", lastBuild);
+        EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
         assertEquals("value1", remoteEnv.get("parameterName1"));
         assertEquals("value2", remoteEnv.get("parameterName2"));
     }
@@ -130,7 +180,7 @@ public class RemoteBuildConfigurationTest {
         config.setJob("MyJob");
         assertEquals("MyJob", config.getJob());
         try {
-            config.findEffectiveRemoteHost(null);
+            config.evaluateEffectiveRemoteHost(null);
             fail("findRemoteHost() should throw an AbortException since server not specified");
         } catch(AbortException e) {
             assertEquals("Configuration of the remote Jenkins host is missing.", e.getMessage());
@@ -143,7 +193,7 @@ public class RemoteBuildConfigurationTest {
         config.setJob("MyJob");
         config.setRemoteJenkinsUrl("http://test:8080");
         assertEquals("MyJob", config.getJob());
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://test:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -154,7 +204,7 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("remoteJenkinsName");
         assertEquals("MyJob", config.getJob());
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://test:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -165,7 +215,7 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("remoteJenkinsName");
         assertEquals("A/B/C/D/MyJob", config.getJob());
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://test:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -173,7 +223,7 @@ public class RemoteBuildConfigurationTest {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("http://test:8080/job/folder/job/MyJob");
         assertEquals("http://test:8080/job/folder/job/MyJob", config.getJob()); //The value configured for "job"
-        assertEquals("http://test:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://test:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -183,7 +233,7 @@ public class RemoteBuildConfigurationTest {
         config.setJob("http://testA:8080/job/folder/job/MyJobA");
         config.setRemoteJenkinsUrl("http://testB:8080");
         assertEquals("http://testA:8080/job/folder/job/MyJobA", config.getJob()); //The value configured for "job"
-        assertEquals("http://testA:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://testA:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
@@ -195,18 +245,18 @@ public class RemoteBuildConfigurationTest {
 
         config.setRemoteJenkinsName("remoteJenkinsName");
         assertEquals("http://testA:8080/job/folder/job/MyJobA", config.getJob()); //The value configured for "job"
-        assertEquals("http://testA:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://testA:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_withoutJob() throws IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+    public void testEvaluateEffectiveRemoteHost_withoutJob() throws IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
         try {
             RemoteBuildConfiguration config = new RemoteBuildConfiguration();
             config.setJob("xxx");
             Field field = config.getClass().getDeclaredField("job");
             field.setAccessible(true);
             field.set(config, "");
-            config.findEffectiveRemoteHost(null);
+            config.evaluateEffectiveRemoteHost(null);
             fail("findRemoteHost() should throw an AbortException since job not specified");
         } catch(AbortException e) {
             assertEquals("Parameter 'Remote Job Name or URL' ('job' variable in Pipeline) not specified.", e.getMessage());
@@ -220,19 +270,19 @@ public class RemoteBuildConfigurationTest {
         config = mockGlobalRemoteHost(config, "remoteJenkinsName", "http://globallyConfigured:8080");
 
         config.setRemoteJenkinsName("remoteJenkinsName");
-        assertEquals("http://globallyConfigured:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://globallyConfigured:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
 
         //Now override remote host URL
         config.setRemoteJenkinsUrl("http://locallyOverridden:8080");
         assertEquals("MyJob", config.getJob());
-        assertEquals("http://locallyOverridden:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://locallyOverridden:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_jobNameMissing() throws IOException {
+    public void testEvaluateEffectiveRemoteHost_jobNameMissing() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         try {
-            config.findEffectiveRemoteHost(null);
+            config.evaluateEffectiveRemoteHost(null);
         }
         catch (AbortException e) {
             assertEquals("Parameter 'Remote Job Name or URL' ('job' variable in Pipeline) not specified.", e.getMessage());
@@ -240,14 +290,14 @@ public class RemoteBuildConfigurationTest {
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_globalConfigMissing() throws IOException {
+    public void testEvaluateEffectiveRemoteHost_globalConfigMissing() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("MyJob");
         config = mockGlobalRemoteHost(config, "remoteJenkinsName", "http://globallyConfigured:8080");
 
         config.setRemoteJenkinsName("notConfiguredRemoteHost");
         try {
-            config.findEffectiveRemoteHost(null);
+            config.evaluateEffectiveRemoteHost(null);
         }
         catch (AbortException e) {
             assertEquals("Could get remote host with ID 'notConfiguredRemoteHost' configured in Jenkins global configuration. Please check your global configuration.", e.getMessage());
@@ -255,41 +305,41 @@ public class RemoteBuildConfigurationTest {
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_globalConfigMissing_localOverrideHostURL() throws IOException {
+    public void testEvaluateEffectiveRemoteHost_globalConfigMissing_localOverrideHostURL() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("MyJob");
         config = mockGlobalRemoteHost(config, "remoteJenkinsName", "http://globallyConfigured:8080");
 
         config.setRemoteJenkinsName("notConfiguredRemoteHost");
         config.setRemoteJenkinsUrl("http://locallyOverridden:8080");
-        assertEquals("http://locallyOverridden:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://locallyOverridden:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_globalConfigMissing_localOverrideJobURL() throws IOException {
+    public void testEvaluateEffectiveRemoteHost_globalConfigMissing_localOverrideJobURL() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("http://localJobUrl:8080/job/MyJob");
         config = mockGlobalRemoteHost(config, "remoteJenkinsName", "http://globallyConfigured:8080");
 
         config.setRemoteJenkinsName("notConfiguredRemoteHost");
-        assertEquals("http://localJobUrl:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://localJobUrl:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_localOverrideHostURL() throws IOException {
+    public void testEvaluateEffectiveRemoteHost_localOverrideHostURL() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("MyJob");
         config.setRemoteJenkinsUrl("http://hostname:8080");
-        assertEquals("http://hostname:8080", config.findEffectiveRemoteHost(null).getRemoteAddress());
+        assertEquals("http://hostname:8080", config.evaluateEffectiveRemoteHost(null).getRemoteAddress());
     }
 
     @Test @WithoutJenkins
-    public void testFindEffectiveRemoteHost_localOverrideHostURLWrong() throws IOException {
+    public void testEvaluateEffectiveRemoteHost_localOverrideHostURLWrong() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
         config.setJob("MyJob");
         config.setRemoteJenkinsUrl("hostname:8080");
         try {
-            config.findEffectiveRemoteHost(null);
+            config.evaluateEffectiveRemoteHost(null);
             fail("Expected AbortException");
         }
         catch (AbortException e) {
