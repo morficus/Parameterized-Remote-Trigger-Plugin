@@ -78,12 +78,6 @@ public class RemoteBuildConfigurationTest {
         _testRemoteBuild(true);
     }
 
-//    @Test
-//    public void testRemoteBuildWithMissingAuthentication() throws Exception {
-//        enableAuth();
-//        _testRemoteBuild(false);
-//    }
-
     @Test
     public void testRemoteBuildWithCrumb() throws Exception {
         disableAuth();
