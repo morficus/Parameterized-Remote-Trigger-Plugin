@@ -37,8 +37,6 @@ public class RemoteJenkinsServerTest {
         verifyEqualsHashCode(server, clone);
         assertEquals("address", ADDRESS, clone.getAddress());
         assertEquals("address", server.getAddress(), clone.getAddress());
-        assertEquals("remoteAddress", ADDRESS, clone.getRemoteAddress());
-        assertEquals("remoteAddress", server.getRemoteAddress(), clone.getRemoteAddress());
         assertEquals("auth2", server.getAuth2(), clone.getAuth2());
         assertEquals("displayName", DISPLAY_NAME, clone.getDisplayName());
         assertEquals("displayName", server.getDisplayName(), clone.getDisplayName());

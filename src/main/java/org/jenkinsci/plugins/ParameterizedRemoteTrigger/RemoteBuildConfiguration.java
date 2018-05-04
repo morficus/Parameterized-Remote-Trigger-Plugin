@@ -92,7 +92,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
      */
     private final static Auth2 DEFAULT_AUTH = NullAuth.INSTANCE;
 
-    
+
     private static final int      DEFAULT_POLLINTERVALL = 10;
     private static final String   paramerizedBuildUrl   = "/buildWithParameters";
     private static final String   normalBuildUrl        = "/build";
@@ -502,7 +502,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         if (context.effectiveRemoteServer.getHasBuildTokenRootSupport()) {
           // start building the proper URL based on known capabiltiies of the remote server
-            triggerUrlString = context.effectiveRemoteServer.getRemoteAddress();
+            if (context.effectiveRemoteServer.getAddress() == null) {
+                throw new AbortException("The remote server address can not be empty, or it must be overridden on the job configuration.");
+            }
+            triggerUrlString = context.effectiveRemoteServer.getAddress();
             triggerUrlString += buildTokenRootUrl;
             triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized);
             query = addToQueryString(query, "job=" + encodeValue(jobNameOrUrl)); //TODO: does it work with full URL?
@@ -815,7 +818,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
             throws IOException {
 
-      String queueQuery = String.format("%s/queue/item/%s/api/json/", context.effectiveRemoteServer.getRemoteAddress(), queueId);
+      if (context.effectiveRemoteServer.getAddress() == null) {
+          throw new AbortException("The remote server address can not be empty, or it must be overridden on the job configuration.");
+      }
+      String queueQuery = String.format("%s/queue/item/%s/api/json/", context.effectiveRemoteServer.getAddress(), queueId);
       ConnectionResponse response = sendHTTPCall( queueQuery, "GET", context, 1 );
       JSONObject queueResponse = response.getBody();
 
@@ -1187,7 +1193,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     private JenkinsCrumb getCrumb(BuildContext context) throws IOException
     {
-        String address = context.effectiveRemoteServer.getRemoteAddress();
+        String address = context.effectiveRemoteServer.getAddress();
+        if (address == null) {
+            throw new AbortException("The remote server address can not be empty, or it must be overridden on the job configuration.");
+        }
         URL crumbProviderUrl;
         try {
             String xpathValue = URLEncoder.encode("concat(//crumbRequestField,\":\",//crumb)", "UTF-8");
@@ -1461,7 +1470,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         return isParameterized;
     }
 
-    protected static String generateJobUrl(RemoteJenkinsServer remoteServer, String jobNameOrUrl)
+    protected static String generateJobUrl(RemoteJenkinsServer remoteServer, String jobNameOrUrl) throws AbortException
     {
         if(isEmpty(jobNameOrUrl)) throw new IllegalArgumentException("Invalid job name/url: " + jobNameOrUrl);
         String remoteJobUrl;
@@ -1469,7 +1478,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         if(FormValidationUtils.isURL(_jobNameOrUrl)) {
             remoteJobUrl = _jobNameOrUrl;
         } else {
-            remoteJobUrl = remoteServer.getRemoteAddress();
+            remoteJobUrl = remoteServer.getAddress();
+            if (remoteJobUrl == null) {
+                throw new AbortException("The remote server address can not be empty, or it must be overridden on the job configuration.");
+            }
             while(remoteJobUrl.endsWith("/")) remoteJobUrl = remoteJobUrl.substring(0, remoteJobUrl.length()-1);
 
             String[] split = _jobNameOrUrl.trim().split("/");

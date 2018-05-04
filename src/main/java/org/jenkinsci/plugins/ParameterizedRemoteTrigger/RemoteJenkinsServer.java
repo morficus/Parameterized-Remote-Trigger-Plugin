@@ -135,24 +135,6 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return (DescriptorImpl) super.getDescriptor();
     }
 
-    /**
-     * @return the remote server address
-     * @throws RuntimeException
-     *             if the address of the remote server was not set
-     */
-    @Nonnull
-    public String getRemoteAddress() {
-        if (address == null) {
-            throw new RuntimeException("The remote address can not be empty.");
-        } else {
-            try {
-                new URL(address);
-            } catch (MalformedURLException e) {
-                throw new RuntimeException("Malformed address (" + address + "). Remember to indicate the protocol, i.e. http, https, etc.");
-            }
-        }
-        return address;
-    }
 
     @Extension
     public static class DescriptorImpl extends Descriptor<RemoteJenkinsServer> {
