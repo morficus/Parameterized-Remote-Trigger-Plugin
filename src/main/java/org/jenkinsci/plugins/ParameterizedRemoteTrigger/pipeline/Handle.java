@@ -335,7 +335,7 @@ public class Handle implements Serializable {
     public String toString() {
 
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), effectiveRemoteServer.getRemoteAddress(), queueId));
+        sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), effectiveRemoteServer.getAddress(), queueId));
         if(buildStatus != null) sb.append(String.format(", buildStatus=%s", buildStatus));
         if(buildData != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildData.getBuildNumber(), buildData.getURL()));
         sb.append("]");
