@@ -1058,6 +1058,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             addCrumbToConnection(connection, context);
             // wait up to 5 seconds for the connection to be open
             connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
             connection.connect();
             responseHeader = connection.getHeaderFields();
             responseCode = connection.getResponseCode();
