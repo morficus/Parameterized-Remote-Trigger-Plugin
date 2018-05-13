@@ -4,6 +4,7 @@ import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -86,7 +87,7 @@ public class RemoteBuildConfigurationTest {
         _testRemoteBuild(false);
     }
 
-	private void _testRemoteBuild(boolean authenticate, FreeStyleProject remoteProject) throws Exception {
+	private void _testRemoteBuild(boolean authenticate, boolean withParam, FreeStyleProject remoteProject) throws Exception {
 
         String remoteUrl = jenkinsRule.getURL().toString();
         RemoteJenkinsServer remoteJenkinsServer = new RemoteJenkinsServer();
@@ -104,7 +105,9 @@ public class RemoteBuildConfigurationTest {
         configuration.setBlockBuildUntilComplete(true);
         configuration.setPollInterval(1);
         configuration.setEnhancedLogging(true);
-        configuration.setParameters("parameterName1=value1" + NL_UNIX + "parameterName2=value2");
+        if (withParam){
+        	configuration.setParameters("parameterName1=value1" + NL_UNIX + "parameterName2=value2");
+        }
         if(authenticate) {
             TokenAuth tokenAuth = new TokenAuth();
             tokenAuth.setUserName(testUser.getId());
@@ -126,9 +129,13 @@ public class RemoteBuildConfigurationTest {
         
         FreeStyleBuild lastBuild = remoteProject.getLastBuild();
         assertNotNull("lastBuild null", lastBuild);
-        EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
-        assertEquals("value1", remoteEnv.get("parameterName1"));
-        assertEquals("value2", remoteEnv.get("parameterName2"));
+        if (withParam){
+            EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
+            assertEquals("value1", remoteEnv.get("parameterName1"));
+            assertEquals("value2", remoteEnv.get("parameterName2"));	
+        } else {
+        	assertNotEquals("lastBuild should be executed no matter the result which depends on the remote job configuration.", null, lastBuild.getNumber());
+        }
     }
 
 	private void _testRemoteBuild(boolean authenticate) throws Exception {
@@ -136,7 +143,7 @@ public class RemoteBuildConfigurationTest {
 		remoteProject.addProperty(
 				new ParametersDefinitionProperty(new StringParameterDefinition("parameterName1", "default1"),
 						new StringParameterDefinition("parameterName2", "default2")));
-		_testRemoteBuild(authenticate, remoteProject);
+		_testRemoteBuild(authenticate, true, remoteProject);
 	}
 
     @Test @WithoutJenkins
@@ -430,7 +437,16 @@ public class RemoteBuildConfigurationTest {
 				new ParametersDefinitionProperty(new StringParameterDefinition("parameterName1", "default1"),
 						new StringParameterDefinition("parameterName2", "default2")));
 
-		this._testRemoteBuild(false, remoteProject);
+		this._testRemoteBuild(false, true, remoteProject);
+	}
+	
+	@Test
+	public void testRemoteFolderedBuildWithoutParameters() throws Exception {
+		disableAuth();
+
+		MockFolder remoteJobFolder = jenkinsRule.createFolder("someJobFolder1");
+		FreeStyleProject remoteProject = remoteJobFolder.createProject(FreeStyleProject.class, "someJobName1");
+		this._testRemoteBuild(false, false, remoteProject);
 	}
 
 }
