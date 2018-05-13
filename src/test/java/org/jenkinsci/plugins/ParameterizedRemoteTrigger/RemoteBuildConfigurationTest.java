@@ -23,6 +23,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
+import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 import hudson.AbortException;
@@ -85,7 +86,7 @@ public class RemoteBuildConfigurationTest {
         _testRemoteBuild(false);
     }
 
-    private void _testRemoteBuild(boolean authenticate) throws Exception {
+	private void _testRemoteBuild(boolean authenticate, FreeStyleProject remoteProject) throws Exception {
 
         String remoteUrl = jenkinsRule.getURL().toString();
         RemoteJenkinsServer remoteJenkinsServer = new RemoteJenkinsServer();
@@ -94,11 +95,6 @@ public class RemoteBuildConfigurationTest {
         RemoteBuildConfiguration.DescriptorImpl descriptor =
                 jenkinsRule.jenkins.getDescriptorByType(RemoteBuildConfiguration.DescriptorImpl.class);
         descriptor.setRemoteSites(remoteJenkinsServer);
-
-        FreeStyleProject remoteProject = jenkinsRule.createFreeStyleProject();
-        remoteProject.addProperty(new ParametersDefinitionProperty(
-                new StringParameterDefinition("parameterName1", "default1"),
-                new StringParameterDefinition("parameterName2", "default2")));
 
         FreeStyleProject project = jenkinsRule.createFreeStyleProject();
         RemoteBuildConfiguration configuration = new RemoteBuildConfiguration();
@@ -134,6 +130,14 @@ public class RemoteBuildConfigurationTest {
         assertEquals("value1", remoteEnv.get("parameterName1"));
         assertEquals("value2", remoteEnv.get("parameterName2"));
     }
+
+	private void _testRemoteBuild(boolean authenticate) throws Exception {
+		FreeStyleProject remoteProject = jenkinsRule.createFreeStyleProject();
+		remoteProject.addProperty(
+				new ParametersDefinitionProperty(new StringParameterDefinition("parameterName1", "default1"),
+						new StringParameterDefinition("parameterName2", "default2")));
+		_testRemoteBuild(authenticate, remoteProject);
+	}
 
     @Test @WithoutJenkins
     public void testDefaults() throws IOException {
@@ -416,5 +420,17 @@ public class RemoteBuildConfigurationTest {
 
     }
 
+	@Test
+	public void testRemoteFolderedBuild() throws Exception {
+		disableAuth();
+
+		MockFolder remoteJobFolder = jenkinsRule.createFolder("someJobFolder");
+		FreeStyleProject remoteProject = remoteJobFolder.createProject(FreeStyleProject.class, "someJobName");
+		remoteProject.addProperty(
+				new ParametersDefinitionProperty(new StringParameterDefinition("parameterName1", "default1"),
+						new StringParameterDefinition("parameterName2", "default2")));
+
+		this._testRemoteBuild(false, remoteProject);
+	}
 
 }
