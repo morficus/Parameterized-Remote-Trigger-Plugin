@@ -737,7 +737,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         if (this.getBlockBuildUntilComplete()) {
           context.logger.println("Blocking local job until remote job completes.");
           // Form the URL for the triggered job
-          String jobLocation = jobURL + "api/json/";
+          // Only avoid url cache while loop inquiry
+          String jobLocation = String.format("%sapi/json/?seed=%d", jobURL, System.currentTimeMillis());
 
           buildStatus = getBuildStatus(jobLocation, context);
           handle.setBuildStatus(buildStatus);
