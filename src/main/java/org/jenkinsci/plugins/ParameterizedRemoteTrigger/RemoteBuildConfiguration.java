@@ -244,19 +244,18 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         List<String> parameterList = new ArrayList<String>();
         try {
 
-            String filePath = String.format("%s/%s", context.workspace, getParameterFile());
+            FilePath filePath = context.workspace.child(getParameterFile());
             String sCurrentLine;
+            context.logger.println(String.format("Loading parameters from file %s", filePath.getRemote()));
 
-            context.logger.println(String.format("Loading parameters from file %s", filePath));
-
-            br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF-8"));
+            br = new BufferedReader(new InputStreamReader(filePath.read(), "UTF-8"));
 
             while ((sCurrentLine = br.readLine()) != null) {
                 parameterList.add(sCurrentLine);
             }
-        } catch (IOException e) {
+        } catch (InterruptedException | IOException e) {
             context.logger.println(String.format("[WARNING] Failed loading parameters: %s", e.getMessage()));
-        } finally {
+		} finally {
             try {
                 if (br != null) {
                     br.close();
