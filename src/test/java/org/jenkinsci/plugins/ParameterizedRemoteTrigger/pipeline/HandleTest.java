@@ -13,7 +13,9 @@ public class HandleTest
     String help = Handle.help();
     //Check only a few to see if it works in general
     assertContains(help, true, "- String toString()");
-    assertContains(help, true, "- BuildStatus getBuildStatus()");
+    assertContains(help, true, "- RemoteBuildInfo getBuildInfo()");
+    assertContains(help, true, "- RemoteBuildStatus getBuildStatus()");
+    assertContains(help, true, "- Result getBuildResult()");
     assertContains(help, true, "- URL getBuildUrl()");
     assertContains(help, true, "- int getBuildNumber()");
     assertContains(help, true, "- boolean isFinished()");
