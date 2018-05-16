@@ -30,6 +30,10 @@
         <id>morficus</id>
         <name>Maurice Williams</name>
     </developer>
+    <developer>
+        <id>cashlalala</id>
+        <name>KaiHsiang Chang</name>
+    </developer>
   </developers>
 
    <build>
