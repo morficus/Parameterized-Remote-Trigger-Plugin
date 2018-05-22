@@ -24,9 +24,6 @@ public class RemoteBuildInfo implements Serializable
     private String queueId;
 
     @Nonnull
-    private RemoteBuildQueueStatus queueStatus;
-
-    @Nonnull
     private int buildNumber;
 
     @CheckForNull
@@ -42,20 +39,13 @@ public class RemoteBuildInfo implements Serializable
     public RemoteBuildInfo()
     {
         queueId = null;
-        queueStatus = RemoteBuildQueueStatus.NOT_QUEUED;
-        status = RemoteBuildStatus.NOT_STARTED;
+        status = RemoteBuildStatus.NOT_TRIGGERED;
         result = Result.NOT_BUILT;
     }
 
     @CheckForNull
     public String getQueueId() {
         return queueId;
-    }
-
-    @Nonnull
-    public RemoteBuildQueueStatus getQueueStatus()
-    {
-        return queueStatus;
     }
 
     @Nonnull
@@ -84,7 +74,7 @@ public class RemoteBuildInfo implements Serializable
 
     public void setQueueId(String queueId) {
         this.queueId = queueId;
-        this.queueStatus = RemoteBuildQueueStatus.QUEUED;
+        this.status = RemoteBuildStatus.QUEUED;
     }
 
     public void setBuildData(@Nonnull int buildNumber, @Nullable URL buildURL) throws AbortException
@@ -94,7 +84,7 @@ public class RemoteBuildInfo implements Serializable
         }
         this.buildNumber = buildNumber;
         this.buildURL = buildURL;
-        this.queueStatus = RemoteBuildQueueStatus.EXECUTED;
+        this.status = RemoteBuildStatus.RUNNING;
     }
 
     public void setBuildStatus(RemoteBuildStatus status)
@@ -125,19 +115,15 @@ public class RemoteBuildInfo implements Serializable
     public String toString()
     {
         if (status == RemoteBuildStatus.FINISHED) return String.format("status=%s, result=%s", status.toString(), result.toString());
-        else return String.format("queueStatus=%s, status=%s", queueStatus.toString(), status.toString());
+        else return String.format("status=%s", status.toString());
     }
 
-    public boolean isNotQueued() {
-        return queueStatus == RemoteBuildQueueStatus.NOT_QUEUED;
+    public boolean isNotTriggered() {
+        return status == RemoteBuildStatus.NOT_TRIGGERED;
     }
 
     public boolean isQueued() {
-        return queueStatus == RemoteBuildQueueStatus.QUEUED;
-    }
-
-    public boolean isNotStarted() {
-        return status == RemoteBuildStatus.NOT_STARTED;
+        return status == RemoteBuildStatus.QUEUED;
     }
 
     public boolean isRunning() {

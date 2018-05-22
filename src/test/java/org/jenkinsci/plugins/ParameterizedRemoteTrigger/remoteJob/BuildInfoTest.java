@@ -18,7 +18,7 @@ public class BuildInfoTest {
 
         RemoteBuildInfo buildInfo = new RemoteBuildInfo();
 
-        assert(buildInfo.isNotStarted());
+        assert(buildInfo.isNotTriggered());
         assert(buildInfo.getResult() == Result.NOT_BUILT);
     }
 
@@ -58,7 +58,7 @@ public class BuildInfoTest {
 
         RemoteBuildInfo buildInfo = new RemoteBuildInfo();
 
-        assert(buildInfo.toString().equals("queueStatus=NOT_QUEUED, status=NOT_STARTED"));
+        assert(buildInfo.toString().equals("status=NOT_TRIGGERED"));
 
         buildInfo = new RemoteBuildInfo();
         buildInfo.setBuildResult(Result.SUCCESS);

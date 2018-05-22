@@ -5,14 +5,18 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob;
  */
 public enum RemoteBuildStatus
 {
-
     /**
-     * The remote build did not start.
+     * The remote job was not triggered and it did not enter the queue.
      */
-    NOT_STARTED("NOT_STARTED"),
+    NOT_TRIGGERED("NOT_TRIGGERED"),
 
     /**
-     * The remote build is running currently.
+     * The remote job was triggered and it did enter the queue.
+     */
+    QUEUED("QUEUED"),
+
+    /**
+     * The remote job left the queue and it is running currently.
      */
     RUNNING("RUNNING"),
 

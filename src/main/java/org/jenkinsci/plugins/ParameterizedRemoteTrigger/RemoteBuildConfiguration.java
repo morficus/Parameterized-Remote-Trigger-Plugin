@@ -44,7 +44,6 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildInfoExpor
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItem;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItemData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildQueueStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
@@ -692,13 +691,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         }
 
-        RemoteBuildInfo buildInfo = new RemoteBuildInfo(); // QueueStatus.NOT_QUEUED
+        RemoteBuildInfo buildInfo = new RemoteBuildInfo();
 
         context.logger.println("Triggering remote job now.");
 
         ConnectionResponse responseRemoteJob = sendHTTPCall(triggerUrlString, "POST", context, 1);
         QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
-        buildInfo.setQueueId(queueItem.getId()); // QueueStatus.QUEUED
+        buildInfo.setQueueId(queueItem.getId());
         buildInfo = updateBuildInfo(buildInfo, context);
 
         return new Handle(this, buildInfo, context.currentItem, context.effectiveRemoteServer, remoteJobMetadata);
@@ -762,10 +761,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
           buildInfo = updateBuildInfo(buildInfo, context);
           handle.setBuildInfo(buildInfo);
 
-          if (buildInfo.isNotStarted())
+          if (buildInfo.isQueued())
             context.logger.println("Waiting for remote build to start ...");
 
-          while (buildInfo.isNotStarted()) {
+          while (buildInfo.isQueued()) {
               context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
               // Sleep for 'pollInterval' seconds.
               // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
@@ -797,6 +796,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
               buildInfo = updateBuildInfo(buildInfo, context);
               handle.setBuildInfo(buildInfo);
           }
+
           context.logger.println("Remote build finished with status " + buildInfo.getResult().toString() + ".");
           if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
 
@@ -872,7 +872,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     public RemoteBuildInfo updateBuildInfo(@Nonnull RemoteBuildInfo buildInfo, @Nonnull BuildContext context) throws IOException {
 
-        if (buildInfo.isNotQueued()) return buildInfo;
+        if (buildInfo.isNotTriggered()) return buildInfo;
 
         if (buildInfo.isQueued()) {
             String queueId = buildInfo.getQueueId();
@@ -881,12 +881,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             }
             QueueItemData queueItem = getQueueItemData(queueId, context);
             if (queueItem.isExecuted()) {
-                buildInfo.setBuildData(queueItem.getBuildNumber(), queueItem.getBuildURL());  // QueueStatus.EXECUTED
+                buildInfo.setBuildData(queueItem.getBuildNumber(), queueItem.getBuildURL());
             }
             return buildInfo;
         }
 
-        // QueueStatus.EXECUTED
         String buildUrlString = buildInfo.getBuildURL() + "api/json/";
         JSONObject responseObject = sendHTTPCall(buildUrlString, "GET", context);
 
