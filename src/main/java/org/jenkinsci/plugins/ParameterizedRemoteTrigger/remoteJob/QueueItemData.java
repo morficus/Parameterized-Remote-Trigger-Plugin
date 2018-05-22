@@ -23,12 +23,18 @@ public class QueueItemData
     @Nonnull
     private RemoteBuildQueueStatus status;
 
+    @Nonnull
+    private int buildNumber;
+
+    @CheckForNull
+    private URL buildURL;
+
 
     public QueueItemData(@Nonnull BuildContext context, @Nonnull JSONObject queueResponse) throws MalformedURLException
     {
         this.queueResponse = queueResponse;
-        if (isExecutable() && getBuildData(context)!=null) status = RemoteBuildQueueStatus.EXECUTED;
-        else status = RemoteBuildQueueStatus.QUEUED;
+        this.status = RemoteBuildQueueStatus.QUEUED;
+        setQueueItemData(context);
     }
 
     public boolean isBlocked()
@@ -61,48 +67,58 @@ public class QueueItemData
         return (!isBlocked() && !isBuildable() && !isPending() && !isCancelled());
     }
 
+    public boolean isExecuted()
+    {
+        return status == RemoteBuildQueueStatus.EXECUTED;
+    }
+
     public RemoteBuildQueueStatus getQueueStatus() {
         return status;
     }
+
+    @Nonnull
+    public int getBuildNumber()
+    {
+        return buildNumber;
+    }
+
+    @CheckForNull
+    public URL getBuildURL()
+    {
+        return buildURL;
+    }
+
     /**
      * When a queue item is <b>executable</b>, the build number and the build URL
      * of the remote job are available in the queue item data.
      *
      * @param context
      *            the context of this Builder/BuildStep.
-     * @return {@link BuildData}
-     *            the remote build or null if the queue item is not executable.
      * @throws MalformedURLException
      *            if there is an error creating the build URL.
      */
-    @CheckForNull
-    public BuildData getBuildData(@Nonnull BuildContext context) throws MalformedURLException
+    private void setQueueItemData(@Nonnull BuildContext context) throws MalformedURLException
     {
-        if (!isExecutable()) return null;
-
-        JSONObject remoteJobInfo;
-        try {
-            remoteJobInfo = queueResponse.getJSONObject("executable");
-            if (remoteJobInfo == null) return null;
-        } catch (JSONException e) {
-            context.logger.println("The attribute \"executable\" was not found. Unexpected response: " + queueResponse.toString());
-            return null;
+        if (isExecutable()) {
+            try {
+                JSONObject remoteJobInfo = queueResponse.getJSONObject("executable");
+                if (remoteJobInfo != null) {
+                    try {
+                        buildNumber = remoteJobInfo.getInt("number");
+                    } catch (JSONException e) {
+                        context.logger.println("The attribute \"number\" was not found. Unexpected response: " + queueResponse.toString());
+                    }
+                    try {
+                        buildURL = new URL(remoteJobInfo.getString("url"));
+                    } catch (JSONException e) {
+                        context.logger.println("The attribute \"url\" was not found. Unexpected response: " + queueResponse.toString());
+                    }
+                }
+            } catch (JSONException e) {
+                context.logger.println("The attribute \"executable\" was not found. Unexpected response: " + queueResponse.toString());
+            }
+            if (buildNumber != -1 && buildURL != null) status = RemoteBuildQueueStatus.EXECUTED;
         }
-        int buildNumber;
-        try {
-            buildNumber = remoteJobInfo.getInt("number");
-        } catch (JSONException e) {
-            context.logger.println("The attribute \"number\" was not found. Unexpected response: " + queueResponse.toString());
-            return null;
-        }
-        String buildUrl;
-        try {
-            buildUrl = remoteJobInfo.getString("url");
-        } catch (JSONException e) {
-            context.logger.println("The attribute \"url\" was not found. Unexpected response: " + queueResponse.toString());
-            return null;
-        }
-        return new BuildData(buildNumber, new URL(buildUrl));
     }
 
     private boolean getOptionalBoolean(String attribute)

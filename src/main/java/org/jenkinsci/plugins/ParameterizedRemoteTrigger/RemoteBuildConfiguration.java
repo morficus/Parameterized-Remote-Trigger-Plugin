@@ -8,7 +8,6 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,11 +40,10 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.ForbiddenException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UnauthorizedException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.Handle;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildData;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildInfoExporterAction;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItem;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItemData;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildQueueStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
@@ -745,13 +743,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             handle.setBuildInfo(buildInfo);
         }
 
-        BuildData buildData = buildInfo.getBuildData();
-        if (buildData == null) {
+        URL jobURL = buildInfo.getBuildURL();
+        int jobNumber = buildInfo.getBuildNumber();
+
+        if (jobURL == null || jobNumber == -1) {
             throw new AbortException(String.format("Unexpected status: %s", buildInfo.toString()));
         }
-
-        int jobNumber = buildData.getBuildNumber();
-        URL jobURL = buildData.getURL();
 
         context.logger.println("  Remote build URL: " + jobURL);
         context.logger.println("  Remote build number: " + jobNumber);
@@ -882,19 +879,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new AbortException(String.format("Unexpected status: %s. The queue id was not found.", buildInfo.toString()));
             }
             QueueItemData queueItem = getQueueItemData(queueId, context);
-            BuildData buildData = queueItem.getBuildData(context);
-            if (queueItem.isExecutable() && buildData!=null) {
-                buildInfo.setBuildData(buildData);  // QueueStatus.EXECUTED
+            if (queueItem.isExecuted()) {
+                buildInfo.setBuildData(queueItem.getBuildNumber(), queueItem.getBuildURL());  // QueueStatus.EXECUTED
             }
             return buildInfo;
         }
 
         // QueueStatus.EXECUTED
-        BuildData buildData = buildInfo.getBuildData();
-        if (buildData == null) {
-            throw new AbortException(String.format("Unexpected status: %s", buildInfo.toString()));
-        }
-        String buildUrlString = buildData.getURL() + "api/json/";
+        String buildUrlString = buildInfo.getBuildURL() + "api/json/";
         JSONObject responseObject = sendHTTPCall(buildUrlString, "GET", context);
 
         try {

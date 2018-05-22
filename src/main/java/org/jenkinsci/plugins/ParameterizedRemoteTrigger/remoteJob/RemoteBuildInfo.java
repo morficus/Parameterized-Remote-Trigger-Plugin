@@ -1,10 +1,13 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob;
 
 import java.io.Serializable;
+import java.net.URL;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import hudson.AbortException;
 import hudson.model.Result;
 
 /**
@@ -20,11 +23,14 @@ public class RemoteBuildInfo implements Serializable
     @CheckForNull
     private String queueId;
 
-    @CheckForNull
-    private BuildData buildData;
-
     @Nonnull
     private RemoteBuildQueueStatus queueStatus;
+
+    @Nonnull
+    private int buildNumber;
+
+    @CheckForNull
+    private URL buildURL;
 
     @Nonnull
     private RemoteBuildStatus status;
@@ -36,8 +42,9 @@ public class RemoteBuildInfo implements Serializable
     public RemoteBuildInfo()
     {
         queueId = null;
-        buildData = null;
         queueStatus = RemoteBuildQueueStatus.NOT_QUEUED;
+        buildNumber = -1;
+        buildURL = null;
         status = RemoteBuildStatus.NOT_STARTED;
         result = Result.NOT_BUILT;
     }
@@ -47,15 +54,22 @@ public class RemoteBuildInfo implements Serializable
         return queueId;
     }
 
-    @CheckForNull
-    public BuildData getBuildData() {
-        return buildData;
-    }
-
     @Nonnull
     public RemoteBuildQueueStatus getQueueStatus()
     {
         return queueStatus;
+    }
+
+    @Nonnull
+    public int getBuildNumber()
+    {
+        return buildNumber;
+    }
+
+    @CheckForNull
+    public URL getBuildURL()
+    {
+        return buildURL;
     }
 
     @Nonnull
@@ -75,8 +89,13 @@ public class RemoteBuildInfo implements Serializable
         this.queueStatus = RemoteBuildQueueStatus.QUEUED;
     }
 
-    public void setBuildData(BuildData buildData) {
-        this.buildData = buildData;
+    public void setBuildData(@Nonnull int buildNumber, @Nullable URL buildURL) throws AbortException
+    {
+        if (buildURL == null) {
+            throw new AbortException(String.format("Unexpected remote build status: %s", toString()));
+        }
+        this.buildNumber = buildNumber;
+        this.buildURL = buildURL;
         this.queueStatus = RemoteBuildQueueStatus.EXECUTED;
     }
 

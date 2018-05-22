@@ -4,7 +4,6 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -18,7 +17,6 @@ import javax.annotation.ParametersAreNullableByDefault;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
@@ -175,8 +173,7 @@ public class Handle implements Serializable {
     @CheckForNull
     @Whitelisted
     public URL getBuildUrl() {
-        BuildData buildData = buildInfo.getBuildData();
-        return buildData == null ? null : buildData.getURL();
+        return buildInfo.getBuildURL() == null ? null : buildInfo.getBuildURL();
     }
 
     /**
@@ -187,8 +184,7 @@ public class Handle implements Serializable {
     @Nonnull
     @Whitelisted
     public int getBuildNumber() {
-        BuildData buildData = buildInfo.getBuildData();
-        return buildData == null ? -1 : buildData.getBuildNumber();
+        return buildInfo.getBuildNumber();
     }
 
     /**
@@ -306,8 +302,7 @@ public class Handle implements Serializable {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Handle [job=%s, remoteServerURL=%s, queueId=%s", remoteBuildConfiguration.getJob(), effectiveRemoteServer.getAddress(), buildInfo.getQueueId()));
         sb.append(String.format(", %s", buildInfo.toString()));
-        BuildData buildData = buildInfo.getBuildData();
-        if(buildData != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildData.getBuildNumber(), buildData.getURL()));
+        if(buildInfo != null) sb.append(String.format(", buildNumber=%s, buildUrl=%s", buildInfo.getBuildNumber(), buildInfo.getBuildURL()));
         sb.append("]");
         return sb.toString();
     }
@@ -335,12 +330,6 @@ public class Handle implements Serializable {
           }
         }
         return sb.toString();
-    }
-
-    @CheckForNull
-    private BuildData getBuildData(String queueId, PrintStream logger)
-    {
-        return buildInfo.getBuildData();
     }
 
     /**
