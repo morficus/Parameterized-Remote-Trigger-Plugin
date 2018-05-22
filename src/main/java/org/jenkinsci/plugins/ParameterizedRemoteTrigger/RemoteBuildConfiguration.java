@@ -746,7 +746,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         URL jobURL = buildInfo.getBuildURL();
         int jobNumber = buildInfo.getBuildNumber();
 
-        if (jobURL == null || jobNumber == -1) {
+        if (jobURL == null || jobNumber == 0) {
             throw new AbortException(String.format("Unexpected status: %s", buildInfo.toString()));
         }
 
@@ -851,16 +851,17 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
           throw new AbortException(String.format("Unexpected queue item response: code %s for request %s", response.getResponseCode(), queueQuery));
       }
 
-      QueueItemData queueItem = new QueueItemData(context, queueResponse);
+      QueueItemData queueItem = new QueueItemData();
+      queueItem.update(context, queueResponse);
 
       if (queueItem.isBlocked())
-        context.logger.println("The remote job is blocked. Reason: " + queueItem.getWhy() + ".");
+        context.logger.println(String.format("The remote job is blocked. %s.", queueItem.getWhy()));
 
       if (queueItem.isPending())
-        context.logger.println("The remote job is pending. Reason: " + queueItem.getWhy() + ".");
+        context.logger.println(String.format("The remote job is pending. %s.", queueItem.getWhy()));
 
       if (queueItem.isBuildable())
-        context.logger.println("The remote job is buildable. Reason: " + queueItem.getWhy() + ".");
+        context.logger.println(String.format("The remote job is buildable. %s.", queueItem.getWhy()));
 
       if (queueItem.isCancelled())
         throw new AbortException("The remote job was canceled");

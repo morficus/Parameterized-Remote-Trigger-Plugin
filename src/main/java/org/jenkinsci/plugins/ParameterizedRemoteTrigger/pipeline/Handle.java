@@ -179,7 +179,7 @@ public class Handle implements Serializable {
     /**
      * Get the build number of the remote build.
      *
-     * @return the number, or -1 if it could not be identified (yet).
+     * @return the build number, or 0 if it could not be identified (yet).
      */
     @Nonnull
     @Whitelisted

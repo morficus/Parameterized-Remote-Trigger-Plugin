@@ -43,8 +43,6 @@ public class RemoteBuildInfo implements Serializable
     {
         queueId = null;
         queueStatus = RemoteBuildQueueStatus.NOT_QUEUED;
-        buildNumber = -1;
-        buildURL = null;
         status = RemoteBuildStatus.NOT_STARTED;
         result = Result.NOT_BUILT;
     }
