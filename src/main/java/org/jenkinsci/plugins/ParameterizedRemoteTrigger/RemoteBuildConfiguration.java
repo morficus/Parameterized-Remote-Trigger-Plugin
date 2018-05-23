@@ -40,7 +40,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.ForbiddenException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UnauthorizedException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.Handle;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildInfoExporterAction;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfoExporterAction;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItem;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItemData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
@@ -753,7 +753,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         context.logger.println("  Remote build URL: " + jobURL);
         context.logger.println("  Remote build number: " + jobNumber);
 
-        if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
+        if(context.run != null) RemoteBuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
 
         if (this.getBlockBuildUntilComplete()) {
           context.logger.println("Blocking local job until remote job completes.");
@@ -773,7 +773,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
           }
 
           context.logger.println("Remote build finished with status " + buildInfo.getResult().toString() + ".");
-          if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
+          if(context.run != null) RemoteBuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
 
           if (this.getEnhancedLogging()) {
               String consoleOutput = getConsoleOutput(jobURL, context);

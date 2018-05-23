@@ -13,7 +13,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.EnvironmentContributingAction;
 import hudson.model.Run;
 
-public class BuildInfoExporterAction implements EnvironmentContributingAction {
+public class RemoteBuildInfoExporterAction implements EnvironmentContributingAction {
 
     public static final String JOB_NAME_VARIABLE = "LAST_TRIGGERED_JOB_NAME";
     public static final String ALL_JOBS_NAME_VARIABLE = "TRIGGERED_JOB_NAMES";
@@ -26,21 +26,21 @@ public class BuildInfoExporterAction implements EnvironmentContributingAction {
 
     private List<BuildReference> builds;
 
-    public BuildInfoExporterAction(Run<?, ?> parentBuild, BuildReference buildRef) {
+    public RemoteBuildInfoExporterAction(Run<?, ?> parentBuild, BuildReference buildRef) {
         super();
 
         this.builds = new ArrayList<BuildReference>();
         addBuildReferenceSafe(buildRef);
     }
 
-    public static BuildInfoExporterAction addBuildInfoExporterAction(@Nonnull Run<?, ?> parentBuild, String triggeredProjectName, int buildNumber, URL jobURL, RemoteBuildInfo buildInfo) {
+    public static RemoteBuildInfoExporterAction addBuildInfoExporterAction(@Nonnull Run<?, ?> parentBuild, String triggeredProjectName, int buildNumber, URL jobURL, RemoteBuildInfo buildInfo) {
         BuildReference reference = new BuildReference(triggeredProjectName, buildNumber, jobURL, buildInfo);
 
-        BuildInfoExporterAction action;
+        RemoteBuildInfoExporterAction action;
         synchronized(parentBuild) {
-            action = parentBuild.getAction(BuildInfoExporterAction.class);
+            action = parentBuild.getAction(RemoteBuildInfoExporterAction.class);
             if (action == null) {
-                action = new BuildInfoExporterAction(parentBuild, reference);
+                action = new RemoteBuildInfoExporterAction(parentBuild, reference);
                 parentBuild.addAction(action);
             } else {
                 action.addBuildReference(reference);
