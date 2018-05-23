@@ -749,50 +749,25 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             throw new AbortException(String.format("Unexpected status: %s", buildInfo.toString()));
         }
 
+        context.logger.println("Remote build started!");
         context.logger.println("  Remote build URL: " + jobURL);
         context.logger.println("  Remote build number: " + jobNumber);
 
         if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
 
-        // If we are told to block until remoteBuildComplete:
         if (this.getBlockBuildUntilComplete()) {
           context.logger.println("Blocking local job until remote job completes.");
 
           buildInfo = updateBuildInfo(buildInfo, context);
           handle.setBuildInfo(buildInfo);
 
-          if (buildInfo.isQueued())
-            context.logger.println("Waiting for remote build to start ...");
-
-          while (buildInfo.isQueued()) {
-              context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
-              // Sleep for 'pollInterval' seconds.
-              // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
-              try {
-                  // Could do with a better way of sleeping...
-                  Thread.sleep(this.pollInterval * 1000);
-              } catch (InterruptedException e) {
-                  this.failBuild(e, context.logger);
-              }
-              buildInfo = updateBuildInfo(buildInfo, context);
-              handle.setBuildInfo(buildInfo);
-          }
-
           if (buildInfo.isRunning()) {
-              context.logger.println("Remote build started!");
               context.logger.println("Waiting for remote build to finish ...");
           }
 
           while (buildInfo.isRunning()) {
               context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
-              // Sleep for 'pollInterval' seconds.
-              // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
-              try {
-                  // Could do with a better way of sleeping...
-                  Thread.sleep(this.pollInterval * 1000);
-              } catch (InterruptedException e) {
-                  this.failBuild(e, context.logger);
-              }
+              Thread.sleep(this.pollInterval * 1000);
               buildInfo = updateBuildInfo(buildInfo, context);
               handle.setBuildInfo(buildInfo);
           }
