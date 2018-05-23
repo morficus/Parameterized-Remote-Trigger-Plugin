@@ -11,9 +11,25 @@ import hudson.AbortException;
 import hudson.model.Result;
 
 /**
- * The remote build info contains the queue id and the queue status of the remote build,
- * while it enters the queue, and the remote job build number, build url, build status and build result,
- * when it leaves the queue.
+ * This class contains information about the remote build.
+ *
+ *<pre>{@code
+ * NOT_TRIGGERED ---+--->    QUEUED    --+-->    RUNNING    -----+----->         FINISHED
+                             queueId           buildNumber                        result
+                                                & buildURL              (ABORTED | UNSTABLE | FAILURE | SUCCESS)
+ *}</pre>
+ *
+ * <p>
+ * By default, the remote build status is NOT_TRIGGERED and the remote build result is NOT_BUILT.
+ * <p>
+ * When the remote build is triggered, the remote job enters the queue (waiting list)
+ * and the status of the remote build changes to QUEUED. In this moment the queueId is available.
+ * The queueId can be used to request information about the remote job while it is waiting to be executed.
+ * <p>
+ * When the remote job leaves the queue, the status changes to RUNNING. Then, the build number and the build URL
+ * are available. The build URL can be used to request information about the remote job while it is being executed.
+ * <p>
+ * When the remote job is finished, the status changes to FINISHED. Then, the remote build result is available.
  *
  */
 public class RemoteBuildInfo implements Serializable
@@ -38,7 +54,6 @@ public class RemoteBuildInfo implements Serializable
 
     public RemoteBuildInfo()
     {
-        queueId = null;
         status = RemoteBuildStatus.NOT_TRIGGERED;
         result = Result.NOT_BUILT;
     }

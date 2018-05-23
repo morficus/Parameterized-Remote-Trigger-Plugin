@@ -1,7 +1,27 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob;
 
 /**
- * The build status of a remote build.
+ * This class implements the build status of a remote build.
+ *
+ *<pre>{@code
+ * NOT_TRIGGERED --+--> QUEUED --+--> RUNNING --+--> FINISHED
+                          |                              |
+                          |                              |
+                          +-------> Cancelled <----------+
+ *}</pre>
+ *
+ * <p>
+ * By default, the remote build status is NOT_TRIGGERED.
+ * <p>
+ * When the remote build is triggered, the remote job enters the queue (waiting list)
+ * and the status of the remote build changes to QUEUED.
+ * <p>
+ * When the remote job leaves the queue, the status changes to RUNNING.
+ * <p>
+ * When the remote job is finished, the status changes to FINISHED. This is the final status.
+ *
+ * In addition, at the status QUEUED and FINISHED, a remote build can be cancelled,
+ * in this case an AbortException is thrown.
  */
 public enum RemoteBuildStatus
 {
