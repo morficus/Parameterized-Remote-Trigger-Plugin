@@ -8,7 +8,6 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,12 +40,10 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.ForbiddenException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UnauthorizedException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.Handle;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildData;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.BuildInfoExporterAction;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfoExporterAction;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItem;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItemData;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildQueueStatus;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
@@ -694,13 +691,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         }
 
-        RemoteBuildInfo buildInfo = new RemoteBuildInfo(); // QueueStatus.NOT_QUEUED
+        RemoteBuildInfo buildInfo = new RemoteBuildInfo();
 
         context.logger.println("Triggering remote job now.");
 
         ConnectionResponse responseRemoteJob = sendHTTPCall(triggerUrlString, "POST", context, 1);
         QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
-        buildInfo.setQueueId(queueItem.getId()); // QueueStatus.QUEUED
+        buildInfo.setQueueId(queueItem.getId());
         buildInfo = updateBuildInfo(buildInfo, context);
 
         return new Handle(this, buildInfo, context.currentItem, context.effectiveRemoteServer, remoteJobMetadata);
@@ -745,63 +742,38 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
             handle.setBuildInfo(buildInfo);
         }
 
-        BuildData buildData = buildInfo.getBuildData();
-        if (buildData == null) {
+        URL jobURL = buildInfo.getBuildURL();
+        int jobNumber = buildInfo.getBuildNumber();
+
+        if (jobURL == null || jobNumber == 0) {
             throw new AbortException(String.format("Unexpected status: %s", buildInfo.toString()));
         }
 
-        int jobNumber = buildData.getBuildNumber();
-        URL jobURL = buildData.getURL();
-
+        context.logger.println("Remote build started!");
         context.logger.println("  Remote build URL: " + jobURL);
         context.logger.println("  Remote build number: " + jobNumber);
 
-        if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
+        if(context.run != null) RemoteBuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
 
-        // If we are told to block until remoteBuildComplete:
         if (this.getBlockBuildUntilComplete()) {
           context.logger.println("Blocking local job until remote job completes.");
 
           buildInfo = updateBuildInfo(buildInfo, context);
           handle.setBuildInfo(buildInfo);
 
-          if (buildInfo.isNotStarted())
-            context.logger.println("Waiting for remote build to start ...");
-
-          while (buildInfo.isNotStarted()) {
-              context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
-              // Sleep for 'pollInterval' seconds.
-              // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
-              try {
-                  // Could do with a better way of sleeping...
-                  Thread.sleep(this.pollInterval * 1000);
-              } catch (InterruptedException e) {
-                  this.failBuild(e, context.logger);
-              }
-              buildInfo = updateBuildInfo(buildInfo, context);
-              handle.setBuildInfo(buildInfo);
-          }
-
           if (buildInfo.isRunning()) {
-              context.logger.println("Remote build started!");
               context.logger.println("Waiting for remote build to finish ...");
           }
 
           while (buildInfo.isRunning()) {
               context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
-              // Sleep for 'pollInterval' seconds.
-              // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
-              try {
-                  // Could do with a better way of sleeping...
-                  Thread.sleep(this.pollInterval * 1000);
-              } catch (InterruptedException e) {
-                  this.failBuild(e, context.logger);
-              }
+              Thread.sleep(this.pollInterval * 1000);
               buildInfo = updateBuildInfo(buildInfo, context);
               handle.setBuildInfo(buildInfo);
           }
+
           context.logger.println("Remote build finished with status " + buildInfo.getResult().toString() + ".");
-          if(context.run != null) BuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
+          if(context.run != null) RemoteBuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL, buildInfo);
 
           if (this.getEnhancedLogging()) {
               String consoleOutput = getConsoleOutput(jobURL, context);
@@ -854,16 +826,17 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
           throw new AbortException(String.format("Unexpected queue item response: code %s for request %s", response.getResponseCode(), queueQuery));
       }
 
-      QueueItemData queueItem = new QueueItemData(context, queueResponse);
+      QueueItemData queueItem = new QueueItemData();
+      queueItem.update(context, queueResponse);
 
       if (queueItem.isBlocked())
-        context.logger.println("The remote job is blocked. Reason: " + queueItem.getWhy() + ".");
+        context.logger.println(String.format("The remote job is blocked. %s.", queueItem.getWhy()));
 
       if (queueItem.isPending())
-        context.logger.println("The remote job is pending. Reason: " + queueItem.getWhy() + ".");
+        context.logger.println(String.format("The remote job is pending. %s.", queueItem.getWhy()));
 
       if (queueItem.isBuildable())
-        context.logger.println("The remote job is buildable. Reason: " + queueItem.getWhy() + ".");
+        context.logger.println(String.format("The remote job is buildable. %s.", queueItem.getWhy()));
 
       if (queueItem.isCancelled())
         throw new AbortException("The remote job was canceled");
@@ -874,7 +847,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
     @Nonnull
     public RemoteBuildInfo updateBuildInfo(@Nonnull RemoteBuildInfo buildInfo, @Nonnull BuildContext context) throws IOException {
 
-        if (buildInfo.isNotQueued()) return buildInfo;
+        if (buildInfo.isNotTriggered()) return buildInfo;
 
         if (buildInfo.isQueued()) {
             String queueId = buildInfo.getQueueId();
@@ -882,19 +855,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new AbortException(String.format("Unexpected status: %s. The queue id was not found.", buildInfo.toString()));
             }
             QueueItemData queueItem = getQueueItemData(queueId, context);
-            BuildData buildData = queueItem.getBuildData(context);
-            if (queueItem.isExecutable() && buildData!=null) {
-                buildInfo.setBuildData(buildData);  // QueueStatus.EXECUTED
+            if (queueItem.isExecuted()) {
+                buildInfo.setBuildData(queueItem.getBuildNumber(), queueItem.getBuildURL());
             }
             return buildInfo;
         }
 
-        // QueueStatus.EXECUTED
-        BuildData buildData = buildInfo.getBuildData();
-        if (buildData == null) {
-            throw new AbortException(String.format("Unexpected status: %s", buildInfo.toString()));
-        }
-        String buildUrlString = buildData.getURL() + "api/json/";
+        String buildUrlString = buildInfo.getBuildURL() + "api/json/";
         JSONObject responseObject = sendHTTPCall(buildUrlString, "GET", context);
 
         try {

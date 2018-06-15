@@ -5,6 +5,7 @@ import java.net.URL;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 
@@ -12,100 +13,128 @@ import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
 /**
- * Contains information about the job <b>while is waiting on the queue</b>.
+ * Contains information about the remote job <b>while is waiting on the queue</b>.
  *
  */
 public class QueueItemData
 {
     @Nonnull
-    private final JSONObject queueResponse;
+    private QueueItemStatus status;
+
+    @Nullable
+    private String why;
 
     @Nonnull
-    private RemoteBuildQueueStatus status;
+    private int buildNumber;
+
+    @Nullable
+    private URL buildURL;
 
 
-    public QueueItemData(@Nonnull BuildContext context, @Nonnull JSONObject queueResponse) throws MalformedURLException
+    public QueueItemData() throws MalformedURLException
     {
-        this.queueResponse = queueResponse;
-        if (isExecutable() && getBuildData(context)!=null) status = RemoteBuildQueueStatus.EXECUTED;
-        else status = RemoteBuildQueueStatus.QUEUED;
+        this.status = QueueItemStatus.WAITING;
+    }
+
+    public boolean isWaiting()
+    {
+        return status == QueueItemStatus.WAITING;
     }
 
     public boolean isBlocked()
     {
-        return queueResponse.getBoolean("blocked");
+        return status == QueueItemStatus.BLOCKED;
     }
 
     public boolean isBuildable()
     {
-        return queueResponse.getBoolean("buildable");
+        return status == QueueItemStatus.BUILDABLE;
     }
 
     public boolean isPending()
     {
-        return getOptionalBoolean("pending");
+        return status == QueueItemStatus.PENDING;
+    }
+
+    public boolean isLeft()
+    {
+        return status == QueueItemStatus.LEFT;
+    }
+
+    public boolean isExecuted()
+    {
+        return status == QueueItemStatus.EXECUTED;
     }
 
     public boolean isCancelled()
     {
-        return getOptionalBoolean("cancelled");
+        return status == QueueItemStatus.CANCELLED;
     }
 
-    public String getWhy()
-    {
-        return queueResponse.getString("why");
-    }
-
-    public boolean isExecutable()
-    {
-        return (!isBlocked() && !isBuildable() && !isPending() && !isCancelled());
-    }
-
-    public RemoteBuildQueueStatus getQueueStatus() {
+    @Nonnull
+    public QueueItemStatus getStatus() {
         return status;
     }
+
+    @CheckForNull
+    public String getWhy() {
+        return why;
+    }
+
+    @Nonnull
+    public int getBuildNumber()
+    {
+        return buildNumber;
+    }
+
+    @CheckForNull
+    public URL getBuildURL()
+    {
+        return buildURL;
+    }
+
     /**
-     * When a queue item is <b>executable</b>, the build number and the build URL
-     * of the remote job are available in the queue item data.
+     * Updates the queue item data with a queue response.
      *
      * @param context
      *            the context of this Builder/BuildStep.
-     * @return {@link BuildData}
-     *            the remote build or null if the queue item is not executable.
+     * @param queueResponse
+     *            the queue response
      * @throws MalformedURLException
      *            if there is an error creating the build URL.
      */
-    @CheckForNull
-    public BuildData getBuildData(@Nonnull BuildContext context) throws MalformedURLException
+    public void update(@Nonnull BuildContext context, @Nonnull JSONObject queueResponse) throws MalformedURLException
     {
-        if (!isExecutable()) return null;
+        if (queueResponse.getBoolean("blocked")) status = QueueItemStatus.BLOCKED;
+        if (queueResponse.getBoolean("buildable")) status = QueueItemStatus.BUILDABLE;
+        if (getOptionalBoolean(queueResponse, "pending")) status = QueueItemStatus.PENDING;
+        if (getOptionalBoolean(queueResponse, "cancelled")) status = QueueItemStatus.CANCELLED;
+        if (isBlocked() || isBuildable() || isPending()) why = queueResponse.getString("why");
+        else if (!isCancelled()) status = QueueItemStatus.LEFT;
 
-        JSONObject remoteJobInfo;
-        try {
-            remoteJobInfo = queueResponse.getJSONObject("executable");
-            if (remoteJobInfo == null) return null;
-        } catch (JSONException e) {
-            context.logger.println("The attribute \"executable\" was not found. Unexpected response: " + queueResponse.toString());
-            return null;
+        if (isLeft()) {
+            try {
+                JSONObject remoteJobInfo = queueResponse.getJSONObject("executable");
+                if (remoteJobInfo != null) {
+                    try {
+                        buildNumber = remoteJobInfo.getInt("number");
+                    } catch (JSONException e) {
+                        context.logger.println(String.format("[WARNING] The attribute \"number\" was not found. Unexpected response: %s", queueResponse.toString()));
+                    }
+                    try {
+                        buildURL = new URL(remoteJobInfo.getString("url"));
+                    } catch (JSONException e) {
+                        context.logger.println(String.format("[WARNING] The attribute \"url\" was not found. Unexpected response: %s", queueResponse.toString()));
+                    }
+                }
+            } catch (JSONException e) {
+                context.logger.println(String.format("[WARNING] The attribute \"executable\" was not found. Unexpected response: %s", queueResponse.toString()));
+            }
+            if (buildNumber != 0 && buildURL != null) status = QueueItemStatus.EXECUTED;
         }
-        int buildNumber;
-        try {
-            buildNumber = remoteJobInfo.getInt("number");
-        } catch (JSONException e) {
-            context.logger.println("The attribute \"number\" was not found. Unexpected response: " + queueResponse.toString());
-            return null;
-        }
-        String buildUrl;
-        try {
-            buildUrl = remoteJobInfo.getString("url");
-        } catch (JSONException e) {
-            context.logger.println("The attribute \"url\" was not found. Unexpected response: " + queueResponse.toString());
-            return null;
-        }
-        return new BuildData(buildNumber, new URL(buildUrl));
     }
 
-    private boolean getOptionalBoolean(String attribute)
+    private boolean getOptionalBoolean(@Nonnull JSONObject queueResponse, @Nonnull String attribute)
     {
         if (queueResponse.containsKey(attribute))
             return queueResponse.getBoolean(attribute);

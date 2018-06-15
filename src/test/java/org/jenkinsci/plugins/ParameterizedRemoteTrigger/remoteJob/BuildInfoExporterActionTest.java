@@ -43,17 +43,17 @@ public class BuildInfoExporterActionTest {
         RemoteBuildInfo buildInfo = new RemoteBuildInfo();
         buildInfo.setBuildResult(Result.SUCCESS);
         for (int i = 1; i <= PARALLEL_JOBS; i++) {
-            BuildInfoExporterAction.addBuildInfoExporterAction(parentBuild, "Job" + i, i, new URL("http://jenkins/jobs/Job" + i), buildInfo);
+            RemoteBuildInfoExporterAction.addBuildInfoExporterAction(parentBuild, "Job" + i, i, new URL("http://jenkins/jobs/Job" + i), buildInfo);
         }
-        BuildInfoExporterAction action = parentBuild.getAction(BuildInfoExporterAction.class);
+        RemoteBuildInfoExporterAction action = parentBuild.getAction(RemoteBuildInfoExporterAction.class);
         EnvVars env = new EnvVars();
         action.buildEnvVars(null, env);
         checkEnv(env);
     }
 
     /**
-     * We had ConcurrentModificationExceptions in the past. This test executes {@link BuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)}
-     * and  {@link BuildInfoExporterAction#buildEnvVars(hudson.model.AbstractBuild, EnvVars)} in parallel to provoke a ConcurrentModificationException (which should not occur anymore).
+     * We had ConcurrentModificationExceptions in the past. This test executes {@link RemoteBuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)}
+     * and  {@link RemoteBuildInfoExporterAction#buildEnvVars(hudson.model.AbstractBuild, EnvVars)} in parallel to provoke a ConcurrentModificationException (which should not occur anymore).
      */
     @Test
     public void testAddBuildInfoExporterAction_parallel() throws IOException, InterruptedException, ExecutionException {
@@ -124,7 +124,7 @@ public class BuildInfoExporterActionTest {
     }
 
     /**
-     * Calls {@link BuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)} a single time.
+     * Calls {@link RemoteBuildInfoExporterAction#addBuildInfoExporterAction(Run, String, int, URL, BuildStatus)} a single time.
      * This Callable is typically executed multiple tiles in parallel to provoke a ConcurrentModificationException (which should not occur anymore).
      */
     private static class AddActionCallable implements Callable<Boolean> {
@@ -140,11 +140,11 @@ public class BuildInfoExporterActionTest {
             String jobName = "Job" + i;
             RemoteBuildInfo buildInfo = new RemoteBuildInfo();
             buildInfo.setBuildResult(Result.SUCCESS);
-            BuildInfoExporterAction.addBuildInfoExporterAction(parentBuild, jobName, i,
+            RemoteBuildInfoExporterAction.addBuildInfoExporterAction(parentBuild, jobName, i,
                     new URL("http://jenkins/jobs/Job" + i), buildInfo);
             System.out.println("AddActionCallable finished for Job" + i);
 
-            BuildInfoExporterAction action = parentBuild.getAction(BuildInfoExporterAction.class);
+            RemoteBuildInfoExporterAction action = parentBuild.getAction(RemoteBuildInfoExporterAction.class);
             Set<String> projectsWithBuilds = action.getProjectsWithBuilds();
             boolean success = projectsWithBuilds.contains(jobName);
             String message = String.format("AddActionCallable %s for %s (projects in list: %s)",
@@ -156,7 +156,7 @@ public class BuildInfoExporterActionTest {
     }
 
     /**
-     * Calls  {@link BuildInfoExporterAction#buildEnvVars(hudson.model.AbstractBuild, EnvVars)} repeatedly until all AddActionCallables finished.
+     * Calls  {@link RemoteBuildInfoExporterAction#buildEnvVars(hudson.model.AbstractBuild, EnvVars)} repeatedly until all AddActionCallables finished.
      * This way we try to provoke a ConcurrentModificationException (which should not occur anymore).
      */
     private static class BuildEnvVarsCallable implements Callable<EnvVars> {
@@ -167,14 +167,14 @@ public class BuildInfoExporterActionTest {
         }
 
         public EnvVars call() throws MalformedURLException, InterruptedException, TimeoutException {
-            BuildInfoExporterAction action = parentBuild.getAction(BuildInfoExporterAction.class);
+            RemoteBuildInfoExporterAction action = parentBuild.getAction(RemoteBuildInfoExporterAction.class);
             EnvVars env = new EnvVars();
             long startTime = System.currentTimeMillis();
             while (action == null || action.getProjectsWithBuilds().size() < PARALLEL_JOBS) {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {}
-                action = parentBuild.getAction(BuildInfoExporterAction.class);
+                action = parentBuild.getAction(RemoteBuildInfoExporterAction.class);
                 if (action != null) {
                     //Provoke ConcurrentModificationException
                     action.buildEnvVars(null, env);

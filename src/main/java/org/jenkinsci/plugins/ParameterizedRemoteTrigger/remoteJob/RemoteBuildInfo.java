@@ -1,16 +1,35 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob;
 
 import java.io.Serializable;
+import java.net.URL;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import hudson.AbortException;
 import hudson.model.Result;
 
 /**
- * The remote build info contains the queue id and the queue status of the remote build,
- * while it enters the queue, and the remote job build number, build url, build status and build result,
- * when it leaves the queue.
+ * This class contains information about the remote build.
+ *
+ *<pre>{@code
+ * NOT_TRIGGERED ---+--->    QUEUED    --+-->    RUNNING    -----+----->         FINISHED
+                             queueId           buildNumber                        result
+                                                & buildURL              (ABORTED | UNSTABLE | FAILURE | SUCCESS)
+ *}</pre>
+ *
+ * <p>
+ * By default, the remote build status is NOT_TRIGGERED and the remote build result is NOT_BUILT.
+ * <p>
+ * When the remote build is triggered, the remote job enters the queue (waiting list)
+ * and the status of the remote build changes to QUEUED. In this moment the queueId is available.
+ * The queueId can be used to request information about the remote job while it is waiting to be executed.
+ * <p>
+ * When the remote job leaves the queue, the status changes to RUNNING. Then, the build number and the build URL
+ * are available. The build URL can be used to request information about the remote job while it is being executed.
+ * <p>
+ * When the remote job is finished, the status changes to FINISHED. Then, the remote build result is available.
  *
  */
 public class RemoteBuildInfo implements Serializable
@@ -20,11 +39,11 @@ public class RemoteBuildInfo implements Serializable
     @CheckForNull
     private String queueId;
 
-    @CheckForNull
-    private BuildData buildData;
-
     @Nonnull
-    private RemoteBuildQueueStatus queueStatus;
+    private int buildNumber;
+
+    @CheckForNull
+    private URL buildURL;
 
     @Nonnull
     private RemoteBuildStatus status;
@@ -35,10 +54,7 @@ public class RemoteBuildInfo implements Serializable
 
     public RemoteBuildInfo()
     {
-        queueId = null;
-        buildData = null;
-        queueStatus = RemoteBuildQueueStatus.NOT_QUEUED;
-        status = RemoteBuildStatus.NOT_STARTED;
+        status = RemoteBuildStatus.NOT_TRIGGERED;
         result = Result.NOT_BUILT;
     }
 
@@ -47,15 +63,16 @@ public class RemoteBuildInfo implements Serializable
         return queueId;
     }
 
-    @CheckForNull
-    public BuildData getBuildData() {
-        return buildData;
+    @Nonnull
+    public int getBuildNumber()
+    {
+        return buildNumber;
     }
 
-    @Nonnull
-    public RemoteBuildQueueStatus getQueueStatus()
+    @CheckForNull
+    public URL getBuildURL()
     {
-        return queueStatus;
+        return buildURL;
     }
 
     @Nonnull
@@ -72,12 +89,17 @@ public class RemoteBuildInfo implements Serializable
 
     public void setQueueId(String queueId) {
         this.queueId = queueId;
-        this.queueStatus = RemoteBuildQueueStatus.QUEUED;
+        this.status = RemoteBuildStatus.QUEUED;
     }
 
-    public void setBuildData(BuildData buildData) {
-        this.buildData = buildData;
-        this.queueStatus = RemoteBuildQueueStatus.EXECUTED;
+    public void setBuildData(@Nonnull int buildNumber, @Nullable URL buildURL) throws AbortException
+    {
+        if (buildURL == null) {
+            throw new AbortException(String.format("Unexpected remote build status: %s", toString()));
+        }
+        this.buildNumber = buildNumber;
+        this.buildURL = buildURL;
+        this.status = RemoteBuildStatus.RUNNING;
     }
 
     public void setBuildStatus(RemoteBuildStatus status)
@@ -108,19 +130,15 @@ public class RemoteBuildInfo implements Serializable
     public String toString()
     {
         if (status == RemoteBuildStatus.FINISHED) return String.format("status=%s, result=%s", status.toString(), result.toString());
-        else return String.format("queueStatus=%s, status=%s", queueStatus.toString(), status.toString());
+        else return String.format("status=%s", status.toString());
     }
 
-    public boolean isNotQueued() {
-        return queueStatus == RemoteBuildQueueStatus.NOT_QUEUED;
+    public boolean isNotTriggered() {
+        return status == RemoteBuildStatus.NOT_TRIGGERED;
     }
 
     public boolean isQueued() {
-        return queueStatus == RemoteBuildQueueStatus.QUEUED;
-    }
-
-    public boolean isNotStarted() {
-        return status == RemoteBuildStatus.NOT_STARTED;
+        return status == RemoteBuildStatus.QUEUED;
     }
 
     public boolean isRunning() {
