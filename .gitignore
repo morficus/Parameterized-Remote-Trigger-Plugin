@@ -10,6 +10,9 @@
 .project
 *.prefs
 
+# Idea-specific stuff
+.idea/
+*.iml
 
 # jenkins data directory, build dir and release settings
 work
