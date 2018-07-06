@@ -1191,7 +1191,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private HttpURLConnection getAuthorizedConnection(BuildContext context, URL url) throws IOException
     {
-        URLConnection connection = ProxyConfiguration.open(url);
+        URLConnection connection = context.effectiveRemoteServer.isUseProxy() ? ProxyConfiguration.open(url) : url.openConnection();
 
         Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
         Auth2 overrideAuth = this.getAuth2();
