@@ -34,6 +34,7 @@ import javax.annotation.ParametersAreNullableByDefault;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import hudson.ProxyConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
@@ -1190,7 +1191,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
     private HttpURLConnection getAuthorizedConnection(BuildContext context, URL url) throws IOException
     {
-        URLConnection connection = url.openConnection();
+        URLConnection connection = context.effectiveRemoteServer.isUseProxy() ? ProxyConfiguration.open(url) : url.openConnection();
 
         Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
         Auth2 overrideAuth = this.getAuth2();

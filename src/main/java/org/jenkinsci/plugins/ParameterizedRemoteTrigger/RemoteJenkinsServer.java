@@ -54,6 +54,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     private Auth2      auth2;
     @CheckForNull
     private String     address;
+    private boolean    useProxy;
 
     @DataBoundConstructor
     public RemoteJenkinsServer() {
@@ -90,6 +91,11 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     }
 
     @DataBoundSetter
+    public void setUseProxy(boolean useProxy) {
+        this.useProxy = useProxy;
+    }
+
+    @DataBoundSetter
     public void setAuth2(Auth2 auth2)
     {
         this.auth2 = (auth2 != null) ? auth2 : DEFAULT_AUTH;
@@ -118,6 +124,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
     public boolean getHasBuildTokenRootSupport() {
         return hasBuildTokenRootSupport;
+    }
+
+    public boolean isUseProxy() {
+        return useProxy;
     }
 
     @CheckForNull
