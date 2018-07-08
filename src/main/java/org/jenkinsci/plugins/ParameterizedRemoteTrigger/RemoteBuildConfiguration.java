@@ -40,6 +40,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descrip
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.ForbiddenException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UnauthorizedException;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UrlNotFoundException;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.Handle;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfoExporterAction;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItem;
@@ -662,36 +663,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
         logAuthInformation(context);
 
-        // get the ID of the Next Job to run.
-        if (this.getPreventRemoteBuildQueue()) {
-            context.logger.println("  Checking if the remote job " + jobNameOrUrl + " is currently running.");
-            String preCheckUrlString = jobUrlString;
-            preCheckUrlString += "/lastBuild";
-            preCheckUrlString += "/api/json/";
-            JSONObject preCheckResponse = sendHTTPCall(preCheckUrlString, "GET", context);
-
-            if ( preCheckResponse != null ) {
-                // check the latest build on the remote server to see if it's running - if so wait until it has stopped.
-                // if building is true then the build is running
-                // if result is null the build hasn't finished - but might not have started running.
-                while (preCheckResponse.getBoolean("building") == true || preCheckResponse.getString("result") == null) {
-                    context.logger.println(String.format(
-                                "  Remote build is currently running - waiting for it to finish. Next try in %s seconds.",
-                                this.pollInterval));
-                    try {
-                        Thread.sleep(this.pollInterval * 1000);
-                    } catch (InterruptedException e) {
-                        this.failBuild(e, context.logger);
-                    }
-                    preCheckResponse = sendHTTPCall(preCheckUrlString, "GET", context);
-                }
-                context.logger.println("  Remote job " + jobNameOrUrl + " is currently not building.");
-            } else {
-                this.failBuild(new Exception("Got a blank response from Remote Jenkins Server, cannot continue."), context.logger);
-            }
-
-        }
-
         RemoteBuildInfo buildInfo = new RemoteBuildInfo();
 
         context.logger.println("Triggering remote job now.");
@@ -934,6 +905,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new UnauthorizedException(buildUrl);
             } else if(responseCode == 403) {
                 throw new ForbiddenException(buildUrl);
+            } else if(responseCode == 404) {
+                throw new UrlNotFoundException(buildUrl);
             } else {
                 consoleOutput = readInputStream(connection);
             }
@@ -1030,6 +1003,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
                 throw new UnauthorizedException(url);
             } else if(responseCode == 403) {
                 throw new ForbiddenException(url);
+            } else if(responseCode == 404) {
+                throw new UrlNotFoundException(url);
             } else {
                 String response = trimToNull(readInputStream(connection));
 
@@ -1053,6 +1028,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
         } catch (UnauthorizedException e) {
             this.failBuild(e, context.logger);
         } catch (ForbiddenException e) {
+            this.failBuild(e, context.logger);
+        } catch (UrlNotFoundException e) {
             this.failBuild(e, context.logger);
         } catch (IOException e) {
 
