@@ -2,9 +2,9 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL_UNIX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -12,7 +12,9 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
@@ -88,6 +90,13 @@ public class RemoteBuildConfigurationTest {
     }
 
 	private void _testRemoteBuild(boolean authenticate, boolean withParam, FreeStyleProject remoteProject) throws Exception {
+		Map<String, String> parms = new HashMap<>();
+		parms.put("parameterName1", "value1");
+		parms.put("parameterName2", "value2");
+        this._testRemoteBuild(authenticate, withParam, remoteProject, parms);
+    }
+	
+	private void _testRemoteBuild(boolean authenticate, boolean withParam, FreeStyleProject remoteProject, Map<String, String> parms) throws Exception {
 
         String remoteUrl = jenkinsRule.getURL().toString();
         RemoteJenkinsServer remoteJenkinsServer = new RemoteJenkinsServer();
@@ -106,7 +115,11 @@ public class RemoteBuildConfigurationTest {
         configuration.setPollInterval(1);
         configuration.setEnhancedLogging(true);
         if (withParam){
-        	configuration.setParameters("parameterName1=value1" + NL_UNIX + "parameterName2=value2");
+        	String parmString = "";
+        	for (Map.Entry<String, String> p : parms.entrySet()) {
+        		parmString += p.getKey() + "=" + p.getValue() + NL_UNIX;
+        	}
+        	configuration.setParameters(parmString);
         }
         if(authenticate) {
             TokenAuth tokenAuth = new TokenAuth();
@@ -131,8 +144,9 @@ public class RemoteBuildConfigurationTest {
         assertNotNull("lastBuild null", lastBuild);
         if (withParam){
             EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
-            assertEquals("value1", remoteEnv.get("parameterName1"));
-            assertEquals("value2", remoteEnv.get("parameterName2"));	
+        	for (Map.Entry<String, String> p : parms.entrySet()) {
+        		assertEquals(p.getValue(), remoteEnv.get(p.getKey()));
+        	}	
         } else {
         	assertNotEquals("lastBuild should be executed no matter the result which depends on the remote job configuration.", null, lastBuild.getNumber());
         }
@@ -447,6 +461,19 @@ public class RemoteBuildConfigurationTest {
 		MockFolder remoteJobFolder = jenkinsRule.createFolder("someJobFolder1");
 		FreeStyleProject remoteProject = remoteJobFolder.createProject(FreeStyleProject.class, "someJobName1");
 		this._testRemoteBuild(false, false, remoteProject);
+	}
+	
+	@Test
+	public void testRemoteBuildWith5KByteString() throws Exception {
+		enableAuth();
+		FreeStyleProject remoteProject = jenkinsRule.createFreeStyleProject();
+		remoteProject.addProperty(
+				new ParametersDefinitionProperty(new StringParameterDefinition("parameterName1", "default1"),
+						new StringParameterDefinition("parameterName2", "default2")));
+		Map<String, String> parms = new HashMap<>();
+		parms.put("parameterName1", TestConst.garbled5KString1);
+		parms.put("parameterName2", TestConst.garbled5KString2);
+		_testRemoteBuild(true, true, remoteProject, parms);
 	}
 
 }

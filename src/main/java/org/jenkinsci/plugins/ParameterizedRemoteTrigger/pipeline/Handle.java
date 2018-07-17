@@ -19,6 +19,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.HttpHelper;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 
 import hudson.model.Result;
@@ -357,7 +358,7 @@ public class Handle implements Serializable {
         PrintStreamWrapper log = new PrintStreamWrapper();
         try {
             BuildContext context = new BuildContext(log.getPrintStream(), effectiveRemoteServer, this.currentItem);
-            return remoteBuildConfiguration.sendHTTPCall(fileUrl.toString(), "GET", context);
+            return remoteBuildConfiguration.doGet(fileUrl.toString(), context);
         } finally {
             lastLog = log.getContent();
         }
