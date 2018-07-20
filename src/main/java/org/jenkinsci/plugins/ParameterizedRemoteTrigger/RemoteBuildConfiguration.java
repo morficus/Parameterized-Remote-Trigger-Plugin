@@ -37,6 +37,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItemData;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfoExporterAction;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.DropCachePeriodicWork;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
@@ -376,8 +377,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 					expandedJob, this.remoteJenkinsName, this.remoteJenkinsUrl));
 		}
 
-		try {
-			URL url = new URL(server.getAddress());
+		String addr = server.getAddress();
+		if (addr != null) {
+			URL url = new URL(addr);
 			Semaphore s = hostLocks.get(url.getHost());
 			Integer lastPermit = hostPermits.get(url.getHost());
 			int maxConn = getMaxConn();
@@ -386,8 +388,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				hostLocks.put(url.getHost(), s);
 				hostPermits.put(url.getHost(), maxConn);
 			}
-		} catch (Exception e) {
-			logger.log(Level.WARNING, "Failed to setup resource lock", e);
 		}
 
 		return server;
@@ -546,7 +546,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * @throws IOException
 	 *             if there is an error triggering the remote job.
 	 * @throws InterruptedException
-	 * 				if any thread has interrupted the current thread.
+	 *             if any thread has interrupted the current thread.
 	 * 
 	 */
 	public Handle performTriggerAndGetQueueId(BuildContext context) throws IOException, InterruptedException {
@@ -602,9 +602,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * @param handle
 	 *            the handle to the remote execution.
 	 * @throws InterruptedException
-	 * 				if any thread has interrupted the current thread.
+	 *             if any thread has interrupted the current thread.
 	 * @throws IOException
-	 * 				if any HTTP error or business logic error
+	 *             if any HTTP error or business logic error
 	 */
 	public void performWaitForBuild(BuildContext context, Handle handle) throws IOException, InterruptedException {
 		String jobName = handle.getJobName();
@@ -703,7 +703,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 *             fails due to an unknown host, unauthorized credentials, or
 	 *             another reason, or if there is an invalid queue response.
 	 * @throws InterruptedException
-	 * 				if any thread has interrupted the current thread.
+	 *             if any thread has interrupted the current thread.
 	 */
 	@Nonnull
 	private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
@@ -798,9 +798,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 *            the context of this Builder/BuildStep.
 	 * @return JSONObject a valid JSON object, or null.
 	 * @throws InterruptedException
-	 * 				if any thread has interrupted the current thread.
+	 *             if any thread has interrupted the current thread.
 	 * @throws IOException
-	 * 				if any HTTP error occurred.
+	 *             if any HTTP error occurred.
 	 */
 	public ConnectionResponse doGet(String urlString, BuildContext context) throws IOException, InterruptedException {
 		return HttpHelper.tryGet(urlString, context, this.getPollInterval(), this.getConnectionRetryLimit(),
@@ -961,12 +961,16 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			throws IOException, InterruptedException {
 
 		String remoteJobUrl = generateJobUrl(context.effectiveRemoteServer, jobNameOrUrl);
-		remoteJobUrl += "/api/json";
+		remoteJobUrl += "/api/json?tree=actions[parameterDefinitions],property[parameterDefinitions],name,fullName,displayName,fullDisplayName,url";
+
+		JSONObject jsonObject = DropCachePeriodicWork.safeGetJobInfo(remoteJobUrl);
+		if (jsonObject != null) {
+			return jsonObject;
+		}
 
 		ConnectionResponse response = doGet(remoteJobUrl, context);
 		if (response.getResponseCode() < 400 && response.getBody() != null) {
-
-			return response.getBody();
+			return DropCachePeriodicWork.safePutJobInfo(remoteJobUrl, response.getBody());
 
 		} else if (response.getResponseCode() == 401 || response.getResponseCode() == 403) {
 			throw new AbortException(

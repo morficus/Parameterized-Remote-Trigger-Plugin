@@ -18,8 +18,12 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
@@ -167,7 +171,7 @@ public class HttpHelper {
 	 * Helper function for character encoding
 	 *
 	 * @param dirtyValue
-	 * 			something that wasn't encoded in UTF-8
+	 *            something that wasn't encoded in UTF-8
 	 * @return encoded value
 	 */
 	public static String encodeValue(String dirtyValue) {
@@ -176,7 +180,6 @@ public class HttpHelper {
 		try {
 			cleanValue = URLEncoder.encode(dirtyValue, "UTF-8").replace("+", "%20");
 		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -226,10 +229,21 @@ public class HttpHelper {
 			throw new AbortException(
 					"The remote server address can not be empty, or it must be overridden on the job configuration.");
 		}
+
 		URL crumbProviderUrl;
+		String globalHost = "";
 		try {
 			String xpathValue = URLEncoder.encode("concat(//crumbRequestField,\":\",//crumb)", "UTF-8");
 			crumbProviderUrl = new URL(address.concat("/crumbIssuer/api/xml?xpath=").concat(xpathValue));
+			globalHost = crumbProviderUrl.getHost();
+
+			
+			JenkinsCrumb jenkinsCrumb = DropCachePeriodicWork.safeGetCrumb(globalHost);
+			if (jenkinsCrumb != null) {
+				context.logger.println("reuse cached crumb: " + globalHost);
+				return jenkinsCrumb;
+			}
+
 			HttpURLConnection connection = getAuthorizedConnection(context, crumbProviderUrl, overrideAuth);
 			int responseCode = connection.getResponseCode();
 			if (responseCode == 401) {
@@ -238,19 +252,19 @@ public class HttpHelper {
 				throw new ForbiddenException(crumbProviderUrl);
 			} else if (responseCode == 404) {
 				context.logger.println("CSRF protection is disabled on the remote server.");
-				return new JenkinsCrumb();
+				return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb());
 			} else if (responseCode == 200) {
 				context.logger.println("CSRF protection is enabled on the remote server.");
 				String response = readInputStream(connection);
 				String[] split = response.split(":");
-				return new JenkinsCrumb(split[0], split[1]);
+				return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb(split[0], split[1]));
 			} else {
 				throw new RuntimeException(String.format("Unexpected response. Response code: %s. Response message: %s",
 						responseCode, connection.getResponseMessage()));
 			}
 		} catch (FileNotFoundException e) {
 			context.logger.println("CSRF protection is disabled on the remote server.");
-			return new JenkinsCrumb();
+			return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb());
 		}
 	}
 
@@ -318,10 +332,10 @@ public class HttpHelper {
 	 * @param isRemoteJobParameterized
 	 *            Is the remote job parameterized
 	 * @param context
-	 *            The build context used in this plugin 
+	 *            The build context used in this plugin
 	 * @return fully formed, fully qualified remote trigger URL
 	 * @throws IOException
-	 * 			throw when it can't pass data checking
+	 *             throw when it can't pass data checking
 	 */
 	public static String buildTriggerUrl(String jobNameOrUrl, String securityToken, Collection<String> params,
 			boolean isRemoteJobParameterized, BuildContext context) throws IOException {
@@ -367,6 +381,11 @@ public class HttpHelper {
 		return triggerUrlString;
 	}
 
+	static {
+		java.net.CookieManager cm = new java.net.CookieManager();
+		java.net.CookieHandler.setDefault(cm);
+	}
+
 	/**
 	 * Same as sendHTTPCall, but keeps track of the number of failed connection
 	 * attempts (aka: the number of times this method has been called). In the case
@@ -391,13 +410,13 @@ public class HttpHelper {
 	 * @param overrideAuth
 	 *            auth used to overwrite the default auth
 	 * @param rawRespRef
-	 *            the raw http response  
+	 *            the raw http response
 	 * @return {@link ConnectionResponse} the response to the HTTP request.
 	 * @throws IOException
-	 * 				all the possibilities of HTTP exceptions
+	 *             all the possibilities of HTTP exceptions
 	 * @throws InterruptedException
-	 * 				if any thread has interrupted the current thread.
-	 * 				
+	 *             if any thread has interrupted the current thread.
+	 * 
 	 */
 	private static ConnectionResponse sendHTTPCall(String urlString, String requestType, BuildContext context,
 			Collection<String> postParams, int numberOfAttempts, int pollInterval, int retryLimit, Auth2 overrideAuth,
@@ -425,7 +444,7 @@ public class HttpHelper {
 			addCrumbToConnection(conn, context, overrideAuth);
 			// wait up to 5 seconds for the connection to be open
 			conn.setConnectTimeout(5000);
-			conn.setReadTimeout(5000);
+			conn.setReadTimeout(10000);
 			if (HTTP_POST.equalsIgnoreCase(requestType)) {
 				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 				conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
@@ -433,9 +452,20 @@ public class HttpHelper {
 				conn.getOutputStream().write(postDataBytes);
 			}
 
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+			logger.finer(String.format("%s begin: %s", urlString, sdf.format(new Date())));
+			Instant before = Instant.now();
+
 			conn.connect();
+
+			Instant after = Instant.now();
+			logger.finer(
+					String.format("%s end: elapsed [%s] ms", urlString, Duration.between(before, after).toMillis()));
+
 			responseHeader = conn.getHeaderFields();
 			responseCode = conn.getResponseCode();
+
 			if (responseCode == 401) {
 				throw new UnauthorizedException(url);
 			} else if (responseCode == 403) {
@@ -471,7 +501,7 @@ public class HttpHelper {
 			// E.g. "HTTP/1.1 403 No valid crumb was included in the request"
 			List<String> hints = responseHeader != null ? responseHeader.get(null) : null;
 			String hintsString = (hints != null && hints.size() > 0) ? " - " + hints.toString() : "";
-			
+
 			// Shouldn't expose the token in console
 			logger.log(Level.WARNING, e.getMessage() + hintsString, e);
 			// If we have connectionRetryLimit set to > 0 then retry that many times.
@@ -493,8 +523,9 @@ public class HttpHelper {
 
 				context.logger.println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit);
 				numberOfAttempts++;
-				responseObject = sendHTTPCall(urlString, requestType, context, postParams, numberOfAttempts,
-						pollInterval, retryLimit, overrideAuth, null).getBody();
+				return sendHTTPCall(urlString, requestType, context, postParams, numberOfAttempts, pollInterval,
+						retryLimit, overrideAuth, rawRespRef);
+
 			} else if (numberOfAttempts > retryLimit) {
 				// reached the maximum number of retries, time to fail
 				throw new ExceedRetryLimitException();
@@ -526,17 +557,19 @@ public class HttpHelper {
 			try {
 				isAccquired = lock.tryAcquire(pollInterval, TimeUnit.SECONDS);
 				logger.log(Level.FINE, String.format("calling %s in semaphore...", urlString));
-				context.logger.println("calling remote in semaphore...");
+				
+				// if we can't lock, just let it go.
 			} catch (InterruptedException e) {
+				logger.log(Level.WARNING, "fail to accquire lock because of interrupt, skip locking...", e);
 				context.logger.println("fail to accquire lock because of interrupt, skip locking...");
 			}
 			if (isAccquired != null && !isAccquired) {
+				logger.warning("fail to accquire lock because of timeout, skip locking...");
 				context.logger.println("fail to accquire lock because of timeout, skip locking...");
 			}
 
 			ConnectionResponse cr = sendHTTPCall(urlString, method, context, params, 1, pollInterval, retryLimit,
 					overrideAuth, rawRespRef);
-			Thread.sleep(50);
 			return cr;
 
 		} finally {
