@@ -8,7 +8,7 @@
 
   <properties>
     <jenkins.version>1.642.3</jenkins.version>
-    <java.level>7</java.level>
+    <java.level>8</java.level>
   </properties>
 
   <artifactId>Parameterized-Remote-Trigger</artifactId>
@@ -43,7 +43,7 @@
          <artifactId>maven-hpi-plugin</artifactId>
          <!--  https://wiki.jenkins-ci.org/display/JENKINS/Marking+a+new+plugin+version+as+incompatible+with+older+versions -->
          <configuration>
-           <compatibleSinceVersion>3.0.1-SNAPSHOT</compatibleSinceVersion>
+           <compatibleSinceVersion>3.0.3-SNAPSHOT</compatibleSinceVersion>
          </configuration>
        </plugin>
      </plugins>
