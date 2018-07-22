@@ -223,7 +223,8 @@ public class HttpHelper {
 	 *             if the request failed.
 	 */
 	@Nonnull
-	private static JenkinsCrumb getCrumb(BuildContext context, Auth2 overrideAuth) throws IOException {
+	private static JenkinsCrumb getCrumb(BuildContext context, Auth2 overrideAuth, boolean isCacheEnabled)
+			throws IOException {
 		String address = context.effectiveRemoteServer.getAddress();
 		if (address == null) {
 			throw new AbortException(
@@ -237,13 +238,11 @@ public class HttpHelper {
 			crumbProviderUrl = new URL(address.concat("/crumbIssuer/api/xml?xpath=").concat(xpathValue));
 			globalHost = crumbProviderUrl.getHost();
 
-			
-			JenkinsCrumb jenkinsCrumb = DropCachePeriodicWork.safeGetCrumb(globalHost);
+			JenkinsCrumb jenkinsCrumb = DropCachePeriodicWork.safeGetCrumb(globalHost, isCacheEnabled);
 			if (jenkinsCrumb != null) {
 				context.logger.println("reuse cached crumb: " + globalHost);
 				return jenkinsCrumb;
 			}
-
 			HttpURLConnection connection = getAuthorizedConnection(context, crumbProviderUrl, overrideAuth);
 			int responseCode = connection.getResponseCode();
 			if (responseCode == 401) {
@@ -252,19 +251,20 @@ public class HttpHelper {
 				throw new ForbiddenException(crumbProviderUrl);
 			} else if (responseCode == 404) {
 				context.logger.println("CSRF protection is disabled on the remote server.");
-				return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb());
+				return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb(), isCacheEnabled);
 			} else if (responseCode == 200) {
 				context.logger.println("CSRF protection is enabled on the remote server.");
 				String response = readInputStream(connection);
 				String[] split = response.split(":");
-				return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb(split[0], split[1]));
+				JenkinsCrumb crumb = new JenkinsCrumb(split[0], split[1]);
+				return DropCachePeriodicWork.safePutCrumb(globalHost, crumb, isCacheEnabled);
 			} else {
 				throw new RuntimeException(String.format("Unexpected response. Response code: %s. Response message: %s",
 						responseCode, connection.getResponseMessage()));
 			}
 		} catch (FileNotFoundException e) {
 			context.logger.println("CSRF protection is disabled on the remote server.");
-			return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb());
+			return DropCachePeriodicWork.safePutCrumb(globalHost, new JenkinsCrumb(), isCacheEnabled);
 		}
 	}
 
@@ -277,11 +277,11 @@ public class HttpHelper {
 	 * @param context
 	 * @throws IOException
 	 */
-	private static void addCrumbToConnection(HttpURLConnection connection, BuildContext context, Auth2 overrideAuth)
-			throws IOException {
+	private static void addCrumbToConnection(HttpURLConnection connection, BuildContext context, Auth2 overrideAuth,
+			boolean isCacheEnabled) throws IOException {
 		String method = connection.getRequestMethod();
 		if (method != null && method.equalsIgnoreCase("POST")) {
-			JenkinsCrumb crumb = getCrumb(context, overrideAuth);
+			JenkinsCrumb crumb = getCrumb(context, overrideAuth, isCacheEnabled);
 			if (crumb.isEnabledOnRemote()) {
 				connection.setRequestProperty(crumb.getHeaderId(), crumb.getCrumbValue());
 			}
@@ -420,7 +420,7 @@ public class HttpHelper {
 	 */
 	private static ConnectionResponse sendHTTPCall(String urlString, String requestType, BuildContext context,
 			Collection<String> postParams, int numberOfAttempts, int pollInterval, int retryLimit, Auth2 overrideAuth,
-			StringBuilder rawRespRef) throws IOException, InterruptedException {
+			StringBuilder rawRespRef, boolean isCrubmCacheEnabled) throws IOException, InterruptedException {
 
 		JSONObject responseObject = null;
 		Map<String, List<String>> responseHeader = null;
@@ -441,7 +441,7 @@ public class HttpHelper {
 			conn.setRequestProperty("Accept", "application/json");
 			conn.setRequestProperty("Accept-Language", "UTF-8");
 			conn.setRequestMethod(requestType);
-			addCrumbToConnection(conn, context, overrideAuth);
+			addCrumbToConnection(conn, context, overrideAuth, isCrubmCacheEnabled);
 			// wait up to 5 seconds for the connection to be open
 			conn.setConnectTimeout(5000);
 			conn.setReadTimeout(10000);
@@ -524,7 +524,7 @@ public class HttpHelper {
 				context.logger.println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit);
 				numberOfAttempts++;
 				return sendHTTPCall(urlString, requestType, context, postParams, numberOfAttempts, pollInterval,
-						retryLimit, overrideAuth, rawRespRef);
+						retryLimit, overrideAuth, rawRespRef, isCrubmCacheEnabled);
 
 			} else if (numberOfAttempts > retryLimit) {
 				// reached the maximum number of retries, time to fail
@@ -546,18 +546,18 @@ public class HttpHelper {
 
 	private static ConnectionResponse tryCall(String urlString, String method, BuildContext context,
 			Collection<String> params, int pollInterval, int retryLimit, Auth2 overrideAuth, StringBuilder rawRespRef,
-			Semaphore lock) throws IOException, InterruptedException {
+			Semaphore lock, boolean isCrubmCacheEnabled) throws IOException, InterruptedException {
 		if (lock == null) {
 			context.logger.println("calling remote without locking...");
-			return sendHTTPCall(urlString, method, context, null, 1, pollInterval, retryLimit, overrideAuth,
-					rawRespRef);
+			return sendHTTPCall(urlString, method, context, null, 1, pollInterval, retryLimit, overrideAuth, rawRespRef,
+					isCrubmCacheEnabled);
 		}
 		Boolean isAccquired = null;
 		try {
 			try {
 				isAccquired = lock.tryAcquire(pollInterval, TimeUnit.SECONDS);
 				logger.log(Level.FINE, String.format("calling %s in semaphore...", urlString));
-				
+
 				// if we can't lock, just let it go.
 			} catch (InterruptedException e) {
 				logger.log(Level.WARNING, "fail to accquire lock because of interrupt, skip locking...", e);
@@ -569,7 +569,7 @@ public class HttpHelper {
 			}
 
 			ConnectionResponse cr = sendHTTPCall(urlString, method, context, params, 1, pollInterval, retryLimit,
-					overrideAuth, rawRespRef);
+					overrideAuth, rawRespRef, isCrubmCacheEnabled);
 			return cr;
 
 		} finally {
@@ -580,27 +580,27 @@ public class HttpHelper {
 	}
 
 	public static ConnectionResponse tryPost(String urlString, BuildContext context, Collection<String> params,
-			int pollInterval, int retryLimit, Auth2 overrideAuth, Semaphore lock)
+			int pollInterval, int retryLimit, Auth2 overrideAuth, Semaphore lock, boolean isCrubmCacheEnabled)
 			throws IOException, InterruptedException {
 
-		return tryCall(urlString, HTTP_POST, context, params, pollInterval, retryLimit, overrideAuth, null, lock);
+		return tryCall(urlString, HTTP_POST, context, params, pollInterval, retryLimit, overrideAuth, null, lock,isCrubmCacheEnabled);
 	}
 
 	public static ConnectionResponse tryGet(String urlString, BuildContext context, int pollInterval, int retryLimit,
 			Auth2 overrideAuth, Semaphore lock) throws IOException, InterruptedException {
-		return tryCall(urlString, HTTP_GET, context, null, pollInterval, retryLimit, overrideAuth, null, lock);
+		return tryCall(urlString, HTTP_GET, context, null, pollInterval, retryLimit, overrideAuth, null, lock, false);
 	}
 
 	public static String tryGetRawResp(String urlString, BuildContext context, int pollInterval, int retryLimit,
 			Auth2 overrideAuth, Semaphore lock) throws IOException, InterruptedException {
 		StringBuilder resp = new StringBuilder();
-		tryCall(urlString, HTTP_GET, context, null, pollInterval, retryLimit, overrideAuth, resp, lock);
+		tryCall(urlString, HTTP_GET, context, null, pollInterval, retryLimit, overrideAuth, resp, lock, false);
 		return resp.toString();
 	}
 
 	public static ConnectionResponse post(String urlString, BuildContext context, Collection<String> params,
-			int pollInterval, int retryLimit, Auth2 overrideAuth) throws IOException, InterruptedException {
-		return tryPost(urlString, context, params, pollInterval, retryLimit, overrideAuth, null);
+			int pollInterval, int retryLimit, Auth2 overrideAuth, boolean isCrubmCacheEnabled) throws IOException, InterruptedException {
+		return tryPost(urlString, context, params, pollInterval, retryLimit, overrideAuth, null, isCrubmCacheEnabled);
 	}
 
 	public static ConnectionResponse get(String urlString, BuildContext context, int pollInterval, int retryLimit,

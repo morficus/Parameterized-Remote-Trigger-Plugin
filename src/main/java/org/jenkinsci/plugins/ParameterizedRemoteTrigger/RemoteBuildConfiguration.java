@@ -109,6 +109,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean loadParamsFromFile;
 	private String parameterFile;
 	private int maxConn;
+	private boolean useCrumbCache;
+	private boolean useJobInfoCache;
 	private Map<String, Semaphore> hostLocks = new HashMap<>();
 	private Map<String, Integer> hostPermits = new HashMap<>();
 
@@ -582,7 +584,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 		try {
 			ConnectionResponse responseRemoteJob = HttpHelper.tryPost(triggerUrlString, context, cleanedParams,
-					this.getPollInterval(), this.getConnectionRetryLimit(), this.getAuth2(), getLock(triggerUrlString));
+					this.getPollInterval(), this.getConnectionRetryLimit(), this.getAuth2(), getLock(triggerUrlString),
+					isUseCrumbCache());
 			QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
 			buildInfo.setQueueId(queueItem.getId());
 			buildInfo = updateBuildInfo(buildInfo, context);
@@ -963,14 +966,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		String remoteJobUrl = generateJobUrl(context.effectiveRemoteServer, jobNameOrUrl);
 		remoteJobUrl += "/api/json?tree=actions[parameterDefinitions],property[parameterDefinitions],name,fullName,displayName,fullDisplayName,url";
 
-		JSONObject jsonObject = DropCachePeriodicWork.safeGetJobInfo(remoteJobUrl);
+		JSONObject jsonObject = DropCachePeriodicWork.safeGetJobInfo(remoteJobUrl, isUseJobInfoCache());
 		if (jsonObject != null) {
 			return jsonObject;
 		}
 
 		ConnectionResponse response = doGet(remoteJobUrl, context);
 		if (response.getResponseCode() < 400 && response.getBody() != null) {
-			return DropCachePeriodicWork.safePutJobInfo(remoteJobUrl, response.getBody());
+			return DropCachePeriodicWork.safePutJobInfo(remoteJobUrl, response.getBody(), isUseJobInfoCache());
 
 		} else if (response.getResponseCode() == 401 || response.getResponseCode() == 403) {
 			throw new AbortException(
@@ -1006,7 +1009,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 			if (!isParameterized && remoteJobMetadata.getJSONArray("property").size() >= 1) {
 				for (Object obj : remoteJobMetadata.getJSONArray("property")) {
-					if (obj instanceof  JSONObject && ((JSONObject) obj).get("parameterDefinitions") != null) {
+					if (obj instanceof JSONObject && ((JSONObject) obj).get("parameterDefinitions") != null) {
 						isParameterized = true;
 					}
 				}
@@ -1049,6 +1052,24 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	@Override
 	public DescriptorImpl getDescriptor() {
 		return (DescriptorImpl) super.getDescriptor();
+	}
+
+	public boolean isUseCrumbCache() {
+		return useCrumbCache;
+	}
+
+	@DataBoundSetter
+	public void setUseCrumbCache(boolean useCrumbCache) {
+		this.useCrumbCache = useCrumbCache;
+	}
+
+	public boolean isUseJobInfoCache() {
+		return useJobInfoCache;
+	}
+
+	@DataBoundSetter
+	public void setUseJobInfoCache(boolean useJobInfoCache) {
+		this.useJobInfoCache = useJobInfoCache;
 	}
 
 	// This indicates to Jenkins that this is an implementation of an extension

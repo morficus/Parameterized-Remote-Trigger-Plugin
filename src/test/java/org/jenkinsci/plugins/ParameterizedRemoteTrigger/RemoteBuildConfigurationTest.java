@@ -112,7 +112,9 @@ public class RemoteBuildConfigurationTest {
         configuration.setRemoteJenkinsName(remoteJenkinsServer.getDisplayName());
         configuration.setPreventRemoteBuildQueue(false);
         configuration.setBlockBuildUntilComplete(true);
-        configuration.setPollInterval(1);
+        configuration.setPollInterval(5);
+        configuration.setUseCrumbCache(false);
+        configuration.setUseJobInfoCache(false);
         configuration.setEnhancedLogging(true);
         if (withParam){
         	String parmString = "";

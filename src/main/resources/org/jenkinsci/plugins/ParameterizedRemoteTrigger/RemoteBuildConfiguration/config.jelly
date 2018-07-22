@@ -49,7 +49,12 @@
         <f:entry title="Enable enhanced logging" field="enhancedLogging">
             <f:checkbox />
         </f:entry>
-
+        <f:entry title="Enable remote server crumb cache" field="useCrumbCache">
+            <f:checkbox />
+        </f:entry>
+        <f:entry title="Enable remote job info. cache" field="useJobInfoCache">
+            <f:checkbox />
+        </f:entry>
         <f:optionalBlock title="Load parameters from external file (this will cause the job to ignore the text field above)" field="loadParamsFromFile" inline="true">
             <f:entry title="Parameter file path + name (all paths are relative to the current workspace)" field="parameterFile">
                 <f:textbox />

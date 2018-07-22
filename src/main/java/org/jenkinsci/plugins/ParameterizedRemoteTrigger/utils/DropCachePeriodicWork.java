@@ -29,7 +29,9 @@ public class DropCachePeriodicWork extends PeriodicWork {
 		return TimeUnit.MINUTES.toMillis(10);
 	}
 
-	public static JenkinsCrumb safePutCrumb(String key, JenkinsCrumb jenkinsCrumb) {
+	public static JenkinsCrumb safePutCrumb(String key, JenkinsCrumb jenkinsCrumb, boolean isCacheEnable) {
+		if (!isCacheEnable)
+			return jenkinsCrumb;
 		try {
 			crumbLock.lock();
 			crumbMap.put(key, jenkinsCrumb);
@@ -39,7 +41,9 @@ public class DropCachePeriodicWork extends PeriodicWork {
 		}
 	}
 
-	public static JenkinsCrumb safeGetCrumb(String key) {
+	public static JenkinsCrumb safeGetCrumb(String key, boolean isCacheEnable) {
+		if (!isCacheEnable)
+			return null;
 		try {
 			crumbLock.lock();
 			if (crumbMap.containsKey(key)) {
@@ -52,7 +56,9 @@ public class DropCachePeriodicWork extends PeriodicWork {
 		}
 	}
 
-	public static JSONObject safePutJobInfo(String key, JSONObject jobInfo) {
+	public static JSONObject safePutJobInfo(String key, JSONObject jobInfo, boolean isCacheEnable) {
+		if (!isCacheEnable)
+			return jobInfo;
 		try {
 			jobInfoLock.lock();
 			jobInfoMap.put(key, jobInfo);
@@ -62,7 +68,9 @@ public class DropCachePeriodicWork extends PeriodicWork {
 		}
 	}
 
-	public static JSONObject safeGetJobInfo(String key) {
+	public static JSONObject safeGetJobInfo(String key, boolean isCacheEnable) {
+		if (!isCacheEnable)
+			return null;
 		try {
 			jobInfoLock.lock();
 			if (jobInfoMap.containsKey(key)) {
