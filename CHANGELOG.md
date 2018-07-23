@@ -1,3 +1,48 @@
+# 3.0.3 (Jul 18th, 2018)
+### New feature
+
+* None
+
+### Improvement
+
+* Add concurrent connection restriction to prevent remote servers from blocking 
+* Add job info. & crumb cache to reduce the dummy inquiries when parallel triggering
+
+### Bug fixes
+
+* [JENKINS-52673](https://issues.jenkins-ci.org/browse/JENKINS-52673)
+
+### Important change
+
+* jdk version must be at least v1.8
+
+
+# 3.0.2 (Jul 18th, 2018)
+### New feature
+
+* None
+
+### Improvement
+
+* HTTP utility reorganized
+   * post with form-data
+
+### Bug fixes
+
+* Fix parameters are too long (HTTP status 414)
+
+
+# 3.0.1 (Jul 9th, 2018)
+### New feature
+* Support triggering remote jobs via Jenkins proxy 
+
+### Improvement
+- code refinement
+
+### Bug fixes
+- [JENKINS-47919 ](https://issues.jenkins-ci.org/browse/JENKINS-47919) (clarified & fixed)
+
+
 # 3.0.0 (May 17th, 2018)
 ### New feature
 * Pipeline support
