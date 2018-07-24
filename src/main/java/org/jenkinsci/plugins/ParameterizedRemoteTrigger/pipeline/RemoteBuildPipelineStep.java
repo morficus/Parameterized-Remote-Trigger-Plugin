@@ -146,6 +146,16 @@ public class RemoteBuildPipelineStep extends Step {
         remoteBuildConfig.setParameterFile(parameterFile);
     }
 
+	@DataBoundSetter
+	public void setUseJobInfoCache(boolean useJobInfoCache) {
+		remoteBuildConfig.setUseJobInfoCache(useJobInfoCache);
+	}
+
+	@DataBoundSetter
+	public void setUseCrumbCache(boolean useCrumbCache) {
+		remoteBuildConfig.setUseCrumbCache(useCrumbCache);
+	}
+    
     @Override
     public StepExecution start(StepContext context) throws Exception {
         return new Execution(context, remoteBuildConfig);
@@ -292,5 +302,13 @@ public class RemoteBuildPipelineStep extends Step {
 
   public int getConnectionRetryLimit() {
       return remoteBuildConfig.getConnectionRetryLimit();
+  }
+    
+  public boolean isUseCrumbCache() {
+	  return remoteBuildConfig.isUseCrumbCache();
+  }
+
+  public boolean isUseJobInfoCache() {
+	  return remoteBuildConfig.isUseJobInfoCache();
   }
 }
