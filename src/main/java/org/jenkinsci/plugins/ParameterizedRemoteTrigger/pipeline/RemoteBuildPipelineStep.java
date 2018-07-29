@@ -62,84 +62,86 @@ import hudson.util.ListBoxModel;
 
 public class RemoteBuildPipelineStep extends Step {
 
-    private RemoteBuildConfiguration remoteBuildConfig;
+	private RemoteBuildConfiguration remoteBuildConfig;
 
-    @DataBoundConstructor
-    public RemoteBuildPipelineStep(String job) {
-        remoteBuildConfig = new RemoteBuildConfiguration();
-        remoteBuildConfig.setJob(job);
-        remoteBuildConfig.setShouldNotFailBuild(false);     //We need to get notified. Failure feedback is collected async then.
-        remoteBuildConfig.setBlockBuildUntilComplete(true); //default for Pipeline Step
-    }
-    
+	@DataBoundConstructor
+	public RemoteBuildPipelineStep(String job) {
+		remoteBuildConfig = new RemoteBuildConfiguration();
+		remoteBuildConfig.setJob(job);
+		remoteBuildConfig.setShouldNotFailBuild(false); // We need to get notified. Failure feedback is collected async
+														// then.
+		remoteBuildConfig.setBlockBuildUntilComplete(true); // default for Pipeline Step
+	}
+
 	@DataBoundSetter
 	public void setAbortTriggeredJob(boolean abortTriggeredJob) {
 		remoteBuildConfig.setAbortTriggeredJob(abortTriggeredJob);
 	}
-    
-    @DataBoundSetter
-    public void setMaxConn(int maxConn) {
-    	remoteBuildConfig.setMaxConn(maxConn);
-    }
-    @DataBoundSetter
-    public void setAuth(Auth2 auth) {
-        remoteBuildConfig.setAuth2(auth);
-    }
 
-    @DataBoundSetter
-    public void setRemoteJenkinsName(String remoteJenkinsName) {
-        remoteBuildConfig.setRemoteJenkinsName(remoteJenkinsName);
-    }
+	@DataBoundSetter
+	public void setMaxConn(int maxConn) {
+		remoteBuildConfig.setMaxConn(maxConn);
+	}
 
-    @DataBoundSetter
-    public void setRemoteJenkinsUrl(String remoteJenkinsUrl) {
-        remoteBuildConfig.setRemoteJenkinsUrl(remoteJenkinsUrl);
-    }
+	@DataBoundSetter
+	public void setAuth(Auth2 auth) {
+		remoteBuildConfig.setAuth2(auth);
+	}
 
-    @DataBoundSetter
-    public void setShouldNotFailBuild(boolean shouldNotFailBuild) {
-        remoteBuildConfig.setShouldNotFailBuild(shouldNotFailBuild);
-    }
+	@DataBoundSetter
+	public void setRemoteJenkinsName(String remoteJenkinsName) {
+		remoteBuildConfig.setRemoteJenkinsName(remoteJenkinsName);
+	}
 
-    @DataBoundSetter
-    public void setPreventRemoteBuildQueue(boolean preventRemoteBuildQueue) {
-        remoteBuildConfig.setPreventRemoteBuildQueue(preventRemoteBuildQueue);
-    }
+	@DataBoundSetter
+	public void setRemoteJenkinsUrl(String remoteJenkinsUrl) {
+		remoteBuildConfig.setRemoteJenkinsUrl(remoteJenkinsUrl);
+	}
 
-    @DataBoundSetter
-    public void setPollInterval(int pollInterval) {
-        remoteBuildConfig.setPollInterval(pollInterval);
-    }
+	@DataBoundSetter
+	public void setShouldNotFailBuild(boolean shouldNotFailBuild) {
+		remoteBuildConfig.setShouldNotFailBuild(shouldNotFailBuild);
+	}
 
-    @DataBoundSetter
-    public void setBlockBuildUntilComplete(boolean blockBuildUntilComplete) {
-        remoteBuildConfig.setBlockBuildUntilComplete(blockBuildUntilComplete);
-    }
+	@DataBoundSetter
+	public void setPreventRemoteBuildQueue(boolean preventRemoteBuildQueue) {
+		remoteBuildConfig.setPreventRemoteBuildQueue(preventRemoteBuildQueue);
+	}
 
-    @DataBoundSetter
-    public void setToken(String token) {
-        remoteBuildConfig.setToken(token);
-    }
+	@DataBoundSetter
+	public void setPollInterval(int pollInterval) {
+		remoteBuildConfig.setPollInterval(pollInterval);
+	}
 
-    @DataBoundSetter
-    public void setParameters(String parameters) {
-        remoteBuildConfig.setParameters(parameters);
-    }
+	@DataBoundSetter
+	public void setBlockBuildUntilComplete(boolean blockBuildUntilComplete) {
+		remoteBuildConfig.setBlockBuildUntilComplete(blockBuildUntilComplete);
+	}
 
-    @DataBoundSetter
-    public void setEnhancedLogging(boolean enhancedLogging) {
-        remoteBuildConfig.setEnhancedLogging(enhancedLogging);
-    }
+	@DataBoundSetter
+	public void setToken(String token) {
+		remoteBuildConfig.setToken(token);
+	}
 
-    @DataBoundSetter
-    public void setLoadParamsFromFile(boolean loadParamsFromFile) {
-        remoteBuildConfig.setLoadParamsFromFile(loadParamsFromFile);
-    }
+	@DataBoundSetter
+	public void setParameters(String parameters) {
+		remoteBuildConfig.setParameters(parameters);
+	}
 
-    @DataBoundSetter
-    public void setParameterFile(String parameterFile) {
-        remoteBuildConfig.setParameterFile(parameterFile);
-    }
+	@DataBoundSetter
+	public void setEnhancedLogging(boolean enhancedLogging) {
+		remoteBuildConfig.setEnhancedLogging(enhancedLogging);
+	}
+
+	@DataBoundSetter
+	public void setLoadParamsFromFile(boolean loadParamsFromFile) {
+		remoteBuildConfig.setLoadParamsFromFile(loadParamsFromFile);
+	}
+
+	@DataBoundSetter
+	public void setParameterFile(String parameterFile) {
+		remoteBuildConfig.setParameterFile(parameterFile);
+	}
 
 	@DataBoundSetter
 	public void setUseJobInfoCache(boolean useJobInfoCache) {
@@ -150,180 +152,191 @@ public class RemoteBuildPipelineStep extends Step {
 	public void setUseCrumbCache(boolean useCrumbCache) {
 		remoteBuildConfig.setUseCrumbCache(useCrumbCache);
 	}
-    
-    @Override
-    public StepExecution start(StepContext context) throws Exception {
-        return new Execution(context, remoteBuildConfig);
-    }
 
-    @Extension(optional = true)
-    public static final class DescriptorImpl extends StepDescriptor {
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new Execution(context, remoteBuildConfig);
+	}
 
-        @Override public String getFunctionName() {
-            return "triggerRemoteJob";
-        }
+	@Extension(optional = true)
+	public static final class DescriptorImpl extends StepDescriptor {
 
-        @Override public String getDisplayName() {
-            return "Trigger Remote Job";
-        }
+		@Override
+		public String getFunctionName() {
+			return "triggerRemoteJob";
+		}
 
-        @Override public Set<? extends Class<?>> getRequiredContext() {
-            Set<Class<?>> set = new HashSet<Class<?>>();
-            Collections.addAll(set, Run.class, FilePath.class, Launcher.class, TaskListener.class);
-            return set;
-        }
+		@Override
+		public String getDisplayName() {
+			return "Trigger Remote Job";
+		}
 
-        @Restricted(NoExternalUse.class)
-        @Nonnull
-        public ListBoxModel doFillRemoteJenkinsNameItems() {
-            RemoteBuildConfiguration.DescriptorImpl descriptor = Descriptor.findByDescribableClassName(
-                        ExtensionList.lookup(RemoteBuildConfiguration.DescriptorImpl.class), RemoteBuildConfiguration.class.getName());
-            if(descriptor == null) throw new RuntimeException("Could not get descriptor for RemoteBuildConfiguration");
-            return descriptor.doFillRemoteJenkinsNameItems();
-        }
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			Set<Class<?>> set = new HashSet<Class<?>>();
+			Collections.addAll(set, Run.class, FilePath.class, Launcher.class, TaskListener.class);
+			return set;
+		}
 
-        @Restricted(NoExternalUse.class)
-        public FormValidation doCheckJob(
-                    @QueryParameter("job") final String value,
-                    @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
-                    @QueryParameter("remoteJenkinsName") final String remoteJenkinsName) {
-            RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, remoteJenkinsName, value);
-            if(result.isAffected(AffectedField.JOB_NAME_OR_URL)) return result.formValidation;
-            return FormValidation.ok();
-        }
+		@Restricted(NoExternalUse.class)
+		@Nonnull
+		public ListBoxModel doFillRemoteJenkinsNameItems() {
+			RemoteBuildConfiguration.DescriptorImpl descriptor = Descriptor.findByDescribableClassName(
+					ExtensionList.lookup(RemoteBuildConfiguration.DescriptorImpl.class),
+					RemoteBuildConfiguration.class.getName());
+			if (descriptor == null)
+				throw new RuntimeException("Could not get descriptor for RemoteBuildConfiguration");
+			return descriptor.doFillRemoteJenkinsNameItems();
+		}
 
-        @Restricted(NoExternalUse.class)
-        public FormValidation doCheckRemoteJenkinsUrl(
-                    @QueryParameter("remoteJenkinsUrl") final String value,
-                    @QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
-                    @QueryParameter("job") final String job) {
-            RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(value, remoteJenkinsName, job);
-            if(result.isAffected(AffectedField.REMOTE_JENKINS_URL)) return result.formValidation;
-            return FormValidation.ok();
-        }
+		@Restricted(NoExternalUse.class)
+		public FormValidation doCheckJob(@QueryParameter("job") final String value,
+				@QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
+				@QueryParameter("remoteJenkinsName") final String remoteJenkinsName) {
+			RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl,
+					remoteJenkinsName, value);
+			if (result.isAffected(AffectedField.JOB_NAME_OR_URL))
+				return result.formValidation;
+			return FormValidation.ok();
+		}
 
-        @Restricted(NoExternalUse.class)
-        public FormValidation doCheckRemoteJenkinsName(
-                    @QueryParameter("remoteJenkinsName") final String value,
-                    @QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
-                    @QueryParameter("job") final String job) {
-            RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, value, job);
-            if(result.isAffected(AffectedField.REMOTE_JENKINS_NAME)) return result.formValidation;
-            return FormValidation.ok();
-        }
+		@Restricted(NoExternalUse.class)
+		public FormValidation doCheckRemoteJenkinsUrl(@QueryParameter("remoteJenkinsUrl") final String value,
+				@QueryParameter("remoteJenkinsName") final String remoteJenkinsName,
+				@QueryParameter("job") final String job) {
+			RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(value,
+					remoteJenkinsName, job);
+			if (result.isAffected(AffectedField.REMOTE_JENKINS_URL))
+				return result.formValidation;
+			return FormValidation.ok();
+		}
 
-        public static List<Auth2Descriptor> getAuth2Descriptors() {
-          return Auth2.all();
-        }
+		@Restricted(NoExternalUse.class)
+		public FormValidation doCheckRemoteJenkinsName(@QueryParameter("remoteJenkinsName") final String value,
+				@QueryParameter("remoteJenkinsUrl") final String remoteJenkinsUrl,
+				@QueryParameter("job") final String job) {
+			RemoteURLCombinationsResult result = FormValidationUtils.checkRemoteURLCombinations(remoteJenkinsUrl, value,
+					job);
+			if (result.isAffected(AffectedField.REMOTE_JENKINS_NAME))
+				return result.formValidation;
+			return FormValidation.ok();
+		}
 
-        public static Auth2Descriptor getDefaultAuth2Descriptor() {
-            return NullAuth.DESCRIPTOR;
-        }
-    }
+		public static List<Auth2Descriptor> getAuth2Descriptors() {
+			return Auth2.all();
+		}
 
-    public static class Execution extends SynchronousNonBlockingStepExecution<Handle> {
+		public static Auth2Descriptor getDefaultAuth2Descriptor() {
+			return NullAuth.DESCRIPTOR;
+		}
+	}
 
-        private static final long serialVersionUID = 5339071667093320735L;
+	public static class Execution extends SynchronousNonBlockingStepExecution<Handle> {
 
-        private final RemoteBuildConfiguration remoteBuildConfig;
+		private static final long serialVersionUID = 5339071667093320735L;
 
-        Execution(StepContext context, RemoteBuildConfiguration remoteBuildConfig) {
-            super(context);
-            this.remoteBuildConfig = remoteBuildConfig;
-        }
+		private final RemoteBuildConfiguration remoteBuildConfig;
 
-        @Override protected Handle run() throws Exception {
-            StepContext stepContext = getContext();
-            Run<?, ?> build = stepContext.get(Run.class);
-            FilePath workspace = stepContext.get(FilePath.class);
-            TaskListener listener = stepContext.get(TaskListener.class);
-            RemoteJenkinsServer effectiveRemoteServer = remoteBuildConfig.evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
-            BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
-            Handle handle = null;
-            try {
-                handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
-                if(remoteBuildConfig.getBlockBuildUntilComplete()) {
-                    remoteBuildConfig.performWaitForBuild(context, handle);
-                }
-                
-            } catch(InterruptedException e) {
-            	remoteBuildConfig.abortRemoteTask(effectiveRemoteServer, handle, context);
-    			throw e;
-    		}
-            return handle;
-        }
-    }
+		Execution(StepContext context, RemoteBuildConfiguration remoteBuildConfig) {
+			super(context);
+			this.remoteBuildConfig = remoteBuildConfig;
+		}
 
-  public String getRemoteJenkinsName() {
-      return remoteBuildConfig.getRemoteJenkinsName();
-  }
+		@Override
+		protected Handle run() throws Exception {
+			StepContext stepContext = getContext();
+			Run<?, ?> build = stepContext.get(Run.class);
+			FilePath workspace = stepContext.get(FilePath.class);
+			TaskListener listener = stepContext.get(TaskListener.class);
+			RemoteJenkinsServer effectiveRemoteServer = remoteBuildConfig
+					.evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
+			BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(),
+					effectiveRemoteServer);
+			Handle handle = null;
+			try {
+				handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
+				if (remoteBuildConfig.getBlockBuildUntilComplete()) {
+					remoteBuildConfig.performWaitForBuild(context, handle);
+				}
 
-  public String getRemoteJenkinsUrl() {
-      return remoteBuildConfig.getRemoteJenkinsUrl();
-  }
+			} catch (InterruptedException e) {
+				remoteBuildConfig.abortRemoteTask(effectiveRemoteServer, handle, context);
+				throw e;
+			}
+			return handle;
+		}
+	}
 
-  public String getJob() {
-      return remoteBuildConfig.getJob();
-  }
+	public String getRemoteJenkinsName() {
+		return remoteBuildConfig.getRemoteJenkinsName();
+	}
 
-  public boolean getShouldNotFailBuild() {
-      return remoteBuildConfig.getShouldNotFailBuild();
-  }
+	public String getRemoteJenkinsUrl() {
+		return remoteBuildConfig.getRemoteJenkinsUrl();
+	}
 
-  public boolean getPreventRemoteBuildQueue() {
-      return remoteBuildConfig.getPreventRemoteBuildQueue();
-  }
+	public String getJob() {
+		return remoteBuildConfig.getJob();
+	}
 
-  public int getPollInterval() {
-      return remoteBuildConfig.getPollInterval();
-  }
+	public boolean getShouldNotFailBuild() {
+		return remoteBuildConfig.getShouldNotFailBuild();
+	}
 
-  public boolean getBlockBuildUntilComplete() {
-      return remoteBuildConfig.getBlockBuildUntilComplete();
-  }
+	public boolean getPreventRemoteBuildQueue() {
+		return remoteBuildConfig.getPreventRemoteBuildQueue();
+	}
 
-  public String getToken() {
-      return remoteBuildConfig.getToken();
-  }
+	public int getPollInterval() {
+		return remoteBuildConfig.getPollInterval();
+	}
 
-  public String getParameters() {
-      return remoteBuildConfig.getParameters();
-  }
+	public boolean getBlockBuildUntilComplete() {
+		return remoteBuildConfig.getBlockBuildUntilComplete();
+	}
 
-  public boolean getEnhancedLogging() {
-      return remoteBuildConfig.getEnhancedLogging();
-  }
+	public String getToken() {
+		return remoteBuildConfig.getToken();
+	}
 
-  public boolean getLoadParamsFromFile() {
-      return remoteBuildConfig.getLoadParamsFromFile();
-  }
+	public String getParameters() {
+		return remoteBuildConfig.getParameters();
+	}
 
-  public String getParameterFile() {
-      return remoteBuildConfig.getParameterFile();
-  }
+	public boolean getEnhancedLogging() {
+		return remoteBuildConfig.getEnhancedLogging();
+	}
 
-  public int getConnectionRetryLimit() {
-      return remoteBuildConfig.getConnectionRetryLimit();
-  }
-    
-  public boolean isUseCrumbCache() {
-	  return remoteBuildConfig.isUseCrumbCache();
-  }
+	public boolean getLoadParamsFromFile() {
+		return remoteBuildConfig.getLoadParamsFromFile();
+	}
 
-  public boolean isUseJobInfoCache() {
-	  return remoteBuildConfig.isUseJobInfoCache();
-  }
-  
+	public String getParameterFile() {
+		return remoteBuildConfig.getParameterFile();
+	}
+
+	public int getConnectionRetryLimit() {
+		return remoteBuildConfig.getConnectionRetryLimit();
+	}
+
+	public boolean isUseCrumbCache() {
+		return remoteBuildConfig.isUseCrumbCache();
+	}
+
+	public boolean isUseJobInfoCache() {
+		return remoteBuildConfig.isUseJobInfoCache();
+	}
+
 	public boolean isAbortTriggeredJob() {
 		return remoteBuildConfig.isAbortTriggeredJob();
 	}
-    
-    public int getMaxConn() {
-    	return remoteBuildConfig.getMaxConn();
-    }
 
-    public Auth2 getAuth() {
-        return remoteBuildConfig.getAuth2();
-    }
+	public int getMaxConn() {
+		return remoteBuildConfig.getMaxConn();
+	}
+
+	public Auth2 getAuth() {
+		return remoteBuildConfig.getAuth2();
+	}
 
 }
