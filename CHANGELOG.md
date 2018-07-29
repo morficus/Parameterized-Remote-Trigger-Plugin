@@ -1,3 +1,17 @@
+# 3.0.4 (Jul 30th, 2018)
+### New feature
+
+* Support to abort remote job
+
+### Improvement
+
+* None
+
+### Bug fixes
+
+* [PR #45](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/45)
+
+
 # 3.0.3 (Jul 23th, 2018)
 ### New feature
 
