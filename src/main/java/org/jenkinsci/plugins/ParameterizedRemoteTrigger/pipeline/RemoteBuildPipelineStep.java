@@ -64,7 +64,6 @@ public class RemoteBuildPipelineStep extends Step {
 
     private RemoteBuildConfiguration remoteBuildConfig;
 
-
     @DataBoundConstructor
     public RemoteBuildPipelineStep(String job) {
         remoteBuildConfig = new RemoteBuildConfiguration();
@@ -73,22 +72,18 @@ public class RemoteBuildPipelineStep extends Step {
         remoteBuildConfig.setBlockBuildUntilComplete(true); //default for Pipeline Step
     }
     
+	@DataBoundSetter
+	public void setAbortTriggeredJob(boolean abortTriggeredJob) {
+		remoteBuildConfig.setAbortTriggeredJob(abortTriggeredJob);
+	}
+    
     @DataBoundSetter
     public void setMaxConn(int maxConn) {
     	remoteBuildConfig.setMaxConn(maxConn);
     }
-    
-    public int getMaxConn() {
-    	return remoteBuildConfig.getMaxConn();
-    }
-
     @DataBoundSetter
     public void setAuth(Auth2 auth) {
         remoteBuildConfig.setAuth2(auth);
-    }
-
-    public Auth2 getAuth() {
-        return remoteBuildConfig.getAuth2();
     }
 
     @DataBoundSetter
@@ -244,10 +239,17 @@ public class RemoteBuildPipelineStep extends Step {
             TaskListener listener = stepContext.get(TaskListener.class);
             RemoteJenkinsServer effectiveRemoteServer = remoteBuildConfig.evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
             BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
-            Handle handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
-            if(remoteBuildConfig.getBlockBuildUntilComplete()) {
-                remoteBuildConfig.performWaitForBuild(context, handle);
-            }
+            Handle handle = null;
+            try {
+                handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
+                if(remoteBuildConfig.getBlockBuildUntilComplete()) {
+                    remoteBuildConfig.performWaitForBuild(context, handle);
+                }
+                
+            } catch(InterruptedException e) {
+            	remoteBuildConfig.abortRemoteTask(effectiveRemoteServer, handle, context);
+    			throw e;
+    		}
             return handle;
         }
     }
@@ -311,4 +313,17 @@ public class RemoteBuildPipelineStep extends Step {
   public boolean isUseJobInfoCache() {
 	  return remoteBuildConfig.isUseJobInfoCache();
   }
+  
+	public boolean isAbortTriggeredJob() {
+		return remoteBuildConfig.isAbortTriggeredJob();
+	}
+    
+    public int getMaxConn() {
+    	return remoteBuildConfig.getMaxConn();
+    }
+
+    public Auth2 getAuth() {
+        return remoteBuildConfig.getAuth2();
+    }
+
 }

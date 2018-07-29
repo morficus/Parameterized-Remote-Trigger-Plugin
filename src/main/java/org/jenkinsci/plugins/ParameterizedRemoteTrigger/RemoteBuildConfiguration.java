@@ -42,6 +42,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtil
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.HttpHelper;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.RestUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.TokenMacroUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -111,6 +112,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private int maxConn;
 	private boolean useCrumbCache;
 	private boolean useJobInfoCache;
+	private boolean abortTriggeredJob;
+	
 	private Map<String, Semaphore> hostLocks = new HashMap<>();
 	private Map<String, Integer> hostPermits = new HashMap<>();
 
@@ -137,6 +140,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		}
 		auth = null;
 		return this;
+	}
+	
+	@DataBoundSetter
+	public void setAbortTriggeredJob(boolean abortTriggeredJob) {
+		this.abortTriggeredJob = abortTriggeredJob;
 	}
 
 	@DataBoundSetter
@@ -395,7 +403,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return server;
 	}
 
-	private Semaphore getLock(String addr) {
+	public Semaphore getLock(String addr) {
 		Semaphore s = null;
 		try {
 			URL url = new URL(addr);
@@ -504,6 +512,22 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			throw new AbortException(e.getClass().getSimpleName() + ": " + e.getMessage());
 		}
 	}
+	
+	public void abortRemoteTask(RemoteJenkinsServer remoteServer, Handle handle, BuildContext context) 
+			throws IOException, InterruptedException {
+		if (isAbortTriggeredJob() && context != null && handle != null && !handle.isFinished()) {
+			try {
+				if (handle.isQueued()) {
+					RestUtils.cancelQueueItem(remoteServer.getAddress(), handle, context, this);
+				} else {
+					RestUtils.stopRemoteJob(handle, context, this);
+				}				
+			} catch (IOException ex) {
+				context.logger.println("Fail to abort remote job: " + ex.getMessage());
+				logger.log(Level.WARNING, "Fail to abort remote job", ex);
+			}
+		}
+	}
 
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
@@ -530,12 +554,20 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	@Override
 	public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
 			throws InterruptedException, IOException {
-		RemoteJenkinsServer effectiveRemoteServer = evaluateEffectiveRemoteHost(
-				new BasicBuildContext(build, workspace, listener));
-		BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(),
-				effectiveRemoteServer);
-		Handle handle = performTriggerAndGetQueueId(context);
-		performWaitForBuild(context, handle);
+		Handle handle = null;
+		BuildContext context = null;
+		RemoteJenkinsServer effectiveRemoteServer = null;
+		try {
+			effectiveRemoteServer = evaluateEffectiveRemoteHost(
+					new BasicBuildContext(build, workspace, listener));
+			context = new BuildContext(build, workspace, listener, listener.getLogger(),
+					effectiveRemoteServer);
+			handle = performTriggerAndGetQueueId(context);
+			performWaitForBuild(context, handle);
+		} catch(InterruptedException e) {
+			this.abortRemoteTask(effectiveRemoteServer, handle, context);
+			throw e;
+		}
 	}
 
 	/**
@@ -863,6 +895,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		context.logger.println(String.format("    - connectionRetryLimit:    %s", _connectionRetryLimit));
 		context.logger.println(
 				"################################################################################################################");
+	}
+	
+	public boolean isAbortTriggeredJob() {
+		return abortTriggeredJob;
 	}
 
 	public int getMaxConn() {

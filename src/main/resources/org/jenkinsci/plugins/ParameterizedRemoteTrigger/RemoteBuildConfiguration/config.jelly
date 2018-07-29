@@ -17,7 +17,11 @@
         <f:entry title="Do not fail if remote fails" field="shouldNotFailBuild">
             <f:checkbox />
         </f:entry>
-
+        
+        <f:entry title="Abort remote job if current job was aborted" field="abortTriggeredJob">
+            <f:checkbox />
+        </f:entry>
+        
         <f:entry title="Wait to trigger remote builds until no other builds are running." field="preventRemoteBuildQueue">
             <f:checkbox />
         </f:entry>
