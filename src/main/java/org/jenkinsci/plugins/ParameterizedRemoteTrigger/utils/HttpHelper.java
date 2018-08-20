@@ -380,12 +380,7 @@ public class HttpHelper {
 
 		return triggerUrlString;
 	}
-
-	static {
-		java.net.CookieManager cm = new java.net.CookieManager();
-		java.net.CookieHandler.setDefault(cm);
-	}
-
+	
 	/**
 	 * Same as sendHTTPCall, but keeps track of the number of failed connection
 	 * attempts (aka: the number of times this method has been called). In the case
