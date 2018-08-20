@@ -1,3 +1,18 @@
+# 3.0.5 (Aug 20th, 2018)
+### New feature
+
+* None
+
+### Improvement
+
+* None
+
+### Bug fixes
+
+* [PR #46](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/46)
+* [JENKINS-53125](https://issues.jenkins-ci.org/browse/JENKINS-53125)
+
+
 # 3.0.4 (Jul 30th, 2018)
 ### New feature
 
