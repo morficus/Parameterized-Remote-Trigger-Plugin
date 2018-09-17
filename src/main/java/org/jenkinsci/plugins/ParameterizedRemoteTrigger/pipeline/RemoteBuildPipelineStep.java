@@ -152,6 +152,11 @@ public class RemoteBuildPipelineStep extends Step {
 	public void setUseCrumbCache(boolean useCrumbCache) {
 		remoteBuildConfig.setUseCrumbCache(useCrumbCache);
 	}
+	
+	@DataBoundSetter
+	public void setDisabled(boolean disabled) {
+		remoteBuildConfig.setDisabled(disabled);
+	}
 
 	@Override
 	public StepExecution start(StepContext context) throws Exception {
@@ -254,9 +259,11 @@ public class RemoteBuildPipelineStep extends Step {
 					effectiveRemoteServer);
 			Handle handle = null;
 			try {
-				handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
-				if (remoteBuildConfig.getBlockBuildUntilComplete()) {
-					remoteBuildConfig.performWaitForBuild(context, handle);
+				if (!remoteBuildConfig.isStepDisabled(listener.getLogger())) {
+					handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
+					if (remoteBuildConfig.getBlockBuildUntilComplete()) {
+						remoteBuildConfig.performWaitForBuild(context, handle);
+					}	
 				}
 
 			} catch (InterruptedException e) {
@@ -338,5 +345,10 @@ public class RemoteBuildPipelineStep extends Step {
 	public Auth2 getAuth() {
 		return remoteBuildConfig.getAuth2();
 	}
+	
+	public boolean isDisabled() {
+		return remoteBuildConfig.isDisabled();
+	}
+
 
 }

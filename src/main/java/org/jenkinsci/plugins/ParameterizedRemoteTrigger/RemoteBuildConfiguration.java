@@ -114,7 +114,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean useCrumbCache;
 	private boolean useJobInfoCache;
 	private boolean abortTriggeredJob;
+	private boolean disabled;
 	
+
 	private Map<String, Semaphore> hostLocks = new HashMap<>();
 	private Map<String, Integer> hostPermits = new HashMap<>();
 
@@ -239,6 +241,22 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			this.parameterFile = "";
 		else
 			this.parameterFile = parameterFile;
+	}
+	
+	@DataBoundSetter
+	public void setDisabled(boolean disabled) {
+		this.disabled = disabled;
+	}
+
+	@DataBoundSetter
+	public void setUseJobInfoCache(boolean useJobInfoCache) {
+		this.useJobInfoCache = useJobInfoCache;
+	}
+	
+
+	@DataBoundSetter
+	public void setUseCrumbCache(boolean useCrumbCache) {
+		this.useCrumbCache = useCrumbCache;
 	}
 
 	public List<String> getParameterList(BuildContext context) {
@@ -543,8 +561,18 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		FilePath workspace = build.getWorkspace();
 		if (workspace == null)
 			throw new IllegalArgumentException("The workspace can not be null");
-		perform(build, workspace, launcher, listener);
+		if (!isStepDisabled(listener.getLogger())) {
+			perform(build, workspace, launcher, listener);
+		}
 		return true;
+	}
+
+	public boolean isStepDisabled(PrintStream printStream) {
+		if (isDisabled()) {
+			printStream.println("remote trigger step was disabled. skipping...");
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -1004,6 +1032,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return connectionRetryLimit; // For now, this is a constant
 	}
 
+	public boolean isDisabled() {
+		return disabled;
+	}
+
 	private @Nonnull JSONObject getRemoteJobMetadata(String jobNameOrUrl, BuildContext context)
 			throws IOException, InterruptedException {
 
@@ -1102,18 +1134,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return useCrumbCache;
 	}
 
-	@DataBoundSetter
-	public void setUseCrumbCache(boolean useCrumbCache) {
-		this.useCrumbCache = useCrumbCache;
-	}
-
 	public boolean isUseJobInfoCache() {
 		return useJobInfoCache;
-	}
-
-	@DataBoundSetter
-	public void setUseJobInfoCache(boolean useJobInfoCache) {
-		this.useJobInfoCache = useJobInfoCache;
 	}
 
 	// This indicates to Jenkins that this is an implementation of an extension
