@@ -1,3 +1,17 @@
+# 3.0.6 (Sep 18th, 2018)
+### New feature
+
+* Disable remote trigger job step instead of removing it
+
+### Improvement
+
+* None
+
+### Bug fixes
+
+* [JENKINS-52810](https://issues.jenkins-ci.org/browse/JENKINS-52810)
+
+
 # 3.0.5 (Aug 20th, 2018)
 ### New feature
 
