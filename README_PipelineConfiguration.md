@@ -92,7 +92,9 @@ The `Handle` object provides the following methods:
 - `String getJobName()` returns the remote job name
 - `URL getBuildUrl()` returns the remote build URL including the build number
 - `int getBuildNumber()` returns the remote build number
-- `BuildStatus getBuildStatus()` returns the current remote build status
+- `RemoteBuildInfo getBuildInfo()` return information regarding the current remote build
+- `RemoteBuildStatus getBuildStatus()` returns the current remote build status
+- `Result getBuildResult()` return the result of the remote build
 - `BuildStatus getBuildStatusBlocking()` waits for completion and returns the build result
 - `boolean isFinished()` true if the remote build finished
 - `boolean isQueued()` true if the job is queued but not yet running
@@ -107,13 +109,8 @@ def results = handle.readJsonFileFromBuildArchive('build-results.json')
 echo results.urlToTestResults //just an example
 ```
 
-The `BuildStatus` enum provides the following types and methods:
-
-- Custom statuses: `UNKNOWN`, `NOT_STARTED`, `QUEUED`, `RUNNING`, if the remote job did not finish yet.
-- Jenkins Result statuses: `ABORTED`, `FAILURE`, `NOT_BUILT`, `SUCCESS`, `UNSTABLE`, if the remote job finished the status reflects the Jenkins build `Result`.
-- `boolean isJenkinsResult()`, true if the `BuildStatus` reflects a Jenkins `Result`.
-- `Result getJenkinsResult()`, the Jenkins `Result` if the status reflects one, null otherwise.
-- `String toString()`
+- Enum of RemoteBuildStatus may have the values: `UNKNOWN`, `NOT_STARTED`, `QUEUED`, `RUNNING`, if the remote job did not finish yet.
+- Enum of Result may have the values: `ABORTED`, `FAILURE`, `NOT_BUILT`, `SUCCESS`, `UNSTABLE`, if the remote job finished the status reflects the Jenkins build `Result`.
 
 
 <div id="blockingnonblocking"/>
