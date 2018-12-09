@@ -556,11 +556,11 @@ public class HttpHelper {
 				// if we can't lock, just let it go.
 			} catch (InterruptedException e) {
 				logger.log(Level.WARNING, "fail to accquire lock because of interrupt, skip locking...", e);
-				context.logger.println("fail to accquire lock because of interrupt, skip locking...");
+//				context.logger.println("fail to accquire lock because of interrupt, skip locking...");
 			}
 			if (isAccquired != null && !isAccquired) {
 				logger.warning("fail to accquire lock because of timeout, skip locking...");
-				context.logger.println("fail to accquire lock because of timeout, skip locking...");
+//				context.logger.println("fail to accquire lock because of timeout, skip locking...");
 			}
 
 			ConnectionResponse cr = sendHTTPCall(urlString, method, context, params, 1, pollInterval, retryLimit,
