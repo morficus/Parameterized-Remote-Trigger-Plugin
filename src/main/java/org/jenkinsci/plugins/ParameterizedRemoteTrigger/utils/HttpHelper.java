@@ -547,20 +547,18 @@ public class HttpHelper {
 			return sendHTTPCall(urlString, method, context, null, 1, pollInterval, retryLimit, overrideAuth, rawRespRef,
 					isCrubmCacheEnabled);
 		}
-		Boolean isAccquired = null;
+		Boolean isAcquired = null;
 		try {
 			try {
-				isAccquired = lock.tryAcquire(pollInterval, TimeUnit.SECONDS);
+				isAcquired = lock.tryAcquire(pollInterval, TimeUnit.SECONDS);
 				logger.log(Level.FINE, String.format("calling %s in semaphore...", urlString));
 
 				// if we can't lock, just let it go.
 			} catch (InterruptedException e) {
-				logger.log(Level.WARNING, "fail to accquire lock because of interrupt, skip locking...", e);
-//				context.logger.println("fail to accquire lock because of interrupt, skip locking...");
+				logger.log(Level.WARNING, "fail to acquire lock because of interrupt, skip locking...", e);
 			}
-			if (isAccquired != null && !isAccquired) {
-				logger.warning("fail to accquire lock because of timeout, skip locking...");
-//				context.logger.println("fail to accquire lock because of timeout, skip locking...");
+			if (isAcquired != null && !isAcquired) {
+				logger.warning("fail to acquire lock because of timeout, skip locking...");
 			}
 
 			ConnectionResponse cr = sendHTTPCall(urlString, method, context, params, 1, pollInterval, retryLimit,
@@ -568,7 +566,7 @@ public class HttpHelper {
 			return cr;
 
 		} finally {
-			if (isAccquired != null && isAccquired) {
+			if (isAcquired != null && isAcquired) {
 				lock.release();
 			}
 		}
