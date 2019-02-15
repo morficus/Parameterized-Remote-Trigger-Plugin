@@ -439,26 +439,33 @@ public class HttpHelper {
 			addCrumbToConnection(conn, context, overrideAuth, isCrubmCacheEnabled);
 			// wait up to 5 seconds for the connection to be open
 			conn.setConnectTimeout(5000);
-			conn.setReadTimeout(10000);
 			if (HTTP_POST.equalsIgnoreCase(requestType)) {
+				// use longer timeout during POST due to not performing retrys since POST is not idem-potent
+				conn.setReadTimeout(30000);
 				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 				conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
 				conn.setDoOutput(true);
 				conn.getOutputStream().write(postDataBytes);
+			}else {
+				conn.setReadTimeout(10000);
 			}
 
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
 			logger.finer(String.format("%s begin: %s", urlString, sdf.format(new Date())));
 			Instant before = Instant.now();
-
 			conn.connect();
-
 			Instant after = Instant.now();
 			logger.finer(
 					String.format("%s end: elapsed [%s] ms", urlString, Duration.between(before, after).toMillis()));
-
 			responseHeader = conn.getHeaderFields();
+			if (HTTP_POST.equalsIgnoreCase(requestType)) {
+				// if connection to the server succeeded we should not perform any further retries
+				// of a POST request since the data may have been transferred and since POST is not
+				// idem-potent reposting is not a good idea.
+				// Setting retryLimit to -1 will avoid potential double-POSTs due to timeouts during getResponseCode
+				retryLimit = -1;
+			}
 			responseCode = conn.getResponseCode();
 
 			if (responseCode == 401) {
