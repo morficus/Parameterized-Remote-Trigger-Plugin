@@ -202,7 +202,7 @@ public class Handle implements Serializable {
     /**
      * Gets the current build status of the remote job.
      *
-     * @return {@link hudson.model.Result} the build result
+     * @return {@link org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus} the build status
      */
     @Nonnull
     @Whitelisted
@@ -213,8 +213,7 @@ public class Handle implements Serializable {
     /**
      * Updates the current build status of the remote job.
      *
-     * @return {@link hudson.model.Result} the build result
-     *
+     * @return {@link org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus} the build status
      * @throws IOException
      *            if there is an error retrieving the remote build number, or,
      *            if there is an error retrieving the remote build status, or,
