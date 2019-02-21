@@ -95,7 +95,7 @@ The `Handle` object provides the following methods:
 - `RemoteBuildInfo getBuildInfo()` return information regarding the current remote build
 - `RemoteBuildStatus getBuildStatus()` returns the current remote build status
 - `Result getBuildResult()` return the result of the remote build
-- `BuildStatus getBuildStatusBlocking()` waits for completion and returns the build result
+- `RemoteBuildStatus updateBuildStatusBlocking()` waits for completion and returns the build result
 - `boolean isFinished()` true if the remote build finished
 - `boolean isQueued()` true if the job is queued but not yet running
 - `String toString()`
@@ -157,7 +157,7 @@ echo handle.getBuildStatus().toString();
 Even with `blockBuildUntilComplete: false` it is possible to wait synchronously until the remote job finished:
 ```
 def handle = triggerRemoteJob blockBuildUntilComplete: false, ...
-def status = handle.getBuildStatusBlocking()
+def status = handle.updateBuildStatusBlocking()
 ``` 
 
 :warning: Currently the plugin cannot log to the pipeline log directly if used in non-blocking mode. As workaround you can use `handle.lastLog()` after each command to get the log entries.
