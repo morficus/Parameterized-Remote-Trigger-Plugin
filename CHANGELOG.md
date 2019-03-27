@@ -5,9 +5,9 @@
 
 ### Improvement
 
-* Java doc refinement: Handle.getBuildStatus, Handle.updateBuildStatus (541365a0740f1e5b17f2615076249c4da33c34bc)
-* Extend POST timeout & avoid re-POST after timeout (97de437b98bec1cd9d46b78047886809c1e110d2)
-* Handle proxy host to avoid fail in subsequent requests (285d6573107789f3480d5a7fbc726d94a93cb917)
+* Java doc refinement: Handle.getBuildStatus, Handle.updateBuildStatus ([541365a](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/541365a0740f1e5b17f2615076249c4da33c34bc))
+* Extend POST timeout & avoid re-POST after timeout ([97de437](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/97de437b98bec1cd9d46b78047886809c1e110d2))
+* Handle proxy host to avoid fail in subsequent requests ([285d657](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/285d6573107789f3480d5a7fbc726d94a93cb917))
 
 ### Bug fixes
 
