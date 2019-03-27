@@ -12,6 +12,8 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -831,7 +833,22 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			}
 			QueueItemData queueItem = getQueueItemData(queueId, context);
 			if (queueItem.isExecuted()) {
-				buildInfo.setBuildData(queueItem.getBuildNumber(), queueItem.getBuildURL());
+                                URL effectiveRemoteBuildURL = queueItem.getBuildURL();
+                                try {
+                                      URI effectiveUri = new URI(context.effectiveRemoteServer.getAddress());
+                                      String effectiveHostname = effectiveUri.getHost();
+                                      URL remoteURL = queueItem.getBuildURL();
+                                      if (remoteURL != null) {
+                                        URI remoteUri = remoteURL.toURI();
+                                        String remoteHostname = remoteUri.getHost();
+                                        String effectiveRemoteAddress = remoteUri.toString().replaceAll(remoteHostname,effectiveHostname);
+                                        effectiveRemoteBuildURL = new URL(effectiveRemoteAddress);
+                                      }
+                                } catch (URISyntaxException ex) {
+				   throw new AbortException(
+						String.format("Unexpected syntax error: %s.", ex.toString()));
+                                }
+				buildInfo.setBuildData(queueItem.getBuildNumber(), effectiveRemoteBuildURL);
 			}
 			return buildInfo;
 		}
