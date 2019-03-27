@@ -117,7 +117,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean useJobInfoCache;
 	private boolean abortTriggeredJob;
 	private boolean disabled;
-	
 
 	private Map<String, Semaphore> hostLocks = new HashMap<>();
 	private Map<String, Integer> hostPermits = new HashMap<>();
@@ -152,7 +151,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		}
 		return this;
 	}
-	
+
 	@DataBoundSetter
 	public void setAbortTriggeredJob(boolean abortTriggeredJob) {
 		this.abortTriggeredJob = abortTriggeredJob;
@@ -244,7 +243,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		else
 			this.parameterFile = parameterFile;
 	}
-	
+
 	@DataBoundSetter
 	public void setDisabled(boolean disabled) {
 		this.disabled = disabled;
@@ -254,7 +253,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	public void setUseJobInfoCache(boolean useJobInfoCache) {
 		this.useJobInfoCache = useJobInfoCache;
 	}
-	
 
 	@DataBoundSetter
 	public void setUseCrumbCache(boolean useCrumbCache) {
@@ -326,8 +324,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * that no type of character encoding is happening at this step. All encoding
 	 * happens in the "buildUrlQueryString" method.
 	 *
-	 * @param List
-	 *            <String> parameters
+	 * @param List <String> parameters
 	 * @return List<String> of build parameters
 	 */
 	private List<String> getCleanedParameters(List<String> parameters) {
@@ -358,14 +355,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * configured remote host, <code>remoteJenkinsURL</code> which overrides the
 	 * address locally or <code>job</code> which can be a full job URL.
 	 *
-	 * @param context
-	 *            the context of this Builder/BuildStep.
+	 * @param context the context of this Builder/BuildStep.
 	 * @return {@link RemoteJenkinsServer} a RemoteJenkinsServer object, never null.
-	 * @throws AbortException
-	 *             if no server found and remoteJenkinsUrl empty.
-	 * @throws MalformedURLException
-	 *             if <code>remoteJenkinsName</code> no valid URL or
-	 *             <code>job</code> an URL but nor valid.
+	 * @throws AbortException        if no server found and remoteJenkinsUrl empty.
+	 * @throws MalformedURLException if <code>remoteJenkinsName</code> no valid URL
+	 *                               or <code>job</code> an URL but nor valid.
 	 */
 	@Nonnull
 	public RemoteJenkinsServer evaluateEffectiveRemoteHost(BasicBuildContext context) throws IOException {
@@ -445,8 +439,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	/**
 	 * Lookup up the globally configured Remote Jenkins Server based on display name
 	 *
-	 * @param displayName
-	 *            Name of the configuration you are looking for
+	 * @param displayName Name of the configuration you are looking for
 	 * @return A deep-copy of the RemoteJenkinsServer object configured globally
 	 */
 	public @Nullable @CheckForNull RemoteJenkinsServer findRemoteHost(String displayName) {
@@ -514,13 +507,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * Convenience function to mark the build as failed. It's intended to only be
 	 * called from this.perform().
 	 *
-	 * @param e
-	 *            exception that caused the build to fail.
-	 * @param logger
-	 *            build listener.
-	 * @throws IOException
-	 *             if the build fails and <code>shouldNotFailBuild</code> is not
-	 *             set.
+	 * @param e      exception that caused the build to fail.
+	 * @param logger build listener.
+	 * @throws IOException if the build fails and <code>shouldNotFailBuild</code> is
+	 *                     not set.
 	 */
 	protected void failBuild(Exception e, PrintStream logger) throws IOException {
 		StringBuilder msg = new StringBuilder();
@@ -540,8 +530,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			throw new AbortException(e.getClass().getSimpleName() + ": " + e.getMessage());
 		}
 	}
-	
-	public void abortRemoteTask(RemoteJenkinsServer remoteServer, Handle handle, BuildContext context) 
+
+	public void abortRemoteTask(RemoteJenkinsServer remoteServer, Handle handle, BuildContext context)
 			throws IOException, InterruptedException {
 		if (isAbortTriggeredJob() && context != null && handle != null && !handle.isFinished()) {
 			try {
@@ -549,7 +539,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 					RestUtils.cancelQueueItem(remoteServer.getAddress(), handle, context, this);
 				} else {
 					RestUtils.stopRemoteJob(handle, context, this);
-				}				
+				}
 			} catch (IOException ex) {
 				context.logger.println("Fail to abort remote job: " + ex.getMessage());
 				logger.log(Level.WARNING, "Fail to abort remote job", ex);
@@ -581,13 +571,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * Triggers the remote job and, waits until completion if
 	 * <code>blockBuildUntilComplete</code> is set.
 	 *
-	 * @throws InterruptedException
-	 *             if any thread has interrupted the current thread.
-	 * @throws IOException
-	 *             if there is an error retrieving the remote build data, or, if
-	 *             there is an error retrieving the remote build status, or, if
-	 *             there is an error retrieving the console output of the remote
-	 *             build, or, if the remote build does not succeed.
+	 * @throws InterruptedException if any thread has interrupted the current
+	 *                              thread.
+	 * @throws IOException          if there is an error retrieving the remote build
+	 *                              data, or, if there is an error retrieving the
+	 *                              remote build status, or, if there is an error
+	 *                              retrieving the console output of the remote
+	 *                              build, or, if the remote build does not succeed.
 	 */
 	@Override
 	public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
@@ -596,13 +586,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		BuildContext context = null;
 		RemoteJenkinsServer effectiveRemoteServer = null;
 		try {
-			effectiveRemoteServer = evaluateEffectiveRemoteHost(
-					new BasicBuildContext(build, workspace, listener));
-			context = new BuildContext(build, workspace, listener, listener.getLogger(),
-					effectiveRemoteServer);
+			effectiveRemoteServer = evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
+			context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
 			handle = performTriggerAndGetQueueId(context);
 			performWaitForBuild(context, handle);
-		} catch(InterruptedException e) {
+		} catch (InterruptedException e) {
 			this.abortRemoteTask(effectiveRemoteServer, handle, context);
 			throw e;
 		}
@@ -612,13 +600,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * Triggers the remote job, identifies the queue ID and, returns a
 	 * <code>Handle</code> to this remote execution.
 	 *
-	 * @param context
-	 *            the context of this Builder/BuildStep.
+	 * @param context the context of this Builder/BuildStep.
 	 * @return Handle to further tracking of the remote build status.
-	 * @throws IOException
-	 *             if there is an error triggering the remote job.
-	 * @throws InterruptedException
-	 *             if any thread has interrupted the current thread.
+	 * @throws IOException          if there is an error triggering the remote job.
+	 * @throws InterruptedException if any thread has interrupted the current
+	 *                              thread.
 	 * 
 	 */
 	public Handle performTriggerAndGetQueueId(BuildContext context) throws IOException, InterruptedException {
@@ -670,14 +656,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * Checks the remote build status and, waits for completion if
 	 * <code>blockBuildUntilComplete</code> is set.
 	 *
-	 * @param context
-	 *            the context of this Builder/BuildStep.
-	 * @param handle
-	 *            the handle to the remote execution.
-	 * @throws InterruptedException
-	 *             if any thread has interrupted the current thread.
-	 * @throws IOException
-	 *             if any HTTP error or business logic error
+	 * @param context the context of this Builder/BuildStep.
+	 * @param handle  the handle to the remote execution.
+	 * @throws InterruptedException if any thread has interrupted the current
+	 *                              thread.
+	 * @throws IOException          if any HTTP error or business logic error
 	 */
 	public void performWaitForBuild(BuildContext context, Handle handle) throws IOException, InterruptedException {
 		String jobName = handle.getJobName();
@@ -769,18 +752,17 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	/**
 	 * Sends a HTTP request to the API of the remote server requesting a queue item.
 	 *
-	 * @param queueId
-	 *            the id of the remote job on the queue.
-	 * @param context
-	 *            the context of this Builder/BuildStep.
+	 * @param queueId the id of the remote job on the queue.
+	 * @param context the context of this Builder/BuildStep.
 	 * @return {@link QueueItemData} the queue item data.
-	 * @throws IOException
-	 *             if there is an error identifying the remote host, or if there is
-	 *             an error setting the authorization header, or if the request
-	 *             fails due to an unknown host, unauthorized credentials, or
-	 *             another reason, or if there is an invalid queue response.
-	 * @throws InterruptedException
-	 *             if any thread has interrupted the current thread.
+	 * @throws IOException          if there is an error identifying the remote
+	 *                              host, or if there is an error setting the
+	 *                              authorization header, or if the request fails
+	 *                              due to an unknown host, unauthorized
+	 *                              credentials, or another reason, or if there is
+	 *                              an invalid queue response.
+	 * @throws InterruptedException if any thread has interrupted the current
+	 *                              thread.
 	 */
 	@Nonnull
 	private QueueItemData getQueueItemData(@Nonnull String queueId, @Nonnull BuildContext context)
@@ -833,21 +815,21 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			}
 			QueueItemData queueItem = getQueueItemData(queueId, context);
 			if (queueItem.isExecuted()) {
-                                URL effectiveRemoteBuildURL = queueItem.getBuildURL();
-                                try {
-                                      URI effectiveUri = new URI(context.effectiveRemoteServer.getAddress());
-                                      String effectiveHostname = effectiveUri.getHost();
-                                      URL remoteURL = queueItem.getBuildURL();
-                                      if (remoteURL != null) {
-                                        URI remoteUri = remoteURL.toURI();
-                                        String remoteHostname = remoteUri.getHost();
-                                        String effectiveRemoteAddress = remoteUri.toString().replaceAll(remoteHostname,effectiveHostname);
-                                        effectiveRemoteBuildURL = new URL(effectiveRemoteAddress);
-                                      }
-                                } catch (URISyntaxException ex) {
-				   throw new AbortException(
-						String.format("Unexpected syntax error: %s.", ex.toString()));
-                                }
+				URL effectiveRemoteBuildURL = queueItem.getBuildURL();
+				try {
+					URI effectiveUri = new URI(context.effectiveRemoteServer.getAddress());
+					String effectiveHostname = effectiveUri.getHost();
+					URL remoteURL = queueItem.getBuildURL();
+					if (remoteURL != null) {
+						URI remoteUri = remoteURL.toURI();
+						String remoteHostname = remoteUri.getHost();
+						String effectiveRemoteAddress = remoteUri.toString().replaceAll(remoteHostname,
+								effectiveHostname);
+						effectiveRemoteBuildURL = new URL(effectiveRemoteAddress);
+					}
+				} catch (URISyntaxException ex) {
+					throw new AbortException(String.format("Unexpected syntax error: %s.", ex.toString()));
+				}
 				buildInfo.setBuildData(queueItem.getBuildNumber(), effectiveRemoteBuildURL);
 			}
 			return buildInfo;
@@ -884,15 +866,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * Orchestrates all calls to the remote server. Also takes care of any
 	 * credentials or failed-connection retries.
 	 *
-	 * @param urlString
-	 *            the URL that needs to be called.
-	 * @param context
-	 *            the context of this Builder/BuildStep.
+	 * @param urlString the URL that needs to be called.
+	 * @param context   the context of this Builder/BuildStep.
 	 * @return JSONObject a valid JSON object, or null.
-	 * @throws InterruptedException
-	 *             if any thread has interrupted the current thread.
-	 * @throws IOException
-	 *             if any HTTP error occurred.
+	 * @throws InterruptedException if any thread has interrupted the current
+	 *                              thread.
+	 * @throws IOException          if any HTTP error occurred.
 	 */
 	public ConnectionResponse doGet(String urlString, BuildContext context) throws IOException, InterruptedException {
 		return HttpHelper.tryGet(urlString, context, this.getPollInterval(), this.getConnectionRetryLimit(),
@@ -953,7 +932,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		context.logger.println(
 				"################################################################################################################");
 	}
-	
+
 	public boolean isAbortTriggeredJob() {
 		return abortTriggeredJob;
 	}
@@ -1022,8 +1001,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	/**
 	 * @return job value with expanded env vars.
-	 * @throws IOException
-	 *             if there is an error replacing tokens.
+	 * @throws IOException if there is an error replacing tokens.
 	 */
 	private String getJobExpanded(BasicBuildContext context) throws IOException {
 		return TokenMacroUtils.applyTokenMacroReplacements(getJob(), context);
@@ -1087,11 +1065,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	/**
 	 * Pokes the remote server to see if it has default parameters defined or not.
 	 *
-	 * @param remoteJobMetadata
-	 *            from {@link #getRemoteJobMetadata(String, BuildContext)}.
+	 * @param remoteJobMetadata from
+	 *                          {@link #getRemoteJobMetadata(String, BuildContext)}.
 	 * @return true if the remote job has parameters, otherwise false.
-	 * @throws IOException
-	 *             if it is not possible to identify if the job is parameterized.
+	 * @throws IOException if it is not possible to identify if the job is
+	 *                     parameterized.
 	 */
 	private boolean isRemoteJobParameterized(JSONObject remoteJobMetadata) throws IOException {
 		boolean isParameterized = false;
