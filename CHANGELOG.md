@@ -1,3 +1,33 @@
+# 3.0.8 (Mar 27th, 2019)
+### New feature
+
+* None
+
+### Improvement
+
+* Java doc refinement: Handle.getBuildStatus, Handle.updateBuildStatus (541365a0740f1e5b17f2615076249c4da33c34bc)
+* Extend POST timeout & avoid re-POST after timeout (97de437b98bec1cd9d46b78047886809c1e110d2)
+* Handle proxy host to avoid fail in subsequent requests (285d6573107789f3480d5a7fbc726d94a93cb917)
+
+### Bug fixes
+
+* None
+
+
+# 3.0.7 (Dec 2nd, 2018)
+### New feature
+
+* None
+
+### Improvement
+
+* None
+
+### Bug fixes
+
+* [JENKINS-55038](https://issues.jenkins-ci.org/browse/JENKINS-55038)
+
+
 # 3.0.6 (Sep 18th, 2018)
 ### New feature
 
