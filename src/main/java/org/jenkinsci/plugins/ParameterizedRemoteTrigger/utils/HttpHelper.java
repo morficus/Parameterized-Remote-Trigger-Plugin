@@ -492,7 +492,7 @@ public class HttpHelper {
 				// But in newer versions of Jenkins, it just returns an empty response.
 				// So we need to compensate and check for both.
 				if (responseCode >= 400 || JSONUtils.mayBeJSON(response) == false) {
-					return new ConnectionResponse(responseHeader, responseCode);
+					return new ConnectionResponse(responseHeader, response, responseCode);
 				} else {
 					responseObject = (JSONObject) JSONSerializer.toJSON(response);
 				}

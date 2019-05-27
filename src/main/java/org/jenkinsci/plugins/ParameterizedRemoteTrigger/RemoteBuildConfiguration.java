@@ -713,29 +713,31 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				context.logger.println("Waiting for remote build to finish ...");
 			}
 
+			String consoleOffset = "0";
+			if (this.getEnhancedLogging()) {
+				context.logger.println("--------------------------------------------------------------------------------");
+				context.logger.println();
+				context.logger.println("Console output of remote job:");
+				consoleOffset = printOffsetConsoleOutput(context, consoleOffset, buildInfo);
+			}
 			while (buildInfo.isRunning()) {
-				context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
+				if (this.getEnhancedLogging()) {
+					consoleOffset = printOffsetConsoleOutput(context, consoleOffset, buildInfo);
+				} else {
+					context.logger.println("  Waiting for " + this.pollInterval + " seconds until next poll.");
+				}
 				Thread.sleep(this.pollInterval * 1000);
 				buildInfo = updateBuildInfo(buildInfo, context);
 				handle.setBuildInfo(buildInfo);
+			}
+			if (this.getEnhancedLogging()) {
+				context.logger.println("--------------------------------------------------------------------------------");
 			}
 
 			context.logger.println("Remote build finished with status " + buildInfo.getResult().toString() + ".");
 			if (context.run != null)
 				RemoteBuildInfoExporterAction.addBuildInfoExporterAction(context.run, jobName, jobNumber, jobURL,
 						buildInfo);
-
-			if (this.getEnhancedLogging()) {
-				String consoleOutput = getConsoleOutput(jobURL, context);
-
-				context.logger.println();
-				context.logger.println("Console output of remote job:");
-				context.logger
-						.println("--------------------------------------------------------------------------------");
-				context.logger.println(consoleOutput);
-				context.logger
-						.println("--------------------------------------------------------------------------------");
-			}
 
 			// If build did not finish with 'success' or 'unstable' then fail build step.
 			if (buildInfo.getResult() != Result.SUCCESS && buildInfo.getResult() != Result.UNSTABLE) {
@@ -856,10 +858,24 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return buildInfo;
 	}
 
-	private String getConsoleOutput(URL url, BuildContext context) throws IOException, InterruptedException {
-		URL buildUrl = new URL(url, "consoleText");
-		return HttpHelper.tryGetRawResp(buildUrl.toString(), context, this.getPollInterval(),
-				this.getConnectionRetryLimit(), this.getAuth2(), getLock(buildUrl.toString()));
+	private String printOffsetConsoleOutput(BuildContext context, String offset, RemoteBuildInfo buildInfo) throws IOException, InterruptedException {
+		if(offset.equals("-1")) {
+			return "-1";
+		}
+		String buildUrlString = String.format("%slogText/progressiveText?start=%s", buildInfo.getBuildURL(), offset);
+		ConnectionResponse response = doGet(buildUrlString, context);
+
+		String rawBody = response.getRawBody();
+		if(rawBody != null && !rawBody.equals("")) {
+			context.logger.println(rawBody);
+		}
+
+		Map<String,List<String>> header = response.getHeader();
+		if(header.containsKey("X-More-Data") && header.containsKey("X-Text-Size")){
+			return header.get("X-Text-Size").get(0);
+		} else {
+			return "-1";
+		}
 	}
 
 	/**
