@@ -3,17 +3,19 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 import static org.apache.commons.lang.StringUtils.trimToEmpty;
 
 import java.io.Serializable;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
+import javax.net.ssl.*;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.List;
 
 import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NoneAuth;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.NaiveTrustManager;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -50,6 +52,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
     @CheckForNull
     private String     displayName;
     private boolean    hasBuildTokenRootSupport;
+    private boolean    trustAllCertificates;
     @CheckForNull
     private Auth2      auth2;
     @CheckForNull
@@ -77,6 +80,10 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return this;
     }
 
+    @DataBoundSetter
+    public void setTrustAllCertificates(boolean trustAllCertificates) {
+        this.trustAllCertificates = trustAllCertificates;
+    }
 
     @DataBoundSetter
     public void setDisplayName(String displayName)
@@ -145,12 +152,36 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
         return (DescriptorImpl) super.getDescriptor();
     }
 
+    public boolean getTrustAllCertificates() { return trustAllCertificates; }
+
 
     @Extension
     public static class DescriptorImpl extends Descriptor<RemoteJenkinsServer> {
 
         public String getDisplayName() {
             return "";
+        }
+
+        /**
+         * Sets the TrustManager to be a "NaiveTrustManager", allowing us to ignore untrusted certificates
+         * Will set the connection to null, if a key management error occurred.
+         *
+         * ATTENTION: THIS IS VERY DANGEROUS AND SHOULD ONLY BE USED IF YOU KNOW WHAT YOU DO!
+         * @param conn  The HttpsURLConnection you want to modify.
+         * @param trustAllCertificates  A boolean, gotten from the Remote Hosts description
+         */
+        public void makeConnectionTrustAllCertificates(HttpsURLConnection conn, boolean trustAllCertificates)
+                throws NoSuchAlgorithmException, KeyManagementException {
+            if (trustAllCertificates) {
+                SSLContext ctx = SSLContext.getInstance("TLS");
+                ctx.init(new KeyManager[0], new TrustManager[]{new NaiveTrustManager()}, new SecureRandom());
+                // SSLContext.setDefault(ctx);
+                conn.setSSLSocketFactory(ctx.getSocketFactory());
+
+                // Trust every hostname
+                HostnameVerifier allHostsValid = (hostname, session) -> true;
+                conn.setHostnameVerifier(allHostsValid);
+            }
         }
 
         /**
@@ -161,7 +192,7 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
          * @return FormValidation object
          */
         @Restricted(NoExternalUse.class)
-        public FormValidation doCheckAddress(@QueryParameter String address) {
+        public FormValidation doCheckAddress(@QueryParameter String address, @QueryParameter boolean trustAllCertificates) {
 
             URL host = null;
 
@@ -180,11 +211,22 @@ public class RemoteJenkinsServer extends AbstractDescribableImpl<RemoteJenkinsSe
 
             // check that the host is reachable
             try {
-                HttpURLConnection connection = (HttpURLConnection) host.openConnection();
-                connection.setConnectTimeout(5000);
-                connection.connect();
+                HttpsURLConnection conn = (HttpsURLConnection) host.openConnection();
+                try {
+                    makeConnectionTrustAllCertificates(conn, trustAllCertificates);
+                } catch (NoSuchAlgorithmException | KeyManagementException e) {
+                    return FormValidation.error(e, "A key management error occurred.");
+                }
+                conn.setConnectTimeout(5000);
+                conn.connect();
+
+                if (trustAllCertificates) {
+                    return FormValidation.warning(
+                            "Connection established! Accepting all certificates is potentially unsafe."
+                    );
+                }
             } catch (Exception e) {
-                return FormValidation.warning("Address looks good, but a connection could not be stablished.");
+                return FormValidation.warning("Address looks good, but a connection could not be established.");
             }
 
             return FormValidation.ok();
