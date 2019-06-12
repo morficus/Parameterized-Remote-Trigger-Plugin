@@ -13,11 +13,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import javax.net.ssl.*;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -189,7 +186,7 @@ public class HttpHelper {
 		return cleanValue;
 	}
 
-	private static String readInputStream(HttpsURLConnection connection) throws IOException {
+	private static String readInputStream(HttpURLConnection connection) throws IOException {
 		BufferedReader rd = null;
 		try {
 
@@ -201,7 +198,7 @@ public class HttpHelper {
 				is = connection.getErrorStream();
 			}
 
-			rd = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+			rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
 			String line;
 			StringBuilder response = new StringBuilder();
 			while ((line = rd.readLine()) != null) {
@@ -246,7 +243,7 @@ public class HttpHelper {
 				context.logger.println("reuse cached crumb: " + globalHost);
 				return jenkinsCrumb;
 			}
-			HttpsURLConnection connection = getAuthorizedConnection(context, crumbProviderUrl, overrideAuth);
+			HttpURLConnection connection = (HttpURLConnection) getAuthorizedConnection(context, crumbProviderUrl, overrideAuth);
 			int responseCode = connection.getResponseCode();
 			if (responseCode == 401) {
 				throw new UnauthorizedException(crumbProviderUrl);
@@ -280,7 +277,7 @@ public class HttpHelper {
 	 * @param context
 	 * @throws IOException
 	 */
-	private static void addCrumbToConnection(HttpsURLConnection connection, BuildContext context, Auth2 overrideAuth,
+	private static void addCrumbToConnection(HttpURLConnection connection, BuildContext context, Auth2 overrideAuth,
 			boolean isCacheEnabled) throws IOException {
 		String method = connection.getRequestMethod();
 		if (method != null && method.equalsIgnoreCase("POST")) {
@@ -292,18 +289,18 @@ public class HttpHelper {
 	}
 
 	/**
-	 * Returns an authorized HttpsURLConnection
+	 * Returns a URLConnection which can be casted to HttpUrlConnection or HttpsUrlConnection
 	 * If the user wanted to trust all certificates, the TrustManager and HostVerifier of the connection
 	 * will be set properly.
 	 *
-	 * ATTENTION: THIS IS VERY DANGEROUS AND SHOULD ONLY BE USED IF YOU KNOW WHAT YOU DO!
+	 * ATTENTION: TRUSTING ALL CERTIFICATES IS VERY DANGEROUS AND SHOULD ONLY BE USED IF YOU KNOW WHAT YOU DO!
 	 * @param context The build context
 	 * @param url The url to the remote build
 	 * @param overrideAuth
 	 * @return An authorized connection with or without a NaiveTrustManager
 	 * @throws IOException
 	 */
-	private static HttpsURLConnection getAuthorizedConnection(BuildContext context, URL url, Auth2 overrideAuth)
+	private static URLConnection getAuthorizedConnection(BuildContext context, URL url, Auth2 overrideAuth)
 			throws IOException {
 		URLConnection connection = context.effectiveRemoteServer.isUseProxy() ? ProxyConfiguration.open(url)
 				: url.openConnection();
@@ -317,24 +314,26 @@ public class HttpHelper {
 			// Set Authorization Header configured globally for remoteServer
 			serverAuth.setAuthorizationHeader(connection, context);
 		}
-		HttpsURLConnection conn = (HttpsURLConnection) connection;
 
-		if (context.effectiveRemoteServer.getTrustAllCertificates()){
-			// Installing the naive manage
-			try {
-				SSLContext ctx = SSLContext.getInstance("TLS");
-				ctx.init(new KeyManager[0], new TrustManager[]{new NaiveTrustManager()}, new SecureRandom());
-				// SSLContext.setDefault(ctx);
-				conn.setSSLSocketFactory(ctx.getSocketFactory());
+		if (connection instanceof HttpsURLConnection) {
+			HttpsURLConnection conn = (HttpsURLConnection) connection;
+			if (context.effectiveRemoteServer.getTrustAllCertificates()) {
+				// Installing the naive manage
+				try {
+					SSLContext ctx = SSLContext.getInstance("TLS");
+					ctx.init(new KeyManager[0], new TrustManager[]{new NaiveTrustManager()}, new SecureRandom());
+					conn.setSSLSocketFactory(ctx.getSocketFactory());
 
-				// Trust every hostname
-				HostnameVerifier allHostsValid = (hostname, session) -> true;
-				conn.setHostnameVerifier(allHostsValid);
-			} catch (NoSuchAlgorithmException | KeyManagementException e) {
-				context.logger.println("Unable to trust all certificates.");
+					// Trust every hostname
+					HostnameVerifier allHostsValid = (hostname, session) -> true;
+					conn.setHostnameVerifier(allHostsValid);
+				} catch (NoSuchAlgorithmException | KeyManagementException e) {
+					context.logger.println("Unable to trust all certificates.");
+				}
 			}
+			return conn;
 		}
-		return conn;
+		return connection;
 	}
 
 	private static String getUrlWithoutParameters(String url) {
@@ -375,7 +374,7 @@ public class HttpHelper {
 		String query = "";
 
 		if (context.effectiveRemoteServer.getHasBuildTokenRootSupport()) {
-			// start building the proper URL based on known capabiltiies of the remote
+			// start building the proper URL based on known capabilities of the remote
 			// server
 			if (context.effectiveRemoteServer.getAddress() == null) {
 				throw new AbortException(
@@ -455,11 +454,11 @@ public class HttpHelper {
 		String parmsString = "";
 		if (HTTP_POST.equalsIgnoreCase(requestType) && postParams != null && postParams.size() > 0) {
 			parmsString = buildUrlQueryString(postParams);
-			postDataBytes = parmsString.getBytes("UTF-8");
+			postDataBytes = parmsString.getBytes(StandardCharsets.UTF_8);
 		}
 
 		URL url = new URL(urlString);
-		HttpsURLConnection conn = getAuthorizedConnection(context, url, overrideAuth);
+		HttpURLConnection conn = (HttpURLConnection) getAuthorizedConnection(context, url, overrideAuth);
 
 		try {
 			conn.setDoInput(true);
@@ -528,6 +527,10 @@ public class HttpHelper {
 				}
 			}
 
+		} catch (SSLHandshakeException handshakeException) {
+			context.logger.println("An SSLHandshakeException occured. The certificate might not be trusted!\n" +
+					"Set 'Trust all certificates' and try again, if you want to accept untrusted certificates.\n");
+			throw handshakeException;
 		} catch (IOException e) {
 
 			// E.g. "HTTP/1.1 403 No valid crumb was included in the request"
@@ -546,25 +549,17 @@ public class HttpHelper {
 				// Sleep for 'pollInterval' seconds.
 				// Sleep takes milliseconds so need to convert this.pollInterval to milliseconds
 				// (x 1000)
-				try {
-					// Could do with a better way of sleeping...
-					Thread.sleep(pollInterval * 1000);
-				} catch (InterruptedException ex) {
-					throw ex;
-				}
+				// Could do with a better way of sleeping...
+				Thread.sleep(pollInterval * 1000);
 
 				context.logger.println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit);
 				numberOfAttempts++;
 				return sendHTTPCall(urlString, requestType, context, postParams, numberOfAttempts, pollInterval,
 						retryLimit, overrideAuth, rawRespRef, isCrubmCacheEnabled);
 
-			} else if (numberOfAttempts > retryLimit) {
+			} else {
 				// reached the maximum number of retries, time to fail
 				throw new ExceedRetryLimitException();
-			} else {
-				// something failed with the connection and we retried the max amount of
-				// times... so throw an exception to mark the build as failed.
-				throw e;
 			}
 
 		} finally {

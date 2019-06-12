@@ -103,6 +103,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private String remoteJenkinsUrl;
 	private Auth2 auth2;
 	private boolean shouldNotFailBuild;
+	private boolean trustAllCertificates;
+	private boolean overrideTrustAllCertificates;
 	private boolean preventRemoteBuildQueue;
 	private int pollInterval;
 	private boolean blockBuildUntilComplete;
@@ -150,6 +152,16 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			hostPermits = new HashMap<>();
 		}
 		return this;
+	}
+
+	@DataBoundSetter
+	public void setTrustAllCertificates(boolean trustAllCertificates) {
+		this.trustAllCertificates = trustAllCertificates;
+	}
+
+	@DataBoundSetter
+	public void setOverrideTrustAllCertificates(boolean overrideTrustAllCertificates) {
+		this.overrideTrustAllCertificates = overrideTrustAllCertificates;
 	}
 
 	@DataBoundSetter
@@ -420,6 +432,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				hostLocks.put(url.getHost(), s);
 				hostPermits.put(url.getHost(), maxConn);
 			}
+		}
+
+		if (this.overrideTrustAllCertificates) {
+			server.setTrustAllCertificates(this.trustAllCertificates);
 		}
 
 		return server;
@@ -853,8 +869,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			} else {
 				context.logger.println("WARNING: Unhandled condition!");
 			}
-		} catch (Exception ex) {
-		}
+		} catch (Exception ignored) {}
 		return buildInfo;
 	}
 
@@ -917,6 +932,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		String _jobExpandedLogEntry = (_job.equals(_jobExpanded)) ? "" : "(" + _jobExpanded + ")";
 		String _remoteJenkinsName = getRemoteJenkinsName();
 		String _remoteJenkinsUrl = getRemoteJenkinsUrl();
+		boolean _trustAllCertificates = context.effectiveRemoteServer.getTrustAllCertificates();
+
 		Auth2 _auth = getAuth2();
 		int _connectionRetryLimit = getConnectionRetryLimit();
 		boolean _blockBuildUntilComplete = getBlockBuildUntilComplete();
@@ -945,6 +962,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		}
 		context.logger.println(String.format("    - blockBuildUntilComplete: %s", _blockBuildUntilComplete));
 		context.logger.println(String.format("    - connectionRetryLimit:    %s", _connectionRetryLimit));
+		context.logger.println(String.format("    - trustAllCertificates:    %s", _trustAllCertificates));
 		context.logger.println(
 				"################################################################################################################");
 	}
@@ -1153,6 +1171,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return useJobInfoCache;
 	}
 
+	public boolean getTrustAllCertificates() {
+		return trustAllCertificates;
+	}
+
+	public boolean getOverrideTrustAllCertificates() {
+		return overrideTrustAllCertificates;
+	}
+
 	// This indicates to Jenkins that this is an implementation of an extension
 	// point.
 	@Extension
@@ -1218,6 +1244,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			save();
 
 			return super.configure(req, formData);
+		}
+
+		@Restricted(NoExternalUse.class)
+		public FormValidation doCheckTrustAllCertificates(@QueryParameter("trustAllCertificates") final boolean value){
+			if (value) {
+				return FormValidation.warning("Accepting all certificates is potentially unsafe.");
+			}
+			return FormValidation.ok();
 		}
 
 		@Restricted(NoExternalUse.class)

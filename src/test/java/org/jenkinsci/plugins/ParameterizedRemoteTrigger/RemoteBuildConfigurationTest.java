@@ -116,6 +116,7 @@ public class RemoteBuildConfigurationTest {
         configuration.setUseCrumbCache(false);
         configuration.setUseJobInfoCache(false);
         configuration.setEnhancedLogging(true);
+        configuration.setTrustAllCertificates(true);
         if (withParam){
         	String parmString = "";
         	for (Map.Entry<String, String> p : parms.entrySet()) {
@@ -179,6 +180,8 @@ public class RemoteBuildConfigurationTest {
       assertEquals(false, config.getPreventRemoteBuildQueue());
       assertEquals(null, config.getRemoteJenkinsName());
       assertEquals(false, config.getShouldNotFailBuild());
+      assertEquals(false, config.getOverrideTrustAllCertificates());
+      assertEquals(false, config.getTrustAllCertificates());
       assertEquals("", config.getToken());
     }
 
@@ -198,6 +201,8 @@ public class RemoteBuildConfigurationTest {
       assertEquals(false, config.getPreventRemoteBuildQueue());
       assertEquals(null, config.getRemoteJenkinsName());
       assertEquals(false, config.getShouldNotFailBuild());
+      assertEquals(false, config.getOverrideTrustAllCertificates());
+      assertEquals(false, config.getTrustAllCertificates());
       assertEquals("", config.getToken());
     }
 
@@ -305,6 +310,27 @@ public class RemoteBuildConfigurationTest {
         assertEquals("http://locallyOverridden:8080", config.evaluateEffectiveRemoteHost(null).getAddress());
     }
 
+    /**
+     * Testing if it is possible to set the TrustAllCertificates-parameter with OverrideTrustAllCertificates set to true
+     *
+     * @throws IOException
+     */
+    @Test @WithoutJenkins
+    public void testRemoteOverridesTrustAllCertificates() throws IOException {
+        RemoteBuildConfiguration config = new RemoteBuildConfiguration();
+        config.setJob("MyJob");
+        config.setTrustAllCertificates(false);
+        config.setOverrideTrustAllCertificates(true);
+
+        config = mockGlobalRemoteHost(config,
+                "remoteJenkinsName",
+                "http://globallyConfigured:8080",
+                true);
+
+        config.setRemoteJenkinsName("remoteJenkinsName");
+        assertTrue(config.getTrustAllCertificates());
+    }
+
     @Test @WithoutJenkins
     public void testEvaluateEffectiveRemoteHost_jobNameMissing() throws IOException {
         RemoteBuildConfiguration config = new RemoteBuildConfiguration();
@@ -383,6 +409,22 @@ public class RemoteBuildConfigurationTest {
         DescriptorImpl descriptor = DescriptorImpl.newInstanceForTests();
         descriptor.setRemoteSites(jenkinsServer);
         doReturn(descriptor).when(spy).getDescriptor();
+
+        return spy;
+    }
+
+    private RemoteBuildConfiguration mockGlobalRemoteHost(
+            RemoteBuildConfiguration config, String remoteName, String remoteUrl, boolean trustAllCertificates
+    ) throws MalformedURLException {
+        RemoteJenkinsServer jenkinsServer = new RemoteJenkinsServer();
+        jenkinsServer.setDisplayName(remoteName);
+        jenkinsServer.setAddress(remoteUrl);
+
+        RemoteBuildConfiguration spy = spy(config);
+        DescriptorImpl descriptor = DescriptorImpl.newInstanceForTests();
+        descriptor.setRemoteSites(jenkinsServer);
+        doReturn(descriptor).when(spy).getDescriptor();
+        spy.setTrustAllCertificates(trustAllCertificates);
 
         return spy;
     }
