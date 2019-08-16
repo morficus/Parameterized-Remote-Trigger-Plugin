@@ -104,6 +104,16 @@ public class RemoteBuildPipelineStep extends Step {
 	}
 
 	@DataBoundSetter
+	public void setTrustAllCertificates(boolean trustAllCertificates) {
+		remoteBuildConfig.setTrustAllCertificates(trustAllCertificates);
+	}
+
+	@DataBoundSetter
+	public void setOverrideTrustAllCertificates(boolean overrideTrustAllCertificates) {
+		remoteBuildConfig.setOverrideTrustAllCertificates(overrideTrustAllCertificates);
+	}
+
+	@DataBoundSetter
 	public void setPreventRemoteBuildQueue(boolean preventRemoteBuildQueue) {
 		remoteBuildConfig.setPreventRemoteBuildQueue(preventRemoteBuildQueue);
 	}
@@ -288,6 +298,14 @@ public class RemoteBuildPipelineStep extends Step {
 
 	public boolean getShouldNotFailBuild() {
 		return remoteBuildConfig.getShouldNotFailBuild();
+	}
+
+	public boolean getTrustAllCertificates() {
+		return remoteBuildConfig.getTrustAllCertificates();
+	}
+
+	public boolean getOverrideTrustAllCertificates() {
+		return remoteBuildConfig.getOverrideTrustAllCertificates();
 	}
 
 	public boolean getPreventRemoteBuildQueue() {

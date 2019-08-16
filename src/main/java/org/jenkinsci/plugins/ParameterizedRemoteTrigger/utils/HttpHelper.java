@@ -12,12 +12,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
+import javax.net.ssl.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -198,7 +198,7 @@ public class HttpHelper {
 				is = connection.getErrorStream();
 			}
 
-			rd = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+			rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
 			String line;
 			StringBuilder response = new StringBuilder();
 			while ((line = rd.readLine()) != null) {
@@ -243,7 +243,7 @@ public class HttpHelper {
 				context.logger.println("reuse cached crumb: " + globalHost);
 				return jenkinsCrumb;
 			}
-			HttpURLConnection connection = getAuthorizedConnection(context, crumbProviderUrl, overrideAuth);
+			HttpURLConnection connection = (HttpURLConnection) getAuthorizedConnection(context, crumbProviderUrl, overrideAuth);
 			int responseCode = connection.getResponseCode();
 			if (responseCode == 401) {
 				throw new UnauthorizedException(crumbProviderUrl);
@@ -288,7 +288,19 @@ public class HttpHelper {
 		}
 	}
 
-	private static HttpURLConnection getAuthorizedConnection(BuildContext context, URL url, Auth2 overrideAuth)
+	/**
+	 * Returns a URLConnection which can be casted to HttpUrlConnection or HttpsUrlConnection
+	 * If the user wanted to trust all certificates, the TrustManager and HostVerifier of the connection
+	 * will be set properly.
+	 *
+	 * ATTENTION: TRUSTING ALL CERTIFICATES IS VERY DANGEROUS AND SHOULD ONLY BE USED IF YOU KNOW WHAT YOU DO!
+	 * @param context The build context
+	 * @param url The url to the remote build
+	 * @param overrideAuth
+	 * @return An authorized connection with or without a NaiveTrustManager
+	 * @throws IOException
+	 */
+	private static URLConnection getAuthorizedConnection(BuildContext context, URL url, Auth2 overrideAuth)
 			throws IOException {
 		URLConnection connection = context.effectiveRemoteServer.isUseProxy() ? ProxyConfiguration.open(url)
 				: url.openConnection();
@@ -303,7 +315,25 @@ public class HttpHelper {
 			serverAuth.setAuthorizationHeader(connection, context);
 		}
 
-		return (HttpURLConnection) connection;
+		if (connection instanceof HttpsURLConnection) {
+			HttpsURLConnection conn = (HttpsURLConnection) connection;
+			if (context.effectiveRemoteServer.getTrustAllCertificates()) {
+				// Installing the naive manage
+				try {
+					SSLContext ctx = SSLContext.getInstance("TLS");
+					ctx.init(new KeyManager[0], new TrustManager[]{new NaiveTrustManager()}, new SecureRandom());
+					conn.setSSLSocketFactory(ctx.getSocketFactory());
+
+					// Trust every hostname
+					HostnameVerifier allHostsValid = (hostname, session) -> true;
+					conn.setHostnameVerifier(allHostsValid);
+				} catch (NoSuchAlgorithmException | KeyManagementException e) {
+					context.logger.println("Unable to trust all certificates.");
+				}
+			}
+			return conn;
+		}
+		return connection;
 	}
 
 	private static String getUrlWithoutParameters(String url) {
@@ -344,7 +374,7 @@ public class HttpHelper {
 		String query = "";
 
 		if (context.effectiveRemoteServer.getHasBuildTokenRootSupport()) {
-			// start building the proper URL based on known capabiltiies of the remote
+			// start building the proper URL based on known capabilities of the remote
 			// server
 			if (context.effectiveRemoteServer.getAddress() == null) {
 				throw new AbortException(
@@ -387,7 +417,6 @@ public class HttpHelper {
 	 * of a failed connection, the method calls it self recursively and increments
 	 * the number of attempts.
 	 *
-	 * @see sendHTTPCall
 	 * @param urlString
 	 *            the URL that needs to be called.
 	 * @param requestType
@@ -425,11 +454,11 @@ public class HttpHelper {
 		String parmsString = "";
 		if (HTTP_POST.equalsIgnoreCase(requestType) && postParams != null && postParams.size() > 0) {
 			parmsString = buildUrlQueryString(postParams);
-			postDataBytes = parmsString.getBytes("UTF-8");
+			postDataBytes = parmsString.getBytes(StandardCharsets.UTF_8);
 		}
 
 		URL url = new URL(urlString);
-		HttpURLConnection conn = getAuthorizedConnection(context, url, overrideAuth);
+		HttpURLConnection conn = (HttpURLConnection) getAuthorizedConnection(context, url, overrideAuth);
 
 		try {
 			conn.setDoInput(true);
@@ -440,7 +469,7 @@ public class HttpHelper {
 			// wait up to 5 seconds for the connection to be open
 			conn.setConnectTimeout(5000);
 			if (HTTP_POST.equalsIgnoreCase(requestType)) {
-				// use longer timeout during POST due to not performing retrys since POST is not idem-potent
+				// use longer timeout during POST due to not performing retries since POST is not idem-potent
 				conn.setReadTimeout(30000);
 				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 				conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
@@ -491,13 +520,17 @@ public class HttpHelper {
 				// non-parameterized jobs), it returns a string indicating the status.
 				// But in newer versions of Jenkins, it just returns an empty response.
 				// So we need to compensate and check for both.
-				if (responseCode >= 400 || JSONUtils.mayBeJSON(response) == false) {
+				if (responseCode >= 400 || !JSONUtils.mayBeJSON(response)) {
 					return new ConnectionResponse(responseHeader, response, responseCode);
 				} else {
 					responseObject = (JSONObject) JSONSerializer.toJSON(response);
 				}
 			}
 
+		} catch (SSLHandshakeException handshakeException) {
+			context.logger.println("An SSLHandshakeException occured. The certificate might not be trusted!\n" +
+					"Set 'Trust all certificates' and try again, if you want to accept untrusted certificates.\n");
+			throw handshakeException;
 		} catch (IOException e) {
 
 			// E.g. "HTTP/1.1 403 No valid crumb was included in the request"
@@ -509,32 +542,24 @@ public class HttpHelper {
 			// If we have connectionRetryLimit set to > 0 then retry that many times.
 			if (numberOfAttempts <= retryLimit) {
 				context.logger.println(String.format(
-						"Connection to remote server failed %s, waiting for to retry - %s seconds until next attempt. URL: %s, parameters: %s",
+						"Connection to remote server failed %s, waiting to retry - %s seconds until next attempt. URL: %s, parameters: %s",
 						(responseCode == 0 ? "" : "[" + responseCode + "]"), pollInterval,
 						getUrlWithoutParameters(urlString), parmsString));
 
 				// Sleep for 'pollInterval' seconds.
-				// Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds
+				// Sleep takes milliseconds so need to convert this.pollInterval to milliseconds
 				// (x 1000)
-				try {
-					// Could do with a better way of sleeping...
-					Thread.sleep(pollInterval * 1000);
-				} catch (InterruptedException ex) {
-					throw ex;
-				}
+				// Could do with a better way of sleeping...
+				Thread.sleep(pollInterval * 1000);
 
 				context.logger.println("Retry attempt #" + numberOfAttempts + " out of " + retryLimit);
 				numberOfAttempts++;
 				return sendHTTPCall(urlString, requestType, context, postParams, numberOfAttempts, pollInterval,
 						retryLimit, overrideAuth, rawRespRef, isCrubmCacheEnabled);
 
-			} else if (numberOfAttempts > retryLimit) {
+			} else {
 				// reached the maximum number of retries, time to fail
 				throw new ExceedRetryLimitException();
-			} else {
-				// something failed with the connection and we retried the max amount of
-				// times... so throw an exception to mark the build as failed.
-				throw e;
 			}
 
 		} finally {
