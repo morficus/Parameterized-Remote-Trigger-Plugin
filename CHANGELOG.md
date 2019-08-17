@@ -1,3 +1,18 @@
+# 3.0.9 (Aug 17th, 2019)
+### New feature
+
+* None
+
+### Improvement
+
+* Stream output rather than dump it all out at the end ([a625e4b](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/a625e4b7df875a11a2e8310c2aee781e61626f06))
+* Added the ability to trust untrusted certificates ([08ec3ec](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/08ec3ec779839716fd080f93de03a9432f6c05fe))
+
+### Bug fixes
+
+* None
+
+
 # 3.0.8 (Mar 27th, 2019)
 ### New feature
 
