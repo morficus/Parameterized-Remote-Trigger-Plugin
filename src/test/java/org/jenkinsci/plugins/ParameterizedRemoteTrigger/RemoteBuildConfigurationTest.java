@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import hudson.model.*;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
@@ -37,6 +36,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 import hudson.model.User;
+import hudson.model.ListView;
 import hudson.security.HudsonPrivateSecurityRealm;
 import hudson.security.SecurityRealm;
 import hudson.security.AuthorizationStrategy.Unsecured;
