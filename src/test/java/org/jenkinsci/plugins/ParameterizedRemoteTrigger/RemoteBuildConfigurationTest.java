@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import hudson.model.*;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
@@ -518,6 +519,17 @@ public class RemoteBuildConfigurationTest {
 		parms.put("parameterName1", TestConst.garbled5KString1);
 		parms.put("parameterName2", TestConst.garbled5KString2);
 		_testRemoteBuild(true, true, remoteProject, parms);
+	}
+
+	@Test
+	public void testRemoteViewBuild() throws Exception {
+		disableAuth();
+
+		FreeStyleProject remoteProject = jenkinsRule.createFreeStyleProject("test-job");
+		ListView view = new ListView("test-view", jenkinsRule.getInstance());
+		view.add(remoteProject);
+		jenkinsRule.getInstance().addView(view);
+		_testRemoteBuild(false, false, remoteProject);
 	}
 
 }
