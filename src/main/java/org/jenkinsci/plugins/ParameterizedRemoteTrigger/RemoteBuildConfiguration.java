@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import static java.lang.Math.min;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
@@ -510,7 +511,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		if (isEmpty(jobUrl))
 			return null;
 		if (FormValidationUtils.isURL(jobUrl)) {
-			int index = jobUrl.indexOf("/job/");
+			int index;
+			if (jobUrl.contains("/view/")) {
+				index = min(jobUrl.indexOf("/view/"), jobUrl.indexOf("/job/"));
+			} else {
+				index = jobUrl.indexOf("/job/");
+			}
 			if (index < 0)
 				throw new MalformedURLException("Expected '/job/' element in job URL but was: " + jobUrl);
 			return jobUrl.substring(0, index);
