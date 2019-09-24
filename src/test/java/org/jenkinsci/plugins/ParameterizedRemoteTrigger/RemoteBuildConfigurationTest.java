@@ -36,6 +36,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 import hudson.model.User;
+import hudson.model.ListView;
 import hudson.security.HudsonPrivateSecurityRealm;
 import hudson.security.SecurityRealm;
 import hudson.security.AuthorizationStrategy.Unsecured;
@@ -518,6 +519,17 @@ public class RemoteBuildConfigurationTest {
 		parms.put("parameterName1", TestConst.garbled5KString1);
 		parms.put("parameterName2", TestConst.garbled5KString2);
 		_testRemoteBuild(true, true, remoteProject, parms);
+	}
+
+	@Test
+	public void testRemoteViewBuild() throws Exception {
+		disableAuth();
+
+		FreeStyleProject remoteProject = jenkinsRule.createFreeStyleProject("test-job");
+		ListView view = new ListView("test-view", jenkinsRule.getInstance());
+		view.add(remoteProject);
+		jenkinsRule.getInstance().addView(view);
+		_testRemoteBuild(false, false, remoteProject);
 	}
 
 }
