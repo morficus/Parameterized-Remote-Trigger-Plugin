@@ -82,7 +82,7 @@ public class HttpHelper {
 	 *            the parameters needed to trigger the remote job.
 	 * @return query-parameter-formated URL-encoded string.
 	 */
-	private static String buildUrlQueryString(Collection<String> parameters) {
+	public static String buildUrlQueryString(Collection<String> parameters) {
 
 		// List to hold the encoded parameters
 		List<String> encodedParameters = new ArrayList<String>();

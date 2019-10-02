@@ -737,7 +737,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 			String consoleOffset = "0";
 			if (this.getEnhancedLogging()) {
-				context.logger.println("--------------------------------------------------------------------------------");
+				context.logger
+						.println("--------------------------------------------------------------------------------");
 				context.logger.println();
 				context.logger.println("Console output of remote job:");
 				consoleOffset = printOffsetConsoleOutput(context, consoleOffset, buildInfo);
@@ -753,7 +754,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				handle.setBuildInfo(buildInfo);
 			}
 			if (this.getEnhancedLogging()) {
-				context.logger.println("--------------------------------------------------------------------------------");
+				context.logger
+						.println("--------------------------------------------------------------------------------");
 			}
 
 			context.logger.println("Remote build finished with status " + buildInfo.getResult().toString() + ".");
@@ -875,24 +877,26 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			} else {
 				context.logger.println("WARNING: Unhandled condition!");
 			}
-		} catch (Exception ignored) {}
+		} catch (Exception ignored) {
+		}
 		return buildInfo;
 	}
 
-	private String printOffsetConsoleOutput(BuildContext context, String offset, RemoteBuildInfo buildInfo) throws IOException, InterruptedException {
-		if(offset.equals("-1")) {
+	private String printOffsetConsoleOutput(BuildContext context, String offset, RemoteBuildInfo buildInfo)
+			throws IOException, InterruptedException {
+		if (offset.equals("-1")) {
 			return "-1";
 		}
 		String buildUrlString = String.format("%slogText/progressiveText?start=%s", buildInfo.getBuildURL(), offset);
 		ConnectionResponse response = doGet(buildUrlString, context);
 
 		String rawBody = response.getRawBody();
-		if(rawBody != null && !rawBody.equals("")) {
+		if (rawBody != null && !rawBody.equals("")) {
 			context.logger.println(rawBody);
 		}
 
-		Map<String,List<String>> header = response.getHeader();
-		if(header.containsKey("X-More-Data") && header.containsKey("X-Text-Size")){
+		Map<String, List<String>> header = response.getHeader();
+		if (header.containsKey("X-More-Data") && header.containsKey("X-Text-Size")) {
 			return header.get("X-Text-Size").get(0);
 		} else {
 			return "-1";
@@ -1079,7 +1083,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			throws IOException, InterruptedException {
 
 		String remoteJobUrl = generateJobUrl(context.effectiveRemoteServer, jobNameOrUrl);
-		remoteJobUrl += "/api/json?tree=actions[parameterDefinitions],property[parameterDefinitions],name,fullName,displayName,fullDisplayName,url";
+		remoteJobUrl += "/api/json?" + HttpHelper.buildUrlQueryString(Arrays.asList(
+				"tree=actions[parameterDefinitions],property[parameterDefinitions],name,fullName,displayName,fullDisplayName,url"));
 
 		JSONObject jsonObject = DropCachePeriodicWork.safeGetJobInfo(remoteJobUrl, isUseJobInfoCache());
 		if (jsonObject != null) {
@@ -1253,7 +1258,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		}
 
 		@Restricted(NoExternalUse.class)
-		public FormValidation doCheckTrustAllCertificates(@QueryParameter("trustAllCertificates") final boolean value){
+		public FormValidation doCheckTrustAllCertificates(@QueryParameter("trustAllCertificates") final boolean value) {
 			if (value) {
 				return FormValidation.warning("Accepting all certificates is potentially unsafe.");
 			}
