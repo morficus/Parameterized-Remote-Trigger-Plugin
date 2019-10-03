@@ -76,7 +76,7 @@ public class HttpHelper {
 	}
 
 	/**
-	 * Return the Collection<String> in an encoded query-string.
+	 * Return the Collection&lt;String&gt; in an encoded query-string.
 	 *
 	 * @param parameters
 	 *            the parameters needed to trigger the remote job.
