@@ -1,3 +1,17 @@
+# 3.1.0 (Oct 3rd, 2019)
+### New feature
+
+* None
+
+### Improvement
+
+* Support "view" in job's URL ([f0b36fa](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/f0b36fa13900da889ebe846d6daeb978e6d7d5f6))
+
+### Bug fixes
+
+* [JENKINS-59456](https://issues.jenkins-ci.org/browse/JENKINS-59456)
+
+
 # 3.0.9 (Aug 17th, 2019)
 ### New feature
 
