@@ -121,7 +121,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean abortTriggeredJob;
 	private boolean disabled;
 
-	private Map<String, Semaphore> hostLocks = new HashMap<>();
+	private transient Map<String, Semaphore> hostLocks = new HashMap<>();
 	private Map<String, Integer> hostPermits = new HashMap<>();
 
 	private static Logger logger = Logger.getLogger(RemoteBuildConfiguration.class.getName());
