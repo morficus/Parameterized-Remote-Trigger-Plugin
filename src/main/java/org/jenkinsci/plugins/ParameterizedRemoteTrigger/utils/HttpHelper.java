@@ -47,6 +47,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UrlNotFoundEx
 
 import hudson.AbortException;
 import hudson.ProxyConfiguration;
+import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 import net.sf.json.util.JSONUtils;
@@ -123,7 +124,7 @@ public class HttpHelper {
 	/**
 	 * Same as above, but takes in to consideration if the remote server has any
 	 * default parameters set or not
-	 * 
+	 *
 	 * @param isRemoteJobParameterized
 	 *            Boolean indicating if the remote job is parameterized or not
 	 * @return A string which represents a portion of the build URL
@@ -410,7 +411,7 @@ public class HttpHelper {
 
 		return triggerUrlString;
 	}
-	
+
 	/**
 	 * Same as sendHTTPCall, but keeps track of the number of failed connection
 	 * attempts (aka: the number of times this method has been called). In the case
@@ -440,7 +441,7 @@ public class HttpHelper {
 	 *             all the possibilities of HTTP exceptions
 	 * @throws InterruptedException
 	 *             if any thread has interrupted the current thread.
-	 * 
+	 *
 	 */
 	private static ConnectionResponse sendHTTPCall(String urlString, String requestType, BuildContext context,
 			Collection<String> postParams, int numberOfAttempts, int pollInterval, int retryLimit, Auth2 overrideAuth,
@@ -523,7 +524,13 @@ public class HttpHelper {
 				if (responseCode >= 400 || !JSONUtils.mayBeJSON(response)) {
 					return new ConnectionResponse(responseHeader, response, responseCode);
 				} else {
-					responseObject = (JSONObject) JSONSerializer.toJSON(response);
+					try {
+						responseObject = (JSONObject) JSONSerializer.toJSON(response);
+					}
+					catch(JSONException e) {
+						// despite JSONUtils.mayBeJSON believing that this might be JSON, it looks like it wasn't
+						return new ConnectionResponse(responseHeader, response, responseCode);
+					}
 				}
 			}
 
