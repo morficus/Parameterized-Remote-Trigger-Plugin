@@ -84,6 +84,8 @@ public class BearerTokenAuth extends Auth2 {
         if (token == null) {
             if (other.token == null) {
                 return true;
+            } else {
+                return false;
             }
         }
         return token.equals(other.token);
