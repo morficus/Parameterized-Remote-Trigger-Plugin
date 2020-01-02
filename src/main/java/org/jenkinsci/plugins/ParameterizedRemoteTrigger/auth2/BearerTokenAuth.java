@@ -6,7 +6,6 @@ import java.net.URLConnection;
 import org.jenkinsci.Symbol;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.Base64Utils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -16,7 +15,7 @@ import hudson.model.Item;
 
 public class BearerTokenAuth extends Auth2 {
 
-    //private static final long serialVersionUID = 051380141338287L;
+    private static final long serialVersionUID = 3614172320192170597L;
 
     @Extension
     public static final Auth2Descriptor DESCRIPTOR = new BearerTokenAuthDescriptor();
@@ -83,12 +82,10 @@ public class BearerTokenAuth extends Auth2 {
             return false;
         BearerTokenAuth other = (BearerTokenAuth) obj;
         if (token == null) {
-            if (other.token != null)
-                return false;
-        } else if (!token.equals(other.token)) {
-            return false;
+            if (other.token == null) {
+                return true;
+            }
         }
-        return true;
+        return token.equals(other.token);
     }
-
 }
