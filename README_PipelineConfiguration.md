@@ -74,6 +74,9 @@ Authentication can be configured globally in the system configuration or set/ove
 The following authentication types are available:
 - **Token Authentication** The specified user id and Jenkins API token is used.<br>
   ```auth: TokenAuth(apiToken: '<theApiToken>', userName: '<userName>')```
+- **Bearer Token Authentication** The specified token is inserted to a "Authentication: Bearer" header in REST API requests.<br>
+  This is useful when the Jenkins deployment is fronted by a token authentication mechanism (such as when running on Red Hat OpenShift)<br>
+  ```auth: BearerTokenAuth(token: '<token>')```
 - **Credentials Authentication** The specified Jenkins Credentials are used. This can be either user/password or user/API Token.<br>
   ```auth: CredentialsAuth(credentials: '<credentialId>')```
 - **No Authentication** No Authorization header will be sent, independent of the global 'remote host' settings.<br>

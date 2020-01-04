@@ -10,6 +10,20 @@ import org.junit.Test;
 public class Auth2Test {
 
     @Test
+    public void testBearerTokenAuthCloneBehaviour() throws CloneNotSupportedException {
+        BearerTokenAuth original = new BearerTokenAuth();
+        original.setToken("original");
+        BearerTokenAuth clone = (BearerTokenAuth)original.clone();
+        verifyEqualsHashCode(original, clone);
+
+        //Test changing clone
+        clone.setToken("changed");
+        verifyEqualsHashCode(original, clone, false);
+        assertEquals("original", original.getToken());
+        assertEquals("changed", clone.getToken());
+    }
+
+    @Test
     public void testCredentialsAuthCloneBehaviour() throws CloneNotSupportedException {
         CredentialsAuth original = new CredentialsAuth();
         original.setCredentials("original");
