@@ -1,3 +1,18 @@
+# 3.1.1 (Jan 4th, 2020)
+### New feature
+
+* Support barrier token authentication ([2b067fe](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/2b067fe963d4d68cef496062b5191e4017b715fd))
+
+### Improvement
+
+* Enhance exception handling of json output ([4642fc6](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/4642fc6d1ee6a09de552a83ae598d0bdfecf6d41))
+* Remove semaphore from serialization ([83a8c0a](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/83a8c0a386838718b5af72c4ff67c8c0efadab3d))
+
+### Bug fixes
+
+* None
+
+
 # 3.1.0 (Oct 3rd, 2019)
 ### New feature
 
