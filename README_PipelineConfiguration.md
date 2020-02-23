@@ -153,6 +153,7 @@ def handle = triggerRemoteJob(
 while( !handle.isFinished() ) {
     echo 'Current Status: ' + handle.getBuildStatus().toString();
     sleep 5
+    handle.updateBuildStatus()
 }
 echo handle.getBuildStatus().toString();
 ```
