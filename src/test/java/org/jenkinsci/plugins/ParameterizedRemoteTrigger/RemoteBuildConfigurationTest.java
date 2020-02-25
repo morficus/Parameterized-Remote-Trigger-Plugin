@@ -12,6 +12,7 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -451,6 +452,16 @@ public class RemoteBuildConfigurationTest {
         assertEquals("xxx", RemoteBuildConfiguration.removeHashParameters("xxx"));
         assertEquals("http://test:8080/MyJob", RemoteBuildConfiguration.removeHashParameters("http://test:8080/MyJob#asdsad"));
         assertEquals("xxx", RemoteBuildConfiguration.removeHashParameters("xxx#zzz"));
+    }
+
+    @Test @WithoutJenkins
+    public void testGenerateEffectiveRemoteBuildURL() throws Exception {
+        URL remoteBuildURL = new URL("http://test:8080/job/Abc/3/");
+
+        assertEquals(new URL("https://foobar:8443/job/Abc/3/"), RemoteBuildConfiguration.generateEffectiveRemoteBuildURL(remoteBuildURL, "https://foobar:8443"));
+        assertEquals(new URL("http://foobar:8888/job/Abc/3/"), RemoteBuildConfiguration.generateEffectiveRemoteBuildURL(remoteBuildURL, "http://foobar:8888"));
+        assertEquals(new URL("https://foobar/job/Abc/3/"), RemoteBuildConfiguration.generateEffectiveRemoteBuildURL(remoteBuildURL, "https://foobar"));
+        assertEquals(new URL("http://foobar/job/Abc/3/"), RemoteBuildConfiguration.generateEffectiveRemoteBuildURL(remoteBuildURL, "http://foobar"));
     }
 
     @Test @WithoutJenkins
