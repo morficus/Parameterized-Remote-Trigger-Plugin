@@ -841,21 +841,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			}
 			QueueItemData queueItem = getQueueItemData(queueId, context);
 			if (queueItem.isExecuted()) {
-				URL effectiveRemoteBuildURL = queueItem.getBuildURL();
-				try {
-					URI effectiveUri = new URI(context.effectiveRemoteServer.getAddress());
-					String effectiveHostname = effectiveUri.getHost();
-					URL remoteURL = queueItem.getBuildURL();
-					if (remoteURL != null) {
-						URI remoteUri = remoteURL.toURI();
-						String remoteHostname = remoteUri.getHost();
-						String effectiveRemoteAddress = remoteUri.toString().replaceAll(remoteHostname,
-								effectiveHostname);
-						effectiveRemoteBuildURL = new URL(effectiveRemoteAddress);
-					}
-				} catch (URISyntaxException ex) {
-					throw new AbortException(String.format("Unexpected syntax error: %s.", ex.toString()));
-				}
+				URL remoteBuildURL = queueItem.getBuildURL();
+				String effectiveRemoteServerAddress = context.effectiveRemoteServer.getAddress();
+				URL effectiveRemoteBuildURL = generateEffectiveRemoteBuildURL(remoteBuildURL, effectiveRemoteServerAddress);
 				buildInfo.setBuildData(queueItem.getBuildNumber(), effectiveRemoteBuildURL);
 			}
 			return buildInfo;
@@ -880,6 +868,24 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		} catch (Exception ignored) {
 		}
 		return buildInfo;
+	}
+
+	protected static URL generateEffectiveRemoteBuildURL(URL remoteBuildURL, String effectiveRemoteServerAddress) throws AbortException {
+		if (effectiveRemoteServerAddress == null || remoteBuildURL == null) {
+			return remoteBuildURL;
+		}
+
+		try {
+			URI effectiveUri = new URI(effectiveRemoteServerAddress);
+			return new URL(
+					effectiveUri.getScheme(),
+					effectiveUri.getHost(),
+					effectiveUri.getPort(),
+					remoteBuildURL.getPath()
+			);
+		} catch (URISyntaxException | MalformedURLException ex) {
+			throw new AbortException(String.format("Unexpected syntax error: %s.", ex.toString()));
+		}
 	}
 
 	private String printOffsetConsoleOutput(BuildContext context, String offset, RemoteBuildInfo buildInfo)
