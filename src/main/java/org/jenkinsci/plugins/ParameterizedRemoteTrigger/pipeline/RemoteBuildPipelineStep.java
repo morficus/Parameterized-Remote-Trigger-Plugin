@@ -32,6 +32,7 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BasicBuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
@@ -313,7 +314,7 @@ public class RemoteBuildPipelineStep extends Step {
 	}
 
 	public int getPollInterval() {
-		return remoteBuildConfig.getPollInterval();
+		return remoteBuildConfig.getPollInterval(RemoteBuildStatus.RUNNING);
 	}
 
 	public boolean getBlockBuildUntilComplete() {

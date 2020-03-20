@@ -22,6 +22,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.TokenAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.RemoteBuildPipelineStep;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -178,7 +179,7 @@ public class RemoteBuildConfigurationTest {
       assertEquals(false, config.getOverrideAuth());
       assertEquals("", config.getParameterFile());
       assertEquals("", config.getParameters());
-      assertEquals(10, config.getPollInterval());
+      assertEquals(10, config.getPollInterval(RemoteBuildStatus.RUNNING));
       assertEquals(false, config.getPreventRemoteBuildQueue());
       assertEquals(null, config.getRemoteJenkinsName());
       assertEquals(false, config.getShouldNotFailBuild());
