@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -133,6 +135,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	@DataBoundConstructor
 	public RemoteBuildConfiguration() {
+		CookieManager cookieManager = new CookieManager();
+		CookieHandler.setDefault(cookieManager);
 		pollInterval = DEFAULT_POLLINTERVALL;
 	}
 
