@@ -92,11 +92,15 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 */
 	private final static Auth2 DEFAULT_AUTH = NullAuth.INSTANCE;
 
+	private static final int DEFAULT_HTTP_GET_READ_TIMEOUT = 10000;
+	private static final int DEFAULT_HTTP_POST_READ_TIMEOUT = 30000;
+
 	/**
 	 * The TTL value of all `queued` items is only 5 minutes.
 	 * That is why we have to ignore user specified poll interval for such items.
 	 */
 	private static final int QUEUED_ITEMS_POLLINTERVALL = 30;
+
 	private static final int DEFAULT_POLLINTERVALL = 10;
 	private static final int connectionRetryLimit = 5;
 
@@ -114,6 +118,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean trustAllCertificates;
 	private boolean overrideTrustAllCertificates;
 	private boolean preventRemoteBuildQueue;
+	private int httpPostReadTimeout;
+	private int httpGetReadTimeout;
 	private int pollInterval;
 	private boolean blockBuildUntilComplete;
 	private String job;
@@ -135,9 +141,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	@DataBoundConstructor
 	public RemoteBuildConfiguration() {
+		httpGetReadTimeout = DEFAULT_HTTP_GET_READ_TIMEOUT;
+		httpPostReadTimeout = DEFAULT_HTTP_POST_READ_TIMEOUT;
+		pollInterval = DEFAULT_POLLINTERVALL;
 		CookieManager cookieManager = new CookieManager();
 		CookieHandler.setDefault(cookieManager);
-		pollInterval = DEFAULT_POLLINTERVALL;
 	}
 
 	/*
@@ -209,6 +217,22 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	@DataBoundSetter
 	public void setPreventRemoteBuildQueue(boolean preventRemoteBuildQueue) {
 		this.preventRemoteBuildQueue = preventRemoteBuildQueue;
+	}
+
+	@DataBoundSetter
+	public void setHttpGetReadTimeout(int readTimeout) {
+		if (readTimeout < 1000)
+			this.httpGetReadTimeout = DEFAULT_HTTP_GET_READ_TIMEOUT;
+		else
+			this.httpGetReadTimeout = readTimeout;
+	}
+
+	@DataBoundSetter
+	public void setHttpPostReadTimeout(int readTimeout) {
+		if (readTimeout < 1000)
+			this.httpPostReadTimeout = DEFAULT_HTTP_POST_READ_TIMEOUT;
+		else
+			this.httpPostReadTimeout = readTimeout;
 	}
 
 	@DataBoundSetter
@@ -671,8 +695,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 		try {
 			ConnectionResponse responseRemoteJob = HttpHelper.tryPost(triggerUrlString, context, cleanedParams,
-					this.getPollInterval(buildInfo.getStatus()), this.getConnectionRetryLimit(), this.getAuth2(), getLock(triggerUrlString),
-					isUseCrumbCache());
+					this.getHttpPostReadTimeout(), this.getPollInterval(buildInfo.getStatus()), this.getConnectionRetryLimit(),
+					this.getAuth2(), getLock(triggerUrlString), isUseCrumbCache());
 			QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
 			buildInfo.setQueueId(queueItem.getId());
 			buildInfo = updateBuildInfo(buildInfo, context);
@@ -927,7 +951,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * @throws IOException          if any HTTP error occurred.
 	 */
 	public ConnectionResponse doGet(String urlString, BuildContext context, RemoteBuildStatus remoteBuildStatus) throws IOException, InterruptedException {
-		return HttpHelper.tryGet(urlString, context, this.getPollInterval(remoteBuildStatus), this.getConnectionRetryLimit(),
+		return HttpHelper.tryGet(urlString, context, this.getHttpGetReadTimeout(),
+				this.getPollInterval(remoteBuildStatus), this.getConnectionRetryLimit(),
 				this.getAuth2(), getLock(urlString));
 	}
 
@@ -1012,6 +1037,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 */
 	public String getRemoteJenkinsUrl() {
 		return trimToNull(remoteJenkinsUrl);
+	}
+
+	public int getHttpGetReadTimeout() {
+		return httpGetReadTimeout;
+	}
+
+	public int getHttpPostReadTimeout() {
+		return httpPostReadTimeout;
 	}
 
 	/**
