@@ -24,7 +24,8 @@ public class RestUtils {
 		String cancelQueueUrl = String.format("%s/queue/cancelItem?id=%s", rootUrl, handle.getQueueId());
 		ConnectionResponse resp = null;
 		try {
-			resp = HttpHelper.tryPost(cancelQueueUrl, context, null, remoteConfig.getPollInterval(RemoteBuildStatus.QUEUED) * 2, 0,
+			resp = HttpHelper.tryPost(cancelQueueUrl, context, null, remoteConfig.getHttpPostReadTimeout(),
+					remoteConfig.getPollInterval(RemoteBuildStatus.QUEUED) * 2, 0,
 					remoteConfig.getAuth2(), remoteConfig.getLock(cancelQueueUrl), remoteConfig.isUseCrumbCache());
 		} catch (ExceedRetryLimitException e) {
 			// Due to https://issues.jenkins-ci.org/browse/JENKINS-21311, we can't tell
@@ -41,9 +42,9 @@ public class RestUtils {
 
 		RemoteBuildInfo buildInfo = handle.getBuildInfo();
 		String stopJobUrl = String.format("%sstop", buildInfo.getBuildURL());
-		ConnectionResponse resp = HttpHelper.tryPost(stopJobUrl, context, null, remoteConfig.getPollInterval(buildInfo.getStatus()),
-				remoteConfig.getConnectionRetryLimit(), remoteConfig.getAuth2(), remoteConfig.getLock(stopJobUrl),
-				remoteConfig.isUseCrumbCache());
+		ConnectionResponse resp = HttpHelper.tryPost(stopJobUrl, context, null, remoteConfig.getHttpPostReadTimeout(),
+				remoteConfig.getPollInterval(buildInfo.getStatus()), remoteConfig.getConnectionRetryLimit(),
+				remoteConfig.getAuth2(), remoteConfig.getLock(stopJobUrl), remoteConfig.isUseCrumbCache());
 		context.logger.println(String.format("Remote Job:%s was aborted!", buildInfo.getBuildURL()));
 		return resp;
 	}

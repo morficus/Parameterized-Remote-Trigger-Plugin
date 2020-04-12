@@ -120,6 +120,16 @@ public class RemoteBuildPipelineStep extends Step {
 	}
 
 	@DataBoundSetter
+	public void setHttpGetReadTimeout(int readTimeout) {
+		remoteBuildConfig.setHttpGetReadTimeout(readTimeout);
+	}
+
+	@DataBoundSetter
+	public void setHttpPostReadTimeout(int readTimeout) {
+		remoteBuildConfig.setHttpPostReadTimeout(readTimeout);
+	}
+
+	@DataBoundSetter
 	public void setPollInterval(int pollInterval) {
 		remoteBuildConfig.setPollInterval(pollInterval);
 	}
@@ -311,6 +321,14 @@ public class RemoteBuildPipelineStep extends Step {
 
 	public boolean getPreventRemoteBuildQueue() {
 		return remoteBuildConfig.getPreventRemoteBuildQueue();
+	}
+
+	public int getHttpGetReadTimeout() {
+		return remoteBuildConfig.getHttpGetReadTimeout();
+	}
+
+	public int getHttpPostReadTimeout() {
+		return remoteBuildConfig.getHttpPostReadTimeout();
 	}
 
 	public int getPollInterval() {

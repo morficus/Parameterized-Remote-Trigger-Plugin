@@ -116,6 +116,8 @@ public class RemoteBuildConfigurationTest {
         configuration.setPreventRemoteBuildQueue(false);
         configuration.setBlockBuildUntilComplete(true);
         configuration.setPollInterval(1);
+        configuration.setHttpGetReadTimeout(1000);
+        configuration.setHttpPostReadTimeout(1000);
         configuration.setUseCrumbCache(false);
         configuration.setUseJobInfoCache(false);
         configuration.setEnhancedLogging(true);
@@ -179,6 +181,8 @@ public class RemoteBuildConfigurationTest {
       assertEquals(false, config.getOverrideAuth());
       assertEquals("", config.getParameterFile());
       assertEquals("", config.getParameters());
+      assertEquals(10000, config.getHttpGetReadTimeout());
+      assertEquals(30000, config.getHttpPostReadTimeout());
       assertEquals(10, config.getPollInterval(RemoteBuildStatus.RUNNING));
       assertEquals(false, config.getPreventRemoteBuildQueue());
       assertEquals(null, config.getRemoteJenkinsName());
@@ -200,6 +204,8 @@ public class RemoteBuildConfigurationTest {
       assertTrue(config.getAuth() instanceof NullAuth);
       assertEquals("", config.getParameterFile());
       assertEquals("", config.getParameters());
+      assertEquals(10000, config.getHttpGetReadTimeout());
+      assertEquals(30000, config.getHttpPostReadTimeout());
       assertEquals(10, config.getPollInterval());
       assertEquals(false, config.getPreventRemoteBuildQueue());
       assertEquals(null, config.getRemoteJenkinsName());
