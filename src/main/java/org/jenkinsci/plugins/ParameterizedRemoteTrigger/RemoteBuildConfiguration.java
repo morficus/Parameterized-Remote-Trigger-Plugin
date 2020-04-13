@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -142,6 +144,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		httpGetReadTimeout = DEFAULT_HTTP_GET_READ_TIMEOUT;
 		httpPostReadTimeout = DEFAULT_HTTP_POST_READ_TIMEOUT;
 		pollInterval = DEFAULT_POLLINTERVALL;
+		CookieManager cookieManager = new CookieManager();
+		CookieHandler.setDefault(cookieManager);
 	}
 
 	/*
