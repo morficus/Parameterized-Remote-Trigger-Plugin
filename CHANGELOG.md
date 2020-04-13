@@ -1,3 +1,19 @@
+
+# 3.1.2 (Apr 13th, 2020)
+### New feature
+
+* Support customization of HTTP read timeout for GET & POST ([b9b566a](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/b3841c54571dedee67c6a4a08e1cefcebd5c8760))
+
+### Improvement
+
+* Add cookie handler (Jenkins 2.176.2) ([aeac218](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/aeac218e2360c79107456b13e2c9a74ccc44ebcd))
+* Documentation: Add handler.updateBuildStatus() to non-blocking example ([8268b12](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/8268b1276d1368f5eafb7d5a611588a9100e2eb8))
+
+### Bug fixes
+
+* Keep remote Jenkins URL scheme ([38e2699](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/38e2699e0e725b6ff0d176cf25d8203811c8260d))
+* Set the uplimit when polling queue item information. ([ec05bba](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/ec05bbad0b47135c3f88ad051da34766bea9ff33))
+
 # 3.1.1 (Jan 4th, 2020)
 ### New feature
 
