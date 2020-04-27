@@ -115,7 +115,7 @@ public class QueueItemData
         if (isLeft()) {
             try {
                 JSONObject remoteJobInfo = queueResponse.getJSONObject("executable");
-                if (remoteJobInfo != null) {
+                if (!(remoteJobInfo.isNullObject())) {
                     try {
                         buildNumber = remoteJobInfo.getInt("number");
                     } catch (JSONException e) {
