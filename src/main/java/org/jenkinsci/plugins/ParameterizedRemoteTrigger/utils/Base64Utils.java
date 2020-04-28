@@ -34,6 +34,8 @@ public class Base64Utils
      *           the user password.
      * @param context
      *            the context of this Builder/BuildStep.
+     * @param applyMacro
+     *            boolean to control if macro replacements occur
      * @return the base64 encoded authorization.
      * @throws IOException
      *            if there is a failure while replacing token macros, or
@@ -41,13 +43,15 @@ public class Base64Utils
      */
     @Nonnull
     public static String generateAuthorizationHeaderValue(String authType, String user, String password,
-                BuildContext context) throws IOException
+                BuildContext context, boolean applyMacro) throws IOException
     {
         if (isEmpty(user)) throw new IllegalArgumentException("user null or empty");
         if (password == null) throw new IllegalArgumentException("password null"); // is empty password allowed for Basic Auth?
         String authTypeKey = getAuthType(authType);
         String tuple = user + ":" + password;
-        tuple = TokenMacroUtils.applyTokenMacroReplacements(tuple, context);
+        if (applyMacro) {
+            tuple = TokenMacroUtils.applyTokenMacroReplacements(tuple, context);
+        }
         String encodedTuple = Base64Utils.encode(tuple);
         return authTypeKey + " " + encodedTuple;
     }

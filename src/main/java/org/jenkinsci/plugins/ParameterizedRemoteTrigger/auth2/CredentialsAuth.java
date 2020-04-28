@@ -122,7 +122,7 @@ public class CredentialsAuth extends Auth2 {
         Jenkins jenkins = Jenkins.getInstance();
         if (jenkins != null) {
             Item item = jenkins.getItem(context.currentItem, jenkins.getItem("/"));
-            String authHeaderValue = Base64Utils.generateAuthorizationHeaderValue(AUTHTYPE_BASIC, getUserName(item), getPassword(item), context);
+            String authHeaderValue = Base64Utils.generateAuthorizationHeaderValue(AUTHTYPE_BASIC, getUserName(item), getPassword(item), context, false);
             connection.setRequestProperty("Authorization", authHeaderValue);
         }
     }

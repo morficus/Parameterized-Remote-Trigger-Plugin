@@ -50,7 +50,7 @@ public class TokenAuth extends Auth2 {
 
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
-        String authHeaderValue = Base64Utils.generateAuthorizationHeaderValue(AUTHTYPE_BASIC, getUserName(), getApiToken(), context);
+        String authHeaderValue = Base64Utils.generateAuthorizationHeaderValue(AUTHTYPE_BASIC, getUserName(), getApiToken(), context, true);
         connection.setRequestProperty("Authorization", authHeaderValue);
     }
 
