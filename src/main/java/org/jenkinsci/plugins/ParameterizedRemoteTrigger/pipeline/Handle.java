@@ -19,7 +19,6 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildInfo;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.HttpHelper;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 
 import hudson.model.Result;
