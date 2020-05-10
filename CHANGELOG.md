@@ -1,3 +1,11 @@
+# 3.1.3 (May 10th, 2020)
+
+### Improvement
+
+* Support case insensitive HTTP header  ([a7e69eb](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/68))
+* Token-macro shouldn't work on Jenkins credential auth. ([bf25943](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/71))
+* Check null json object by isNullObject instead of null checking. ([f414c32](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/70))
+
 
 # 3.1.2 (Apr 13th, 2020)
 ### New feature
