@@ -26,6 +26,7 @@ import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
 /**
  * We need to keep this for compatibility - old config deserialization!
@@ -161,7 +162,7 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
             return new Auth(Auth.NONE, null, null, null);
         } else if (auth instanceof TokenAuth) {
             TokenAuth tokenAuth = (TokenAuth) auth;
-            return new Auth(Auth.API_TOKEN, tokenAuth.getUserName(), tokenAuth.getApiToken(), null);
+            return new Auth(Auth.API_TOKEN, tokenAuth.getUserName(), tokenAuth.getApiToken().getPlainText(), null);
         } else if (auth instanceof CredentialsAuth) {
             CredentialsAuth credAuth = (CredentialsAuth) auth;
             try {
@@ -189,7 +190,7 @@ public class Auth extends AbstractDescribableImpl<Auth> implements Serializable 
         } else if (Auth.API_TOKEN.equals(authType)) {
             TokenAuth newAuth = new TokenAuth();
             newAuth.setUserName(oldAuth.getUsername());
-            newAuth.setApiToken(oldAuth.getApiToken());
+            newAuth.setApiToken(Secret.fromString(oldAuth.getApiToken()));
             return newAuth;
         } else if (Auth.CREDENTIALS_PLUGIN.equals(authType)) {
             CredentialsAuth newAuth = new CredentialsAuth();

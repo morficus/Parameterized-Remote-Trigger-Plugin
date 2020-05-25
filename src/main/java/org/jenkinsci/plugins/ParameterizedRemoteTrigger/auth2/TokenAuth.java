@@ -13,6 +13,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import hudson.Extension;
 import hudson.model.Item;
+import hudson.util.Secret;
 
 public class TokenAuth extends Auth2 {
 
@@ -22,7 +23,7 @@ public class TokenAuth extends Auth2 {
     public static final Auth2Descriptor DESCRIPTOR = new TokenAuthDescriptor();
 
     private String userName;
-    private String apiToken;
+    private Secret apiToken;
 
     @DataBoundConstructor
     public TokenAuth() {
@@ -40,17 +41,17 @@ public class TokenAuth extends Auth2 {
     }
 
     @DataBoundSetter
-    public void setApiToken(String apiToken) {
+    public void setApiToken(Secret apiToken) {
         this.apiToken = apiToken;
     }
 
-    public String getApiToken() {
+    public Secret getApiToken() {
         return this.apiToken;
     }
 
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
-        String authHeaderValue = Base64Utils.generateAuthorizationHeaderValue(AUTHTYPE_BASIC, getUserName(), getApiToken(), context, true);
+        String authHeaderValue = Base64Utils.generateAuthorizationHeaderValue(AUTHTYPE_BASIC, getUserName(), getApiToken().getPlainText(), context, true);
         connection.setRequestProperty("Authorization", authHeaderValue);
     }
 

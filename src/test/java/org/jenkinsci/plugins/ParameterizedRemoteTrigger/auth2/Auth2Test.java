@@ -7,6 +7,8 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import hudson.util.Secret;
+
 public class Auth2Test {
 
     @Test
@@ -40,13 +42,13 @@ public class Auth2Test {
     @Test
     public void testTokenAuthCloneBehaviour() throws CloneNotSupportedException {
         TokenAuth original = new TokenAuth();
-        original.setApiToken("original");
+        original.setApiToken(Secret.fromString("original"));
         original.setUserName("original");
         TokenAuth clone = (TokenAuth)original.clone();
         verifyEqualsHashCode(original, clone);
 
         //Test changing clone
-        clone.setApiToken("changed");
+        clone.setApiToken(Secret.fromString("changed"));
         clone.setUserName("changed");
         verifyEqualsHashCode(original, clone, false);
         assertEquals("original", original.getApiToken());
