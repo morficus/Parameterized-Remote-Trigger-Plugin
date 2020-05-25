@@ -5,11 +5,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 import hudson.util.Secret;
 
 public class Auth2Test {
+	
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
 
     @Test
     public void testBearerTokenAuthCloneBehaviour() throws CloneNotSupportedException {
@@ -51,9 +56,9 @@ public class Auth2Test {
         clone.setApiToken(Secret.fromString("changed"));
         clone.setUserName("changed");
         verifyEqualsHashCode(original, clone, false);
-        assertEquals("original", original.getApiToken());
+        assertEquals("original", original.getApiToken().getPlainText());
         assertEquals("original", original.getUserName());
-        assertEquals("changed", clone.getApiToken());
+        assertEquals("changed", clone.getApiToken().getPlainText());
         assertEquals("changed", clone.getUserName());
     }
 

@@ -8,7 +8,9 @@ import static org.junit.Assert.assertTrue;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.CredentialsAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.TokenAuth;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 import hudson.util.Secret;
 
@@ -20,6 +22,9 @@ public class RemoteJenkinsServerTest {
     private final static String ADDRESS = "http://www.example.org:8443";
     private final static String DISPLAY_NAME = "My example server.";
     private final static boolean HAS_BUILD_TOKEN_ROOT_SUPPORT = true;
+    
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
 
     @Test
     public void testCloneBehaviour() throws Exception {
