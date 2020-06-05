@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.net.URLConnection;
 
 import org.jenkinsci.Symbol;
-
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import hudson.Extension;
 import hudson.model.Item;
+import hudson.util.Secret;
 
 
 public class BearerTokenAuth extends Auth2 {
@@ -20,7 +20,7 @@ public class BearerTokenAuth extends Auth2 {
     @Extension
     public static final Auth2Descriptor DESCRIPTOR = new BearerTokenAuthDescriptor();
 
-    private String token;
+    private Secret token;
 
     @DataBoundConstructor
     public BearerTokenAuth() {
@@ -28,17 +28,17 @@ public class BearerTokenAuth extends Auth2 {
     }
 
     @DataBoundSetter
-    public void setToken(String token) {
+    public void setToken(Secret token) {
         this.token = token;
     }
 
-    public String getToken() {
+    public Secret getToken() {
         return this.token;
     }
 
     @Override
     public void setAuthorizationHeader(URLConnection connection, BuildContext context) throws IOException {
-        connection.setRequestProperty("Authorization", "Bearer: " + getToken());
+        connection.setRequestProperty("Authorization", "Bearer: " + getToken().getPlainText());
     }
 
     @Override

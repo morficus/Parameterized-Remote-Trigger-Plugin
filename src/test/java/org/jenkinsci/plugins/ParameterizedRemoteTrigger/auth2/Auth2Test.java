@@ -19,15 +19,15 @@ public class Auth2Test {
     @Test
     public void testBearerTokenAuthCloneBehaviour() throws CloneNotSupportedException {
         BearerTokenAuth original = new BearerTokenAuth();
-        original.setToken("original");
+        original.setToken(Secret.fromString("original"));
         BearerTokenAuth clone = (BearerTokenAuth)original.clone();
         verifyEqualsHashCode(original, clone);
 
         //Test changing clone
-        clone.setToken("changed");
+        clone.setToken(Secret.fromString("changed"));
         verifyEqualsHashCode(original, clone, false);
-        assertEquals("original", original.getToken());
-        assertEquals("changed", clone.getToken());
+        assertEquals("original", original.getToken().getPlainText());
+        assertEquals("changed", clone.getToken().getPlainText());
     }
 
     @Test
