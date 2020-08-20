@@ -5,22 +5,29 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+
+import hudson.util.Secret;
 
 public class Auth2Test {
+	
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
 
     @Test
     public void testBearerTokenAuthCloneBehaviour() throws CloneNotSupportedException {
         BearerTokenAuth original = new BearerTokenAuth();
-        original.setToken("original");
+        original.setToken(Secret.fromString("original"));
         BearerTokenAuth clone = (BearerTokenAuth)original.clone();
         verifyEqualsHashCode(original, clone);
 
         //Test changing clone
-        clone.setToken("changed");
+        clone.setToken(Secret.fromString("changed"));
         verifyEqualsHashCode(original, clone, false);
-        assertEquals("original", original.getToken());
-        assertEquals("changed", clone.getToken());
+        assertEquals("original", original.getToken().getPlainText());
+        assertEquals("changed", clone.getToken().getPlainText());
     }
 
     @Test
@@ -40,18 +47,18 @@ public class Auth2Test {
     @Test
     public void testTokenAuthCloneBehaviour() throws CloneNotSupportedException {
         TokenAuth original = new TokenAuth();
-        original.setApiToken("original");
+        original.setApiToken(Secret.fromString("original"));
         original.setUserName("original");
         TokenAuth clone = (TokenAuth)original.clone();
         verifyEqualsHashCode(original, clone);
 
         //Test changing clone
-        clone.setApiToken("changed");
+        clone.setApiToken(Secret.fromString("changed"));
         clone.setUserName("changed");
         verifyEqualsHashCode(original, clone, false);
-        assertEquals("original", original.getApiToken());
+        assertEquals("original", original.getApiToken().getPlainText());
         assertEquals("original", original.getUserName());
-        assertEquals("changed", clone.getApiToken());
+        assertEquals("changed", clone.getApiToken().getPlainText());
         assertEquals("changed", clone.getUserName());
     }
 

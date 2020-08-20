@@ -44,6 +44,7 @@ import hudson.security.SecurityRealm;
 import hudson.security.AuthorizationStrategy.Unsecured;
 import hudson.security.csrf.DefaultCrumbIssuer;
 import hudson.util.LogTaskListener;
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
 
 public class RemoteBuildConfigurationTest {
@@ -132,7 +133,7 @@ public class RemoteBuildConfigurationTest {
         if(authenticate) {
             TokenAuth tokenAuth = new TokenAuth();
             tokenAuth.setUserName(testUser.getId());
-            tokenAuth.setApiToken(testUserToken);
+            tokenAuth.setApiToken(Secret.fromString(testUserToken));
             configuration.setAuth2(tokenAuth);
         }
 

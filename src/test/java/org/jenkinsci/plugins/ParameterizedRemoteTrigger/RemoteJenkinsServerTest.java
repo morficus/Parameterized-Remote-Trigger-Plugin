@@ -8,7 +8,11 @@ import static org.junit.Assert.assertTrue;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.CredentialsAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.TokenAuth;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+
+import hudson.util.Secret;
 
 
 public class RemoteJenkinsServerTest {
@@ -18,11 +22,14 @@ public class RemoteJenkinsServerTest {
     private final static String ADDRESS = "http://www.example.org:8443";
     private final static String DISPLAY_NAME = "My example server.";
     private final static boolean HAS_BUILD_TOKEN_ROOT_SUPPORT = true;
+    
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
 
     @Test
     public void testCloneBehaviour() throws Exception {
         TokenAuth auth = new TokenAuth();
-        auth.setApiToken(TOKEN);
+        auth.setApiToken(Secret.fromString(TOKEN));
         auth.setUserName(USER);
 
         RemoteJenkinsServer server = new RemoteJenkinsServer();
@@ -55,11 +62,11 @@ public class RemoteJenkinsServerTest {
         //Test if clone is deep-copy or if server fields can be modified
         TokenAuth cloneAuth = (TokenAuth)clone.getAuth2();
         assertNotNull(cloneAuth);
-        cloneAuth.setApiToken("changed");
+        cloneAuth.setApiToken(Secret.fromString("changed"));
         cloneAuth.setUserName("changed");
         TokenAuth serverAuth = (TokenAuth)server.getAuth2();
         assertNotNull(serverAuth);
-        assertEquals("auth.apiToken", TOKEN, serverAuth.getApiToken());
+        assertEquals("auth.apiToken", TOKEN, serverAuth.getApiToken().getPlainText());
         assertEquals("auth.userName", USER, serverAuth.getUserName());
 
         //Test if clone.setAuth() affects original object
