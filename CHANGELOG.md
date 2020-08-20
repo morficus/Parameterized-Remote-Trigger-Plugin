@@ -1,3 +1,11 @@
+# 3.1.4 (Aug 20th, 2020)
+
+### Improvement
+
+* Update git repo in pom ([2b35305](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/72))
+* Retrieve only needed "doGetting" build fields. ([33065c3](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/pull/74))
+* Fix https://issues.jenkins-ci.org/browse/SECURITY-1625
+
 # 3.1.3 (May 10th, 2020)
 
 ### Improvement
