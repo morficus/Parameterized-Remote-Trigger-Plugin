@@ -96,8 +96,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private static final int DEFAULT_HTTP_POST_READ_TIMEOUT = 30000;
 
 	/**
-	 * The TTL value of all `queued` items is only 5 minutes.
-	 * That is why we have to ignore user specified poll interval for such items.
+	 * The TTL value of all `queued` items is only 5 minutes. That is why we have to
+	 * ignore user specified poll interval for such items.
 	 */
 	private static final int QUEUED_ITEMS_POLLINTERVALL = 30;
 
@@ -128,7 +128,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean enhancedLogging;
 	private boolean loadParamsFromFile;
 	private String parameterFile;
-	private int maxConn;
+	private int maxConn = 1;
 	private boolean useCrumbCache;
 	private boolean useJobInfoCache;
 	private boolean abortTriggeredJob;
@@ -189,7 +189,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	@DataBoundSetter
 	public void setMaxConn(int maxConn) {
-		this.maxConn = (maxConn > 5) ? 5 : maxConn;
+		this.maxConn = (maxConn > 5) ? 5 : (maxConn < 1) ? 1 : maxConn;
 	}
 
 	@DataBoundSetter
@@ -695,8 +695,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 		try {
 			ConnectionResponse responseRemoteJob = HttpHelper.tryPost(triggerUrlString, context, cleanedParams,
-					this.getHttpPostReadTimeout(), this.getPollInterval(buildInfo.getStatus()), this.getConnectionRetryLimit(),
-					this.getAuth2(), getLock(triggerUrlString), isUseCrumbCache());
+					this.getHttpPostReadTimeout(), this.getPollInterval(buildInfo.getStatus()),
+					this.getConnectionRetryLimit(), this.getAuth2(), getLock(triggerUrlString), isUseCrumbCache());
 			QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
 			buildInfo.setQueueId(queueItem.getId());
 			buildInfo = updateBuildInfo(buildInfo, context);
@@ -733,7 +733,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		}
 
 		while (buildInfo.isQueued()) {
-			context.logger.println("Waiting for " + this.getPollInterval(buildInfo.getStatus()) + " seconds until next poll.");
+			context.logger.println(
+					"Waiting for " + this.getPollInterval(buildInfo.getStatus()) + " seconds until next poll.");
 			Thread.sleep(this.getPollInterval(buildInfo.getStatus()) * 1000);
 			buildInfo = updateBuildInfo(buildInfo, context);
 			handle.setBuildInfo(buildInfo);
@@ -776,7 +777,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				if (this.getEnhancedLogging()) {
 					consoleOffset = printOffsetConsoleOutput(context, consoleOffset, buildInfo);
 				} else {
-					context.logger.println("  Waiting for " + this.getPollInterval(buildInfo.getStatus()) + " seconds until next poll.");
+					context.logger.println("  Waiting for " + this.getPollInterval(buildInfo.getStatus())
+							+ " seconds until next poll.");
 				}
 				Thread.sleep(this.getPollInterval(buildInfo.getStatus()) * 1000);
 				buildInfo = updateBuildInfo(buildInfo, context);
@@ -872,7 +874,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			if (queueItem.isExecuted()) {
 				URL remoteBuildURL = queueItem.getBuildURL();
 				String effectiveRemoteServerAddress = context.effectiveRemoteServer.getAddress();
-				URL effectiveRemoteBuildURL = generateEffectiveRemoteBuildURL(remoteBuildURL, effectiveRemoteServerAddress);
+				URL effectiveRemoteBuildURL = generateEffectiveRemoteBuildURL(remoteBuildURL,
+						effectiveRemoteServerAddress);
 				buildInfo.setBuildData(queueItem.getBuildNumber(), effectiveRemoteBuildURL);
 			}
 			return buildInfo;
@@ -899,19 +902,16 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return buildInfo;
 	}
 
-	protected static URL generateEffectiveRemoteBuildURL(URL remoteBuildURL, String effectiveRemoteServerAddress) throws AbortException {
+	protected static URL generateEffectiveRemoteBuildURL(URL remoteBuildURL, String effectiveRemoteServerAddress)
+			throws AbortException {
 		if (effectiveRemoteServerAddress == null || remoteBuildURL == null) {
 			return remoteBuildURL;
 		}
 
 		try {
 			URI effectiveUri = new URI(effectiveRemoteServerAddress);
-			return new URL(
-					effectiveUri.getScheme(),
-					effectiveUri.getHost(),
-					effectiveUri.getPort(),
-					remoteBuildURL.getPath()
-			);
+			return new URL(effectiveUri.getScheme(), effectiveUri.getHost(), effectiveUri.getPort(),
+					remoteBuildURL.getPath());
 		} catch (URISyntaxException | MalformedURLException ex) {
 			throw new AbortException(String.format("Unexpected syntax error: %s.", ex.toString()));
 		}
@@ -942,18 +942,19 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * Orchestrates all calls to the remote server. Also takes care of any
 	 * credentials or failed-connection retries.
 	 *
-	 * @param urlString the URL that needs to be called.
-	 * @param context   the context of this Builder/BuildStep.
+	 * @param urlString         the URL that needs to be called.
+	 * @param context           the context of this Builder/BuildStep.
 	 * @param remoteBuildStatus the build status of a remote build.
 	 * @return JSONObject a valid JSON object, or null.
 	 * @throws InterruptedException if any thread has interrupted the current
 	 *                              thread.
 	 * @throws IOException          if any HTTP error occurred.
 	 */
-	public ConnectionResponse doGet(String urlString, BuildContext context, RemoteBuildStatus remoteBuildStatus) throws IOException, InterruptedException {
+	public ConnectionResponse doGet(String urlString, BuildContext context, RemoteBuildStatus remoteBuildStatus)
+			throws IOException, InterruptedException {
 		return HttpHelper.tryGet(urlString, context, this.getHttpGetReadTimeout(),
-				this.getPollInterval(remoteBuildStatus), this.getConnectionRetryLimit(),
-				this.getAuth2(), getLock(urlString));
+				this.getPollInterval(remoteBuildStatus), this.getConnectionRetryLimit(), this.getAuth2(),
+				getLock(urlString));
 	}
 
 	private void logAuthInformation(BuildContext context) throws IOException {
@@ -1074,11 +1075,11 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	public int getPollInterval(RemoteBuildStatus remoteBuildStatus) {
 		switch (remoteBuildStatus) {
-			case NOT_TRIGGERED:
-			case QUEUED:
-				return QUEUED_ITEMS_POLLINTERVALL;
-			default:
-				return pollInterval;
+		case NOT_TRIGGERED:
+		case QUEUED:
+			return QUEUED_ITEMS_POLLINTERVALL;
+		default:
+			return pollInterval;
 		}
 	}
 
