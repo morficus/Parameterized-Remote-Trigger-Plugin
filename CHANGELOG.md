@@ -1,3 +1,10 @@
+# 3.1.5 (Oct 5th, 2020)
+
+### Improvement
+
+* [JENKINS-63819] Add maxConn default value & value checking
+* The plain text tokens are not allowed to set from pipeline directly since 3.1.4, mark builds after 3.1.4 for breaking changes.
+
 # 3.1.4 (Aug 20th, 2020)
 
 ### Improvement
