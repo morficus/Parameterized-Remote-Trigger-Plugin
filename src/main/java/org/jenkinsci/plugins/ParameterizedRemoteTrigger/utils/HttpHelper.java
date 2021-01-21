@@ -549,8 +549,8 @@ public class HttpHelper {
 			// If we have connectionRetryLimit set to > 0 then retry that many times.
 			if (numberOfAttempts <= retryLimit) {
 				context.logger.println(String.format(
-						"Connection to remote server failed %s, waiting to retry - %s seconds until next attempt. URL: %s, parameters: %s",
-						(responseCode == 0 ? "" : "[" + responseCode + "]"), pollInterval,
+						"Connection to remote server failed [%s], waiting to retry - %s seconds until next attempt. URL: %s, parameters: %s",
+						(responseCode == 0 ? e.getMessage() : responseCode), pollInterval,
 						getUrlWithoutParameters(urlString), parmsString));
 
 				// Sleep for 'pollInterval' seconds.
@@ -565,6 +565,11 @@ public class HttpHelper {
 						numberOfAttempts, pollInterval, retryLimit, overrideAuth, rawRespRef, isCrubmCacheEnabled);
 
 			} else {
+				context.logger.println(String.format(
+						"Connection to remote server failed [%s], number of retries exceeded. URL: %s, parameters: %s",
+						(responseCode == 0 ? e.getMessage() : responseCode),
+						getUrlWithoutParameters(urlString), parmsString));
+
 				// reached the maximum number of retries, time to fail
 				throw new ExceedRetryLimitException();
 			}
