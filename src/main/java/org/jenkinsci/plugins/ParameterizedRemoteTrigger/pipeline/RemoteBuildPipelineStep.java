@@ -54,7 +54,6 @@ import org.kohsuke.stapler.QueryParameter;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.FilePath;
-import hudson.Launcher;
 import hudson.model.Descriptor;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -200,7 +199,7 @@ public class RemoteBuildPipelineStep extends Step {
 		@Override
 		public Set<? extends Class<?>> getRequiredContext() {
 			Set<Class<?>> set = new HashSet<Class<?>>();
-			Collections.addAll(set, Run.class, FilePath.class, Launcher.class, TaskListener.class);
+			Collections.addAll(set, Run.class, TaskListener.class);
 			return set;
 		}
 
