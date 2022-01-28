@@ -99,6 +99,7 @@ The `Handle` object provides the following methods:
 - `RemoteBuildStatus getBuildStatus()` returns the current remote build status
 - `Result getBuildResult()` return the result of the remote build
 - `RemoteBuildStatus updateBuildStatusBlocking()` waits for completion and returns the build result
+- `RemoteBuildStatus updateBuildStatus()` update the handles build status. Required for getBuildInfo() etc. to yield updated results.
 - `boolean isFinished()` true if the remote build finished
 - `boolean isQueued()` true if the job is queued but not yet running
 - `String toString()`
