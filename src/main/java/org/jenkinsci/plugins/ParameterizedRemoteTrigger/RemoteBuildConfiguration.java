@@ -341,7 +341,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 					parameterList.add(sCurrentLine);
 				}
 			} else {
-				context.logger.println("[WARNING] workspace is null");
+				throw new AbortException("Workspace is null but parameter file is used. Looks like this step was started with \"agent: none\"");
 			}
 		} catch (InterruptedException | IOException e) {
 			context.logger.println(String.format("[WARNING] Failed loading parameters: %s", e.getMessage()));
