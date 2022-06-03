@@ -1,15 +1,20 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
 import static java.lang.Math.min;
+import static java.util.Collections.singletonMap;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
-import static org.apache.commons.lang.StringUtils.stripAll;
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL;
 
-import java.io.BufferedReader;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import net.sf.json.JSONObject;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNullableByDefault;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.CookieHandler;
@@ -18,9 +23,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,15 +30,13 @@ import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNullableByDefault;
-
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.JobParameters;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.JobParameters.ParametersDescriptor;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.MapParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline.Handle;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItem;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.QueueItemData;
@@ -64,7 +64,6 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Item;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -74,12 +73,9 @@ import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.tasks.SimpleBuildStep;
-import net.sf.json.JSONObject;
 
 /**
- *
  * @author Maurice W.
- *
  */
 @ParametersAreNullableByDefault
 public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep, Serializable {
@@ -91,6 +87,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * override potential global config
 	 */
 	private final static Auth2 DEFAULT_AUTH = NullAuth.INSTANCE;
+	private final static JobParameters DEFAULT_PARAMETERS = new MapParameters();
 
 	private static final int DEFAULT_HTTP_GET_READ_TIMEOUT = 10000;
 	private static final int DEFAULT_HTTP_POST_READ_TIMEOUT = 30000;
@@ -109,11 +106,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 *
 	 * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
 	 */
+	@SuppressWarnings("DeprecatedIsStillUsed")
 	private transient List<Auth> auth;
 
 	private String remoteJenkinsName;
 	private String remoteJenkinsUrl;
 	private Auth2 auth2;
+
+	private JobParameters parameters2;
 	private boolean shouldNotFailBuild;
 	private boolean trustAllCertificates;
 	private boolean overrideTrustAllCertificates;
@@ -124,9 +124,20 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	private boolean blockBuildUntilComplete;
 	private String job;
 	private String token;
+	/**
+	 * We need to keep this for compatibility - old config deserialization!
+	 *
+	 * @deprecated since 3.1.6-SNAPSHOT - use {@link JobParameters} instead.
+	 */
+	@SuppressWarnings("DeprecatedIsStillUsed")
 	private String parameters;
 	private boolean enhancedLogging;
-	private boolean loadParamsFromFile;
+	/**
+	 * We need to keep this for compatibility - old config deserialization!
+	 *
+	 * @deprecated since 3.1.6-SNAPSHOT - use {@link JobParameters} instead.
+	 */
+	@SuppressWarnings("DeprecatedIsStillUsed")
 	private String parameterFile;
 	private int maxConn = 1;
 	private boolean useCrumbCache;
@@ -163,6 +174,14 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			}
 		}
 		auth = null;
+
+		// migrate parameters/parameterFile to JobParameters
+		if (parameters2 == null) {
+			parameters2 = JobParameters.migrateOldParameters(parameters, parameterFile);
+		}
+		parameters = null;
+		parameterFile = null;
+
 		if (hostLocks == null) {
 			hostLocks = new HashMap<>();
 		}
@@ -189,7 +208,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	@DataBoundSetter
 	public void setMaxConn(int maxConn) {
-		this.maxConn = (maxConn > 5) ? 5 : (maxConn < 1) ? 1 : maxConn;
+		this.maxConn = (maxConn > 5) ? 5 : Math.max(maxConn, 1);
 	}
 
 	@DataBoundSetter
@@ -207,6 +226,13 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		this.auth2 = auth;
 		// disable old auth
 		this.auth = null;
+	}
+
+	@DataBoundSetter
+	public void setParameters2(JobParameters parameters2) {
+		this.parameters2 = parameters2;
+		parameters = null; // Disable old parameters
+		parameterFile = null; // Disable old parameters
 	}
 
 	@DataBoundSetter
@@ -275,22 +301,6 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	}
 
 	@DataBoundSetter
-	public void setLoadParamsFromFile(boolean loadParamsFromFile) {
-		this.loadParamsFromFile = loadParamsFromFile;
-	}
-
-	@DataBoundSetter
-	public void setParameterFile(String parameterFile) {
-		if (loadParamsFromFile && (parameterFile == null || parameterFile.isEmpty()))
-			throw new IllegalArgumentException("Parameter file path is empty");
-
-		if (parameterFile == null)
-			this.parameterFile = "";
-		else
-			this.parameterFile = parameterFile;
-	}
-
-	@DataBoundSetter
 	public void setDisabled(boolean disabled) {
 		this.disabled = disabled;
 	}
@@ -305,94 +315,9 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		this.useCrumbCache = useCrumbCache;
 	}
 
-	public List<String> getParameterList(BuildContext context) {
-		String params = getParameters();
-		if (!params.isEmpty()) {
-			String[] parameterArray = params.split("\n");
-			parameterArray = stripAll(parameterArray);
-			return new ArrayList<String>(Arrays.asList(parameterArray));
-		} else if (loadParamsFromFile) {
-			return loadExternalParameterFile(context);
-		} else {
-			return new ArrayList<String>();
-		}
-	}
-
-	/**
-	 * Reads a file from the jobs workspace, and loads the list of parameters from
-	 * with in it. It will also call ```getCleanedParameters``` before returning.
-	 *
-	 * @param BuildContext context
-	 * @return List<String> of build parameters
-	 */
-	private List<String> loadExternalParameterFile(BuildContext context) {
-
-		BufferedReader br = null;
-		List<String> parameterList = new ArrayList<String>();
-		try {
-			if (context.workspace != null) {
-				FilePath filePath = context.workspace.child(getParameterFile());
-				String sCurrentLine;
-				context.logger.println(String.format("Loading parameters from file %s", filePath.getRemote()));
-
-				br = new BufferedReader(new InputStreamReader(filePath.read(), "UTF-8"));
-
-				while ((sCurrentLine = br.readLine()) != null) {
-					parameterList.add(sCurrentLine);
-				}
-			} else {
-				throw new AbortException("Workspace is null but parameter file is used. Looks like this step was started with \"agent: none\"");
-			}
-		} catch (InterruptedException | IOException e) {
-			context.logger.println(String.format("[WARNING] Failed loading parameters: %s", e.getMessage()));
-		} finally {
-			try {
-				if (br != null) {
-					br.close();
-				}
-			} catch (IOException ex) {
-				ex.printStackTrace();
-			}
-		}
-		return getCleanedParameters(parameterList);
-	}
-
-	/**
-	 * Strip out any empty strings from the parameterList
-	 */
-	private void removeEmptyElements(Collection<String> collection) {
-		collection.removeAll(Arrays.asList(null, ""));
-		collection.removeAll(Arrays.asList(null, " "));
-	}
-
-	/**
-	 * Same as "getParameterList", but removes comments and empty strings Notice
-	 * that no type of character encoding is happening at this step. All encoding
-	 * happens in the "buildUrlQueryString" method.
-	 *
-	 * @param List<String> parameters
-	 * @return List<String> of build parameters
-	 */
-	List<String> getCleanedParameters(List<String> parameters) {
-		List<String> params = new ArrayList<String>(parameters);
-		removeEmptyElements(params);
-		removeCommentsFromParameters(params);
-		return params;
-	}
-
-	/**
-	 * Strip out any comments (lines that start with a #) from the collection that
-	 * is passed in.
-	 */
-	private void removeCommentsFromParameters(Collection<String> collection) {
-		List<String> itemsToRemove = new ArrayList<String>();
-
-		for (String parameter : collection) {
-			if (parameter.indexOf("#") == 0) {
-				itemsToRemove.add(parameter);
-			}
-		}
-		collection.removeAll(itemsToRemove);
+	public Map<String, String> getParameterMap(BuildContext context) throws AbortException {
+		return getParameters2()
+				.getParametersMap(context);
 	}
 
 	/**
@@ -662,24 +587,24 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 *                              thread.
 	 *
 	 */
-	public Handle performTriggerAndGetQueueId(BuildContext context) throws IOException, InterruptedException {
-		List<String> cleanedParams = getCleanedParameters(getParameterList(context));
+	public Handle performTriggerAndGetQueueId(@NonNull BuildContext context) throws IOException, InterruptedException {
+		Map<String, String> parameters = getParameterMap(context);
 		String jobNameOrUrl = this.getJob();
 		String securityToken = this.getToken();
 		try {
-			cleanedParams = TokenMacroUtils.applyTokenMacroReplacements(cleanedParams, context);
+			parameters = TokenMacroUtils.applyTokenMacroReplacements(parameters, context);
 			jobNameOrUrl = TokenMacroUtils.applyTokenMacroReplacements(jobNameOrUrl, context);
 			securityToken = TokenMacroUtils.applyTokenMacroReplacements(securityToken, context);
 		} catch (IOException e) {
 			this.failBuild(e, context.logger);
 		}
 
-		logConfiguration(context, cleanedParams);
+		logConfiguration(context, parameters);
 
 		final JSONObject remoteJobMetadata = getRemoteJobMetadata(jobNameOrUrl, context);
 		boolean isRemoteParameterized = isRemoteJobParameterized(remoteJobMetadata);
 
-		final String triggerUrlString = HttpHelper.buildTriggerUrl(jobNameOrUrl, securityToken, null,
+		String triggerUrlString = HttpHelper.buildTriggerUrl(jobNameOrUrl, securityToken,
 				isRemoteParameterized, context);
 
 		// token shouldn't be exposed in the console
@@ -694,7 +619,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		context.logger.println("Triggering remote job now.");
 
 		try {
-			ConnectionResponse responseRemoteJob = HttpHelper.tryPost(triggerUrlString, context, cleanedParams,
+			ConnectionResponse responseRemoteJob = HttpHelper.tryPost(triggerUrlString, context, parameters,
 					this.getHttpPostReadTimeout(), this.getPollInterval(buildInfo.getStatus()),
 					this.getConnectionRetryLimit(), this.getAuth2(), getLock(triggerUrlString), isUseCrumbCache());
 			QueueItem queueItem = new QueueItem(responseRemoteJob.getHeader());
@@ -957,24 +882,24 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				getLock(urlString));
 	}
 
-	private void logAuthInformation(BuildContext context) throws IOException {
+	private void logAuthInformation(@NonNull BuildContext context) {
 
 		Auth2 serverAuth = context.effectiveRemoteServer.getAuth2();
 		Auth2 localAuth = this.getAuth2();
 		if (localAuth != null && !(localAuth instanceof NullAuth)) {
 			String authString = (context.run == null) ? localAuth.getDescriptor().getDisplayName()
-					: localAuth.toString((Item) context.run.getParent());
-			context.logger.println(String.format("  Using job-level defined " + authString));
+					: localAuth.toString(context.run.getParent());
+			context.logger.printf("  Using job-level defined " + authString + "%n");
 		} else if (serverAuth != null && !(serverAuth instanceof NullAuth)) {
 			String authString = (context.run == null) ? serverAuth.getDescriptor().getDisplayName()
-					: serverAuth.toString((Item) context.run.getParent());
-			context.logger.println(String.format("  Using globally defined " + authString));
+					: serverAuth.toString(context.run.getParent());
+			context.logger.printf("  Using globally defined " + authString + "%n");
 		} else {
 			context.logger.println("  No credentials configured");
 		}
 	}
 
-	private void logConfiguration(BuildContext context, List<String> effectiveParams) throws IOException {
+	private void logConfiguration(@Nonnull BuildContext context, Map<String, String> effectiveParams) throws IOException {
 		String _job = getJob();
 		String _jobExpanded = getJobExpanded(context);
 		String _jobExpandedLogEntry = (_job.equals(_jobExpanded)) ? "" : "(" + _jobExpanded + ")";
@@ -985,32 +910,26 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		Auth2 _auth = getAuth2();
 		int _connectionRetryLimit = getConnectionRetryLimit();
 		boolean _blockBuildUntilComplete = getBlockBuildUntilComplete();
-		String _parameterFile = getParameterFile();
-		String _parameters = (effectiveParams == null || effectiveParams.size() <= 0) ? "" : effectiveParams.toString();
-		boolean _loadParamsFromFile = getLoadParamsFromFile();
 		context.logger.println(
 				"################################################################################################################");
 		context.logger.println("  Parameterized Remote Trigger Configuration:");
-		context.logger.println(String.format("    - job:                     %s %s", _job, _jobExpandedLogEntry));
+		context.logger.printf("    - job:                     %s %s%n", _job, _jobExpandedLogEntry);
 		if (!isEmpty(_remoteJenkinsName)) {
-			context.logger.println(String.format("    - remoteJenkinsName:       %s", _remoteJenkinsName));
+			context.logger.printf("    - remoteJenkinsName:       %s%n", _remoteJenkinsName);
 		}
 		if (!isEmpty(_remoteJenkinsUrl)) {
-			context.logger.println(String.format("    - remoteJenkinsUrl:        %s", _remoteJenkinsUrl));
+			context.logger.printf("    - remoteJenkinsUrl:        %s%n", _remoteJenkinsUrl);
 		}
 		if (_auth != null && !(_auth instanceof NullAuth)) {
-			String authString = context.run == null ? _auth.getDescriptor().getDisplayName()
-					: _auth.toString((Item) context.run.getParent());
-			context.logger.println(String.format("    - auth:                    %s", authString));
+			final String authString = context.run == null
+					? _auth.getDescriptor().getDisplayName()
+					: _auth.toString(context.run.getParent());
+			context.logger.printf("    - auth:                    %s%n", authString);
 		}
-		context.logger.println(String.format("    - parameters:              %s", _parameters));
-		if (_loadParamsFromFile) {
-			context.logger.println(String.format("    - loadParamsFromFile:      %s", _loadParamsFromFile));
-			context.logger.println(String.format("    - parameterFile:           %s", _parameterFile));
-		}
-		context.logger.println(String.format("    - blockBuildUntilComplete: %s", _blockBuildUntilComplete));
-		context.logger.println(String.format("    - connectionRetryLimit:    %s", _connectionRetryLimit));
-		context.logger.println(String.format("    - trustAllCertificates:    %s", _trustAllCertificates));
+		context.logger.printf("    - parameters:              %s%n", effectiveParams);
+		context.logger.printf("    - blockBuildUntilComplete: %s%n", _blockBuildUntilComplete);
+		context.logger.printf("    - connectionRetryLimit:    %s%n", _connectionRetryLimit);
+		context.logger.printf("    - trustAllCertificates:    %s%n", _trustAllCertificates);
 		context.logger.println(
 				"################################################################################################################");
 	}
@@ -1107,20 +1026,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return trimToEmpty(token);
 	}
 
-	public String getParameters() {
-		return trimToEmpty(parameters);
-	}
-
 	public boolean getEnhancedLogging() {
 		return enhancedLogging;
 	}
 
-	public boolean getLoadParamsFromFile() {
-		return loadParamsFromFile;
-	}
-
-	public String getParameterFile() {
-		return trimToEmpty(parameterFile);
+	public JobParameters getParameters2() {
+		return (parameters2 != null) ? parameters2 : DEFAULT_PARAMETERS;
 	}
 
 	public int getConnectionRetryLimit() {
@@ -1131,12 +1042,12 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		return disabled;
 	}
 
-	private @Nonnull JSONObject getRemoteJobMetadata(String jobNameOrUrl, BuildContext context)
+	private @Nonnull JSONObject getRemoteJobMetadata(String jobNameOrUrl, @NonNull BuildContext context)
 			throws IOException, InterruptedException {
 
 		String remoteJobUrl = generateJobUrl(context.effectiveRemoteServer, jobNameOrUrl);
-		remoteJobUrl += "/api/json?" + HttpHelper.buildUrlQueryString(Arrays.asList(
-				"tree=actions[parameterDefinitions],property[parameterDefinitions],name,fullName,displayName,fullDisplayName,url"));
+		Map<String, String> parameters = singletonMap("tree", "actions[parameterDefinitions],property[parameterDefinitions],name,fullName,displayName,fullDisplayName,url");
+		remoteJobUrl += "/api/json?" + HttpHelper.buildUrlQueryString(parameters);
 
 		JSONObject jsonObject = DropCachePeriodicWork.safeGetJobInfo(remoteJobUrl, isUseJobInfoCache());
 		if (jsonObject != null) {
@@ -1168,7 +1079,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * @throws IOException if it is not possible to identify if the job is
 	 *                     parameterized.
 	 */
-	private boolean isRemoteJobParameterized(JSONObject remoteJobMetadata) throws IOException {
+	private boolean isRemoteJobParameterized(final JSONObject remoteJobMetadata) throws IOException {
 		boolean isParameterized = false;
 		if (remoteJobMetadata != null) {
 			if (remoteJobMetadata.getJSONArray("actions").size() >= 1) {
@@ -1253,7 +1164,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		 * <p>
 		 * If you don't want fields to be persisted, use <tt>transient</tt>.
 		 */
-		private CopyOnWriteList<RemoteJenkinsServer> remoteSites = new CopyOnWriteList<RemoteJenkinsServer>();
+		private CopyOnWriteList<RemoteJenkinsServer> remoteSites = new CopyOnWriteList<>();
 
 		/**
 		 * In order to load the persisted global configuration, you have to call load()
@@ -1287,15 +1198,18 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		 * FormValidation.ok(); }
 		 */
 
-		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> aClass) {
+		@Override
+		public boolean isApplicable(Class<? extends AbstractProject> aClass) {
 			// Indicates that this builder can be used with all kinds of project
 			// types
 			return true;
 		}
 
 		/**
-		 * This human readable name is used in the configuration screen.
+		 * This human-readable name is used in the configuration screen.
 		 */
+		@NonNull
+		@Override
 		public String getDisplayName() {
 			return "Trigger a remote parameterized job";
 		}
@@ -1376,8 +1290,16 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			return Auth2.all();
 		}
 
+		public static List<ParametersDescriptor> getParametersDescriptors() {
+			return JobParameters.all();
+		}
+
 		public static Auth2Descriptor getDefaultAuth2Descriptor() {
 			return NullAuth.DESCRIPTOR;
+		}
+
+		public static ParametersDescriptor getDefaultParametersDescriptor() {
+			return MapParameters.DESCRIPTOR;
 		}
 
 	}

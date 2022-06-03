@@ -1,19 +1,37 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils;
 
+import static java.util.Collections.emptyMap;
 import static org.apache.commons.io.IOUtils.closeQuietly;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
+import net.sf.json.util.JSONUtils;
+
+import javax.annotation.Nonnull;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.TrustManager;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import javax.net.ssl.*;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -21,7 +39,6 @@ import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -30,10 +47,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
-
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.ConnectionResponse;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.JenkinsCrumb;
@@ -47,10 +62,6 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.exceptions.UrlNotFoundEx
 
 import hudson.AbortException;
 import hudson.ProxyConfiguration;
-import net.sf.json.JSONException;
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
-import net.sf.json.util.JSONUtils;
 
 public class HttpHelper {
 
@@ -83,42 +94,15 @@ public class HttpHelper {
 	 *            the parameters needed to trigger the remote job.
 	 * @return query-parameter-formated URL-encoded string.
 	 */
-	public static String buildUrlQueryString(Collection<String> parameters) {
-
-		// List to hold the encoded parameters
-		List<String> encodedParameters = new ArrayList<String>();
-
-		if (parameters != null) {
-			for (String parameter : parameters) {
-
-				// Step #1 - break apart the parameter-pairs (because we don't want to encode
-				// the "=" character)
-				String[] splitParameters = parameter.split("=");
-
-				// List to hold each individually encoded parameter item
-				List<String> encodedItems = new ArrayList<String>();
-				for (String item : splitParameters) {
-					try {
-						// Step #2 - encode each individual parameter item add the encoded item to its
-						// corresponding list
-
-						encodedItems.add(encodeValue(item));
-
-					} catch (Exception e) {
-						// do nothing
-						// because we are "hard-coding" the encoding type, there is a 0% chance that
-						// this will fail.
-						logger.warning(e.toString());
-					}
-
-				}
-
-				// Step #3 - reunite the previously separated parameter items and add them to
-				// the corresponding list
-				encodedParameters.add(StringUtils.join(encodedItems, "="));
-			}
-		}
-		return StringUtils.join(encodedParameters, "&");
+	public static String buildUrlQueryString(@NonNull final Map<String, String> parameters) {
+		return parameters.entrySet()
+				.stream()
+				.map(entry -> String.format(
+						"%s=%s",
+						encodeValue(entry.getKey()),
+						encodeValue(entry.getValue())
+				))
+				.collect(Collectors.joining("&"));
 	}
 
 	/**
@@ -129,12 +113,8 @@ public class HttpHelper {
 	 *            Boolean indicating if the remote job is parameterized or not
 	 * @return A string which represents a portion of the build URL
 	 */
-	private static String getBuildTypeUrl(boolean isRemoteJobParameterized, Collection<String> params) {
-		boolean isParameterized = false;
-
-		if (isRemoteJobParameterized || (params != null && params.size() > 0)) {
-			isParameterized = true;
-		}
+	private static String getBuildTypeUrl(boolean isRemoteJobParameterized, @NonNull Map<String, String> params) {
+		boolean isParameterized = isRemoteJobParameterized || params.size() > 0;
 
 		if (isParameterized) {
 			return paramerizedBuildUrl;
@@ -358,8 +338,6 @@ public class HttpHelper {
 	 *            Name of the remote job
 	 * @param securityToken
 	 *            Security token used to trigger remote job
-	 * @param params
-	 *            Parameters for the remote job
 	 * @param isRemoteJobParameterized
 	 *            Is the remote job parameterized
 	 * @param context
@@ -368,7 +346,7 @@ public class HttpHelper {
 	 * @throws IOException
 	 *             throw when it can't pass data checking
 	 */
-	public static String buildTriggerUrl(String jobNameOrUrl, String securityToken, Collection<String> params,
+	public static String buildTriggerUrl(String jobNameOrUrl, String securityToken,
 			boolean isRemoteJobParameterized, BuildContext context) throws IOException {
 
 		String triggerUrlString;
@@ -383,24 +361,17 @@ public class HttpHelper {
 			}
 			triggerUrlString = context.effectiveRemoteServer.getAddress();
 			triggerUrlString += buildTokenRootUrl;
-			triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized, params);
+			triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized, emptyMap());
 			query = addToQueryString(query, "job=" + encodeValue(jobNameOrUrl)); // TODO: does it work with full URL?
 
 		} else {
 			triggerUrlString = generateJobUrl(context.effectiveRemoteServer, jobNameOrUrl);
-			triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized, params);
+			triggerUrlString += getBuildTypeUrl(isRemoteJobParameterized, emptyMap());
 		}
 
 		// don't try to include a security token in the URL if none is provided
 		if (!securityToken.equals("")) {
 			query = addToQueryString(query, "token=" + encodeValue(securityToken));
-		}
-
-		// turn our Collection into a query string
-		String buildParams = buildUrlQueryString(params);
-
-		if (!buildParams.isEmpty()) {
-			query = addToQueryString(query, buildParams);
 		}
 
 		// by adding "delay=0", this will (theoretically) force this job to the top of
@@ -446,7 +417,7 @@ public class HttpHelper {
 	 *
 	 */
 	private static ConnectionResponse sendHTTPCall(String urlString, String requestType, BuildContext context,
-			Collection<String> postParams, int readTimeout, int numberOfAttempts, int pollInterval, int retryLimit,
+			Map<String, String> postParams, int readTimeout, int numberOfAttempts, int pollInterval, int retryLimit,
 			Auth2 overrideAuth, StringBuilder rawRespRef, boolean isCrubmCacheEnabled)
 			throws IOException, InterruptedException {
 
@@ -454,7 +425,7 @@ public class HttpHelper {
 		Map<String, List<String>> responseHeader = null;
 		int responseCode = 0;
 
-		byte[] postDataBytes = new byte[] {};
+		byte[] postDataBytes = new byte[]{};
 		String parmsString = "";
 		if (HTTP_POST.equalsIgnoreCase(requestType) && postParams != null && postParams.size() > 0) {
 			parmsString = buildUrlQueryString(postParams);
@@ -526,8 +497,7 @@ public class HttpHelper {
 				} else {
 					try {
 						responseObject = (JSONObject) JSONSerializer.toJSON(response);
-					}
-					catch(JSONException e) {
+					} catch (JSONException e) {
 						// despite JSONUtils.mayBeJSON believing that this might be JSON, it looks like it wasn't
 						return new ConnectionResponse(responseHeader, response, responseCode);
 					}
@@ -584,7 +554,7 @@ public class HttpHelper {
 	}
 
 	private static ConnectionResponse tryCall(String urlString, String method, BuildContext context,
-			Collection<String> params, int readTimeout, int pollInterval, int retryLimit, Auth2 overrideAuth, StringBuilder rawRespRef,
+			Map<String, String> params, int readTimeout, int pollInterval, int retryLimit, Auth2 overrideAuth, StringBuilder rawRespRef,
 			Semaphore lock, boolean isCrubmCacheEnabled) throws IOException, InterruptedException {
 		if (lock == null) {
 			context.logger.println("calling remote without locking...");
@@ -616,12 +586,12 @@ public class HttpHelper {
 		}
 	}
 
-	public static ConnectionResponse tryPost(String urlString, BuildContext context, Collection<String> params,
+	public static ConnectionResponse tryPost(String urlString, BuildContext context, Map<String, String> params,
 			int readTimeout, int pollInterval, int retryLimit, Auth2 overrideAuth, Semaphore lock,
 			boolean isCrubmCacheEnabled) throws IOException, InterruptedException {
 
 		return tryCall(urlString, HTTP_POST, context, params, readTimeout, pollInterval, retryLimit,
-				overrideAuth, null, lock,isCrubmCacheEnabled);
+				overrideAuth, null, lock, isCrubmCacheEnabled);
 	}
 
 	public static ConnectionResponse tryGet(String urlString, BuildContext context, int readTimeout,
@@ -640,7 +610,7 @@ public class HttpHelper {
 		return resp.toString();
 	}
 
-	public static ConnectionResponse post(String urlString, BuildContext context, Collection<String> params,
+	public static ConnectionResponse post(String urlString, BuildContext context, Map<String, String> params,
 			int readTimeout, int pollInterval, int retryLimit, Auth2 overrideAuth, boolean isCrubmCacheEnabled)
 			throws IOException, InterruptedException {
 		return tryPost(urlString, context, params, readTimeout, pollInterval, retryLimit, overrideAuth,
