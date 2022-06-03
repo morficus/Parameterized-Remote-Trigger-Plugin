@@ -1,5 +1,8 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger;
 
+import static java.lang.String.join;
+import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toMap;
 import static org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.StringTools.NL_UNIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -13,6 +16,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,13 +39,13 @@ import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.ListView;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 import hudson.model.User;
-import hudson.model.ListView;
+import hudson.security.AuthorizationStrategy.Unsecured;
 import hudson.security.HudsonPrivateSecurityRealm;
 import hudson.security.SecurityRealm;
-import hudson.security.AuthorizationStrategy.Unsecured;
 import hudson.security.csrf.DefaultCrumbIssuer;
 import hudson.util.LogTaskListener;
 import hudson.util.Secret;
@@ -64,16 +68,16 @@ public class RemoteBuildConfigurationTest {
     private void enableAuth() throws IOException {
         MockAuthorizationStrategy mockAuth = new MockAuthorizationStrategy();
         jenkinsRule.jenkins.setAuthorizationStrategy(mockAuth);
-        
+
         HudsonPrivateSecurityRealm hudsonPrivateSecurityRealm = new HudsonPrivateSecurityRealm(false, false, null);
         jenkinsRule.jenkins.setSecurityRealm(hudsonPrivateSecurityRealm); //jenkinsRule.createDummySecurityRealm());
         testUser = hudsonPrivateSecurityRealm.createAccount("test", "test");
         testUserToken = testUser.getProperty(jenkins.security.ApiTokenProperty.class).getApiToken();
-        
+
         mockAuth.grant(Jenkins.ADMINISTER).everywhere().toAuthenticated();
     }
-    
-    
+
+
     @Test
     public void testRemoteBuild() throws Exception {
         disableAuth();
@@ -99,7 +103,7 @@ public class RemoteBuildConfigurationTest {
 		parms.put("parameterName2", "value2");
         this._testRemoteBuild(authenticate, withParam, remoteProject, parms);
     }
-	
+
 	private void _testRemoteBuild(boolean authenticate, boolean withParam, FreeStyleProject remoteProject, Map<String, String> parms) throws Exception {
 
         String remoteUrl = jenkinsRule.getURL().toString();
@@ -142,20 +146,20 @@ public class RemoteBuildConfigurationTest {
         //Trigger build
         jenkinsRule.waitUntilNoActivity();
         jenkinsRule.buildAndAssertSuccess(project);
-        
+
         //Check results
         FreeStyleBuild lastBuild2 = project.getLastBuild();
         assertNotNull(lastBuild2);
         List<String> log = IOUtils.readLines(lastBuild2.getLogInputStream());
         assertTrue(log.toString(), log.toString().contains("Started by user " + (authenticate ? "test" : "anonymous") + ", Building in workspace"));
-        
+
         FreeStyleBuild lastBuild = remoteProject.getLastBuild();
         assertNotNull("lastBuild null", lastBuild);
         if (withParam){
             EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
         	for (Map.Entry<String, String> p : parms.entrySet()) {
         		assertEquals(p.getValue(), remoteEnv.get(p.getKey()));
-        	}	
+        	}
         } else {
         	assertNotEquals("lastBuild should be executed no matter the result which depends on the remote job configuration.", null, lastBuild.getNumber());
         }
@@ -517,7 +521,7 @@ public class RemoteBuildConfigurationTest {
 
 		this._testRemoteBuild(false, true, remoteProject);
 	}
-	
+
 	@Test
 	public void testRemoteFolderedBuildWithoutParameters() throws Exception {
 		disableAuth();
@@ -526,7 +530,7 @@ public class RemoteBuildConfigurationTest {
 		FreeStyleProject remoteProject = remoteJobFolder.createProject(FreeStyleProject.class, "someJobName1");
 		this._testRemoteBuild(false, false, remoteProject);
 	}
-	
+
 	@Test
 	public void testRemoteBuildWith5KByteString() throws Exception {
 		enableAuth();
@@ -549,6 +553,39 @@ public class RemoteBuildConfigurationTest {
 		view.add(remoteProject);
 		jenkinsRule.getInstance().addView(view);
 		_testRemoteBuild(false, false, remoteProject);
+	}
+
+	@Test @WithoutJenkins
+	public void testParseStringParameters() {
+		RemoteBuildConfiguration config = new RemoteBuildConfiguration();
+		final String parameters = join("\n", asList(
+				"# bla bla",       // Comment
+				"",                // Empty line
+				"   ",             // Empty line (if trimmed)
+				"PARAM1=toto",     // Simple parameter
+				"PARAM2=dG90bwo=", // Parameter with = sign (see https://issues.jenkins.io/browse/JENKINS-58818)
+				"PARAM3=line1",    // Multi-line parameter
+				"line2",           // Multi-line parameter
+				"line3"            // Multi-line parameter
+		));
+		config.setParameters(parameters);
+
+		final Map<String, String> expectedParametersMap = new HashMap<>();
+		expectedParametersMap.put("PARAM1", "toto");
+		expectedParametersMap.put("PARAM2", "dG90bwo="); // This one should fail because it's broken (see issue 58818)
+		expectedParametersMap.put("PARAM3", "line1"); // We keep the wrong value in the test because it's unfixable with string parameters
+
+		final List<String> actualParameterList = config.getCleanedParameters(
+				config.getParameterList(null)
+		);
+		final Map<String, String> actualParametersMap = actualParameterList.stream()
+				.map(line -> {
+					final String[] splitLine = line.split("=");
+					return new AbstractMap.SimpleEntry<>(splitLine[0], splitLine.length > 1 ? splitLine[1] : "");
+				})
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+		assertEquals(expectedParametersMap, actualParametersMap);
 	}
 
 }

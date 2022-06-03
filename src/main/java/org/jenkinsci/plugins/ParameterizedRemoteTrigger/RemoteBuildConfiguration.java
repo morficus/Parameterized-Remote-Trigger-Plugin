@@ -106,7 +106,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	/**
 	 * We need to keep this for compatibility - old config deserialization!
-	 * 
+	 *
 	 * @deprecated since 2.3.0-SNAPSHOT - use {@link Auth2} instead.
 	 */
 	private transient List<Auth> auth;
@@ -373,7 +373,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * @param List<String> parameters
 	 * @return List<String> of build parameters
 	 */
-	private List<String> getCleanedParameters(List<String> parameters) {
+	List<String> getCleanedParameters(List<String> parameters) {
 		List<String> params = new ArrayList<String>(parameters);
 		removeEmptyElements(params);
 		removeCommentsFromParameters(params);
@@ -660,7 +660,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 	 * @throws IOException          if there is an error triggering the remote job.
 	 * @throws InterruptedException if any thread has interrupted the current
 	 *                              thread.
-	 * 
+	 *
 	 */
 	public Handle performTriggerAndGetQueueId(BuildContext context) throws IOException, InterruptedException {
 		List<String> cleanedParams = getCleanedParameters(getParameterList(context));
@@ -1276,7 +1276,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		 * /** Performs on-the-fly validation of the form field 'name'.
 		 *
 		 * @param value This parameter receives the value that the user has typed.
-		 * 
+		 *
 		 * @return Indicates the outcome of the validation. This is sent to the browser.
 		 */
 		/*
