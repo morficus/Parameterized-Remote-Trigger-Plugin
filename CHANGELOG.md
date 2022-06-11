@@ -1,3 +1,10 @@
+# 3.1.6 (Jun 12th, 2022)
+
+### Improvement
+
+* Improve parameters handling. ([f1eb49cf](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/f1eb49cf6294b77dae9361a4176d60d8591f40b7))
+* Allow use `triggerRemoteJob` step with `agent none` ([fef4451](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/fef4451ad0c743d47f3282e75dfb4c9d1ffbb3c3))
+
 # 3.1.5.1 (Oct 6th, 2020)
 
 ### Improvement
