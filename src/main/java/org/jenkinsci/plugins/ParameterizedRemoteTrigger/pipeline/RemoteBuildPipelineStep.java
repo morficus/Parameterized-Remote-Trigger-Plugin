@@ -22,21 +22,22 @@
 
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline;
 
+import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BasicBuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
-import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.JobParameters;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.MapParameters;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
@@ -144,23 +145,13 @@ public class RemoteBuildPipelineStep extends Step {
 	}
 
 	@DataBoundSetter
-	public void setParameters(String parameters) {
-		remoteBuildConfig.setParameters(parameters);
+	public void setParameters2(JobParameters parameters2) {
+		remoteBuildConfig.setParameters2(parameters2);
 	}
 
 	@DataBoundSetter
 	public void setEnhancedLogging(boolean enhancedLogging) {
 		remoteBuildConfig.setEnhancedLogging(enhancedLogging);
-	}
-
-	@DataBoundSetter
-	public void setLoadParamsFromFile(boolean loadParamsFromFile) {
-		remoteBuildConfig.setLoadParamsFromFile(loadParamsFromFile);
-	}
-
-	@DataBoundSetter
-	public void setParameterFile(String parameterFile) {
-		remoteBuildConfig.setParameterFile(parameterFile);
 	}
 
 	@DataBoundSetter
@@ -172,7 +163,7 @@ public class RemoteBuildPipelineStep extends Step {
 	public void setUseCrumbCache(boolean useCrumbCache) {
 		remoteBuildConfig.setUseCrumbCache(useCrumbCache);
 	}
-	
+
 	@DataBoundSetter
 	public void setDisabled(boolean disabled) {
 		remoteBuildConfig.setDisabled(disabled);
@@ -198,7 +189,7 @@ public class RemoteBuildPipelineStep extends Step {
 
 		@Override
 		public Set<? extends Class<?>> getRequiredContext() {
-			Set<Class<?>> set = new HashSet<Class<?>>();
+			Set<Class<?>> set = new HashSet<>();
 			Collections.addAll(set, Run.class, TaskListener.class);
 			return set;
 		}
@@ -251,8 +242,16 @@ public class RemoteBuildPipelineStep extends Step {
 			return Auth2.all();
 		}
 
+		public static List<JobParameters.ParametersDescriptor> getParametersDescriptors() {
+			return JobParameters.all();
+		}
+
 		public static Auth2Descriptor getDefaultAuth2Descriptor() {
 			return NullAuth.DESCRIPTOR;
+		}
+
+		public static JobParameters.ParametersDescriptor getDefaultParametersDescriptor() {
+			return MapParameters.DESCRIPTOR;
 		}
 	}
 
@@ -283,7 +282,7 @@ public class RemoteBuildPipelineStep extends Step {
 					handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
 					if (remoteBuildConfig.getBlockBuildUntilComplete()) {
 						remoteBuildConfig.performWaitForBuild(context, handle);
-					}	
+					}
 				}
 
 			} catch (InterruptedException e) {
@@ -342,20 +341,12 @@ public class RemoteBuildPipelineStep extends Step {
 		return remoteBuildConfig.getToken();
 	}
 
-	public String getParameters() {
-		return remoteBuildConfig.getParameters();
+	public JobParameters getParameters2() {
+		return remoteBuildConfig.getParameters2();
 	}
 
 	public boolean getEnhancedLogging() {
 		return remoteBuildConfig.getEnhancedLogging();
-	}
-
-	public boolean getLoadParamsFromFile() {
-		return remoteBuildConfig.getLoadParamsFromFile();
-	}
-
-	public String getParameterFile() {
-		return remoteBuildConfig.getParameterFile();
 	}
 
 	public int getConnectionRetryLimit() {
@@ -381,10 +372,9 @@ public class RemoteBuildPipelineStep extends Step {
 	public Auth2 getAuth() {
 		return remoteBuildConfig.getAuth2();
 	}
-	
+
 	public boolean isDisabled() {
 		return remoteBuildConfig.isDisabled();
 	}
-
 
 }
