@@ -15,7 +15,7 @@ public class StringParameters extends JobParameters {
 
 	private static final long serialVersionUID = 3614172320192170597L;
 
-	@Extension
+	@Extension(ordinal = 1)
 	public static final StringParametersDescriptor DESCRIPTOR = new StringParametersDescriptor();
 
 	private String parameters;

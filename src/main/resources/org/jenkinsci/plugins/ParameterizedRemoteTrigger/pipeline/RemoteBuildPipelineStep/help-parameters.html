@@ -3,8 +3,23 @@
         Job Parameters
     </div>
     Parameters which will be used when triggering the remote job.
-    <br/>
+    <br />
     If no parameters are needed, then just leave this blank.
-    <br/>
-    Any line start with a pound-sign (#) will be treated as a comment.
+    <br />
+    In case of a String, the plugin uses String/File parameters depending on the parameter's content.
+
+    <ul>
+        <li><b>Map parameters</b><br />
+            <p><code>Map&lt;String, Object></code></p>
+            <p>This is the recommended type. It allows you to provide parameters with key/value and supports multi-line parameters.</p>
+        </li>
+        <li><b>String parameters (legacy)</b><br />
+            <p><code>String</code></p>
+            <p>This type allows to describe parameters within a big string like in versions 3.1.5 and lower. It does not support multi-line parameters.</p>
+        </li>
+        <li><b>File parameters (legacy)</b><br />
+            <p><code>String</code></p>
+            This type allows to describe parameters within a file like in versions 3.1.5 and lower. It does not support multi-line parameters.
+        </li>
+    </ul>
 </div>

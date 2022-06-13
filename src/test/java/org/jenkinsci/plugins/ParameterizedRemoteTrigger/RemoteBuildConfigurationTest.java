@@ -204,7 +204,7 @@ public class RemoteBuildConfigurationTest {
 		assertFalse(config.getEnhancedLogging());
 		assertEquals("job", config.getJob());
 		assertTrue(config.getAuth() instanceof NullAuth);
-		assertTrue(config.getParameters2() instanceof MapParameters);
+		assertTrue(config.getParameters() instanceof MapParameters);
 		assertEquals(10000, config.getHttpGetReadTimeout());
 		assertEquals(30000, config.getHttpPostReadTimeout());
 		assertEquals(10, config.getPollInterval());
