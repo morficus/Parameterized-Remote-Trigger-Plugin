@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.stream.Collectors.toMap;
 
 import java.io.Serializable;
@@ -27,11 +28,11 @@ public abstract class JobParameters extends AbstractDescribableImpl<JobParameter
 	}
 
 	public static JobParameters migrateOldParameters(final String parameters, final String parameterFile) {
-		if (parameterFile != null) {
+		if (!isNullOrEmpty(parameterFile)) {
 			return new FileParameters(parameterFile);
 		}
 
-		if (parameters != null) {
+		if (!isNullOrEmpty(parameters)) {
 			return new StringParameters(parameters);
 		}
 

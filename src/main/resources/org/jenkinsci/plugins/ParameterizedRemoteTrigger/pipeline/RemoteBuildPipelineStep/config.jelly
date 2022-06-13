@@ -19,11 +19,11 @@
         <f:entry title="Do not fail if remote fails" field="shouldNotFailBuild">
             <f:checkbox />
         </f:entry>
-        
+
         <f:entry title="Abort remote job if current job was aborted" field="abortTriggeredJob">
             <f:checkbox />
         </f:entry>
-        
+
         <f:entry title="Wait to trigger remote builds until no other builds are running." field="preventRemoteBuildQueue">
             <f:checkbox />
         </f:entry>
@@ -52,10 +52,8 @@
             <f:textbox />
         </f:entry>
 
-        <f:entry title="Parameters" field="parameters">
-            <f:textarea />
-        </f:entry>
-        
+        <f:dropdownDescriptorSelector field="parameters" title="Parameters" descriptors="${descriptor.getParametersDescriptors()}" default="${descriptor.getDefaultParametersDescriptor()}" />
+
         <f:entry title="Max connection" field="maxConn">
             <f:textbox default="1" />
         </f:entry>
@@ -78,12 +76,5 @@
             <f:checkbox />
           </f:entry>
         </f:optionalBlock>
-
-        <f:optionalBlock title="Load parameters from external file (this will cause the job to ignore the text field above)" field="loadParamsFromFile" inline="true">
-            <f:entry title="Parameter file path + name (all paths are relative to the current workspace)" field="parameterFile">
-                 <f:textbox />
-            </f:entry>
-        </f:optionalBlock>
     </f:section>
-
 </j:jelly>

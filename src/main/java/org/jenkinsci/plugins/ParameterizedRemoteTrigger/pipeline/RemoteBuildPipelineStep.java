@@ -22,10 +22,14 @@
 
 package org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline;
 
+import static java.util.stream.Collectors.toMap;
+
 import javax.annotation.Nonnull;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BasicBuildContext;
@@ -35,8 +39,10 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descriptor;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.FileParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.JobParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.MapParameters;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.StringParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
@@ -52,6 +58,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.FilePath;
@@ -70,7 +77,7 @@ public class RemoteBuildPipelineStep extends Step {
 		remoteBuildConfig = new RemoteBuildConfiguration();
 		remoteBuildConfig.setJob(job);
 		remoteBuildConfig.setShouldNotFailBuild(false); // We need to get notified. Failure feedback is collected async
-														// then.
+		// then.
 		remoteBuildConfig.setBlockBuildUntilComplete(true); // default for Pipeline Step
 	}
 
@@ -145,8 +152,39 @@ public class RemoteBuildPipelineStep extends Step {
 	}
 
 	@DataBoundSetter
-	public void setParameters2(JobParameters parameters2) {
-		remoteBuildConfig.setParameters2(parameters2);
+	public void setParameters(Object parameters) throws AbortException {
+		if (parameters instanceof JobParameters) {
+			remoteBuildConfig.setParameters2((JobParameters) parameters);
+		} else if (parameters instanceof String) {
+			final String parametersAsString = (String) parameters;
+			if (parametersAsString.contains("=") || parametersAsString.contains("\n")) {
+				remoteBuildConfig.setParameters2(new StringParameters(parametersAsString));
+			} else {
+				remoteBuildConfig.setParameters2(new FileParameters(parametersAsString));
+			}
+		} else if (parameters instanceof Map) {
+			@SuppressWarnings("unchecked") final Map<String, String> parametersAsMap =
+					((Map<Object, Object>) parameters).entrySet()
+							.stream()
+							.collect(toMap(
+									(entry) -> entry.getKey().toString(),
+									(entry) -> entry.getValue().toString()
+							));
+			remoteBuildConfig.setParameters2(new MapParameters(parametersAsMap));
+		} else {
+			throw new AbortException("Cannot read remote job parameters.");
+		}
+
+	}
+
+	/**
+	 * @deprecated Still there to allow old configuration (3.1.5 and below) to work.
+	 *             Use {@link RemoteBuildPipelineStep#setParameters(Object)} instead now.
+	 */
+	@Deprecated
+	@DataBoundSetter
+	public void setParameterFile(String parameterFile) {
+		remoteBuildConfig.setParameters2(new FileParameters(parameterFile));
 	}
 
 	@DataBoundSetter
@@ -341,7 +379,7 @@ public class RemoteBuildPipelineStep extends Step {
 		return remoteBuildConfig.getToken();
 	}
 
-	public JobParameters getParameters2() {
+	public JobParameters getParameters() {
 		return remoteBuildConfig.getParameters2();
 	}
 

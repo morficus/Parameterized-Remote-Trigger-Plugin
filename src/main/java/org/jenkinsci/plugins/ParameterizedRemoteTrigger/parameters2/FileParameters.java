@@ -23,7 +23,7 @@ public class FileParameters extends JobParameters {
 
 	private static final long serialVersionUID = 3614172320192170597L;
 
-	@Extension
+	@Extension(ordinal = 0)
 	public static final FileParametersDescriptor DESCRIPTOR = new FileParametersDescriptor();
 
 	private String filePath;

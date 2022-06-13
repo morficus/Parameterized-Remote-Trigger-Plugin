@@ -8,8 +8,10 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
+import org.jboss.marshalling.util.IntKeyMap;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -21,13 +23,13 @@ public class MapParameters extends JobParameters {
 
 	private static final long serialVersionUID = 3614172320192170597L;
 
-	@Extension
+	@Extension(ordinal = 2)
 	public static final MapParametersDescriptor DESCRIPTOR = new MapParametersDescriptor();
 
 	private final List<MapParameter> parameters = new ArrayList<>();
 
 	@DataBoundConstructor
-	public MapParameters() {}
+	public MapParameters() { }
 
 	public MapParameters(@NonNull Map<String, String> parametersMap) {
 		setParametersMap(parametersMap);
