@@ -2,7 +2,7 @@
 
 ### Improvement
 
-* Complete the PR [f1eb49cf] in 3.1.6. (https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/f1eb49cf6294b77dae9361a4176d60d8591f40b7). ([5033a88](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/5033a881308f18d416c340c969b36ec2902bb6d8))
+* Complete the PR [f1eb49cf](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/f1eb49cf6294b77dae9361a4176d60d8591f40b7) in 3.1.6. . ([5033a88](https://github.com/jenkinsci/parameterized-remote-trigger-plugin/commit/5033a881308f18d416c340c969b36ec2902bb6d8))
 
 # 3.1.6 (Jun 12th, 2022)
 
