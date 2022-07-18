@@ -1,3 +1,9 @@
+# 3.1.6.2 (July 18th, 2022)
+
+### Improvement
+
+* Mark breaking changes for 3.1.6.x
+
 # 3.1.6.1 (Jun 14th, 2022)
 
 ### Improvement
