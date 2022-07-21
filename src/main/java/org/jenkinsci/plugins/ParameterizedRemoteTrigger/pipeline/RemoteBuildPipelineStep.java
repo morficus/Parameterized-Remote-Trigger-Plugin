@@ -24,13 +24,15 @@ package org.jenkinsci.plugins.ParameterizedRemoteTrigger.pipeline;
 
 import static java.util.stream.Collectors.toMap;
 
-import javax.annotation.Nonnull;
-import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+
+import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BasicBuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
@@ -41,12 +43,14 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.Auth2.Auth2Descrip
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.FileParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.JobParameters;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.MapParameter;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.MapParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.parameters2.StringParameters;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildStatus;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -57,6 +61,8 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import hudson.AbortException;
 import hudson.Extension;
@@ -71,6 +77,8 @@ import hudson.util.ListBoxModel;
 public class RemoteBuildPipelineStep extends Step {
 
 	private RemoteBuildConfiguration remoteBuildConfig;
+
+	private static final Logger logger = LoggerFactory.getLogger(RemoteBuildPipelineStep.class);
 
 	@DataBoundConstructor
 	public RemoteBuildPipelineStep(String job) {
@@ -154,32 +162,87 @@ public class RemoteBuildPipelineStep extends Step {
 	@DataBoundSetter
 	public void setParameters(Object parameters) throws AbortException {
 		if (parameters instanceof JobParameters) {
+			logger.trace("job parameter detected");
 			remoteBuildConfig.setParameters2((JobParameters) parameters);
 		} else if (parameters instanceof String) {
 			final String parametersAsString = (String) parameters;
 			if (parametersAsString.contains("=") || parametersAsString.contains("\n")) {
+				logger.trace("string var");
 				remoteBuildConfig.setParameters2(new StringParameters(parametersAsString));
 			} else {
+				logger.trace("string file");
 				remoteBuildConfig.setParameters2(new FileParameters(parametersAsString));
 			}
 		} else if (parameters instanceof Map) {
-			@SuppressWarnings("unchecked") final Map<String, String> parametersAsMap =
-					((Map<Object, Object>) parameters).entrySet()
-							.stream()
-							.collect(toMap(
-									(entry) -> entry.getKey().toString(),
-									(entry) -> entry.getValue().toString()
-							));
+			logger.trace("map");
+
+			@SuppressWarnings("unchecked")
+			final Map<String, String> parametersAsMap = ((Map<Object, Object>) parameters).entrySet().stream()
+					.collect(toMap((entry) -> entry.getKey().toString(), (entry) -> entry.getValue().toString()));
+			logger.trace("parsed map");
 			remoteBuildConfig.setParameters2(new MapParameters(parametersAsMap));
 		} else {
-			throw new AbortException("Cannot read remote job parameters.");
-		}
+			logger.trace(parameters.getClass().toString() + ", force casting to UninstantiatedDescribable");
 
+			if (!(parameters instanceof UninstantiatedDescribable)) {
+				throw new AbortException("Cannot parse pipeline parameters.");
+			}
+
+			UninstantiatedDescribable uninstantiatedParms = (UninstantiatedDescribable) parameters;
+
+			Map<String, ?> args = uninstantiatedParms.getArguments();
+			if (args.entrySet().size() < 1) {
+				throw new AbortException("Cannot parse pipeline parameters, no parameters detected.");
+			}
+
+			String keys = "";
+			for (Entry<String, ?> entry : args.entrySet()) {
+				keys += entry.getKey() + ",";
+
+				if (entry.getValue() instanceof List<?>) {
+					if (entry.getKey().equalsIgnoreCase("parameters")) {
+						MapParameters mps = new MapParameters();
+						List<MapParameter> lmp = new ArrayList<MapParameter>();
+
+						for (Object obj : ((List<Object>) entry.getValue())) {
+							UninstantiatedDescribable ao = (UninstantiatedDescribable) obj;
+							MapParameter mpTmp = new MapParameter();
+
+							for (Object subParms : ao.getArguments().entrySet()) {
+
+								Entry<String, String> castedParm = (Entry<String, String>) subParms;
+
+								if (castedParm.getKey() == "name") {
+									mpTmp.setName(castedParm.getValue());
+								} else if (castedParm.getKey() == "value") {
+									mpTmp.setValue(castedParm.getValue());
+								} else {
+									throw new AbortException(
+											"Cannot parse pipeline parameters, unknown sub key: " + castedParm.getKey());
+								}
+							}
+							lmp.add(mpTmp);
+						}
+						mps.setParameters(lmp);
+						logger.trace("map data: " + mps.toString());
+						remoteBuildConfig.setParameters2((JobParameters) mps);
+						return;
+					}
+				} else if (entry.getKey().toLowerCase().equalsIgnoreCase("filepath")) {
+					logger.trace(entry.getValue().toString());
+					remoteBuildConfig.setParameters2((JobParameters) new FileParameters(entry.getValue().toString()));
+					return;
+				}
+			}
+
+			throw new AbortException("Cannot parse pipeline parameters, unknown key: " + keys);
+		}
 	}
 
 	/**
 	 * @deprecated Still there to allow old configuration (3.1.5 and below) to work.
-	 *             Use {@link RemoteBuildPipelineStep#setParameters(Object)} instead now.
+	 *             Use {@link RemoteBuildPipelineStep#setParameters(Object)} instead
+	 *             now.
 	 */
 	@Deprecated
 	@DataBoundSetter
@@ -415,4 +478,15 @@ public class RemoteBuildPipelineStep extends Step {
 		return remoteBuildConfig.isDisabled();
 	}
 
+	/**
+	 * @deprecated Still there to allow old configuration (3.1.5 and below) to work.
+	 *             Use {@link RemoteBuildPipelineStep#getParameters(Object)} instead
+	 *             now. Without this getter, pipeline script generator throws a
+	 *             exception, but we need to keep the backward compatibility of
+	 *             `parameterFile`, so we add this getter back with null return
+	 *             value.
+	 */
+	public String getParameterFile() {
+		return null;
+	}
 }
