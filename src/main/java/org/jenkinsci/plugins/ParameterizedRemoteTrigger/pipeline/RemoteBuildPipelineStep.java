@@ -243,6 +243,8 @@ public class RemoteBuildPipelineStep extends Step {
 	 * @deprecated Still there to allow old configuration (3.1.5 and below) to work.
 	 *             Use {@link RemoteBuildPipelineStep#setParameters(Object)} instead
 	 *             now.
+	 * @param parameterFile
+	 * 				The parameter file.
 	 */
 	@Deprecated
 	@DataBoundSetter
@@ -480,11 +482,12 @@ public class RemoteBuildPipelineStep extends Step {
 
 	/**
 	 * @deprecated Still there to allow old configuration (3.1.5 and below) to work.
-	 *             Use {@link RemoteBuildPipelineStep#getParameters(Object)} instead
+	 *             Use {@link RemoteBuildPipelineStep#getParameters()} instead
 	 *             now. Without this getter, pipeline script generator throws a
 	 *             exception, but we need to keep the backward compatibility of
 	 *             `parameterFile`, so we add this getter back with null return
 	 *             value.
+	 * @return Path of the parameter file.
 	 */
 	public String getParameterFile() {
 		return null;
