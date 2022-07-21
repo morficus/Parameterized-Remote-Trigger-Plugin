@@ -1,3 +1,10 @@
+# 3.1.6.3 (July 22th, 2022)
+
+### Bug fixes
+
+* Fix pipeline generation error
+* Fix pipeline unable to parse
+
 # 3.1.6.2 (July 18th, 2022)
 
 ### Improvement
