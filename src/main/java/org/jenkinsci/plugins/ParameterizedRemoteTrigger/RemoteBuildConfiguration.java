@@ -710,6 +710,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 				handle.setBuildInfo(buildInfo);
 			}
 			if (this.getEnhancedLogging()) {
+				consoleOffset = printOffsetConsoleOutput(context, consoleOffset, buildInfo);
 				context.logger
 						.println("--------------------------------------------------------------------------------");
 			}
