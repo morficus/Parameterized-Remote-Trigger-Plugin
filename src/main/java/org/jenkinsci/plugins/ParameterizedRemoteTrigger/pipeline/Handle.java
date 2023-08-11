@@ -8,12 +8,14 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.util.Optional;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNullableByDefault;
 
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteJenkinsServer;
@@ -366,7 +368,10 @@ public class Handle implements Serializable {
     private String getParameterFromJobMetadata(JSONObject remoteJobMetadata, String string)
     {
         try {
-            return trimToNull(remoteJobMetadata.getString("name"));
+            return Optional.ofNullable(remoteJobMetadata)
+                    .map(meta->meta.getString("name"))
+                    .map(StringUtils::trimToNull)
+                    .orElse(null);
         }
         catch (JSONException e) {
             return null;

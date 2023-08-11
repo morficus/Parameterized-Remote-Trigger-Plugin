@@ -8,10 +8,8 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 
-import org.jboss.marshalling.util.IntKeyMap;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.kohsuke.stapler.DataBoundConstructor;
