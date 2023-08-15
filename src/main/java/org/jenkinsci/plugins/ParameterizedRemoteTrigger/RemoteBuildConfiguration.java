@@ -50,6 +50,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtil
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.HttpHelper;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.OtelUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.RestUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.TokenMacroUtils;
 import org.kohsuke.accmod.Restricted;
@@ -567,7 +568,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		Handle handle = null;
 		BuildContext context = null;
 		RemoteJenkinsServer effectiveRemoteServer = null;
-		try {
+		try (AutoCloseable ignored = OtelUtils.isOpenTelemetryAvailable() ? OtelUtils.activeSpanIfAvailable(build) : OtelUtils.noop()) {
 			effectiveRemoteServer = evaluateEffectiveRemoteHost(new BasicBuildContext(build, workspace, listener));
 			context = new BuildContext(build, workspace, listener, listener.getLogger(), effectiveRemoteServer);
 			handle = performTriggerAndGetQueueId(context);
@@ -575,6 +576,8 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 		} catch (InterruptedException e) {
 			this.abortRemoteTask(effectiveRemoteServer, handle, context);
 			throw e;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 

@@ -49,6 +49,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.BuildContext;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.ConnectionResponse;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.JenkinsCrumb;
@@ -439,6 +440,12 @@ public class HttpHelper {
 			conn.setDoInput(true);
 			conn.setRequestProperty("Accept", "application/json");
 			conn.setRequestProperty("Accept-Language", "UTF-8");
+			if (requestType.equals(HTTP_POST) && OtelUtils.isOpenTelemetryAvailable() ) {
+				String traceParentHeader = OtelUtils.getTraceParent();
+				if (StringUtils.isNotBlank(OtelUtils.getTraceParent())){
+					conn.setRequestProperty("traceparent", traceParentHeader);
+				}
+			}
 			conn.setRequestMethod(requestType);
 			conn.setReadTimeout(readTimeout);
 			addCrumbToConnection(conn, context, overrideAuth, isCrubmCacheEnabled);
