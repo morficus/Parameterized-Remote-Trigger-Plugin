@@ -1,3 +1,9 @@
+# 3.1.6.4 (Sep 5th, 2023)
+
+### Bug fixes
+
+* When enhancedLogging is set and remote log is trimmed. It adds a last poll for logs after the remote build finished.
+
 # 3.1.6.3 (July 22th, 2022)
 
 ### Bug fixes
