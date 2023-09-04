@@ -14,7 +14,7 @@
   </properties>
 
 	<artifactId>Parameterized-Remote-Trigger</artifactId>
-	<version>3.1.6.4-SNAPSHOT</version>
+	<version>3.2.0-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 	<name>Parameterized Remote Trigger Plugin</name>
 	<description>This plugin gives you the ability to trigger parameterized builds on a remote Jenkins server as part of your build.</description>
