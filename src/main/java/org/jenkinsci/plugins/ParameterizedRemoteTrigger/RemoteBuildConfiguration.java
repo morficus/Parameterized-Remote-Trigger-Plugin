@@ -23,9 +23,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -845,7 +847,7 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 
 	private String printOffsetConsoleOutput(BuildContext context, String offset, RemoteBuildInfo buildInfo)
 			throws IOException, InterruptedException {
-		if (offset.equals("-1")) {
+		if (offset == null || offset.equals("-1")) {
 			return "-1";
 		}
 		String buildUrlString = String.format("%slogText/progressiveText?start=%s", buildInfo.getBuildURL(), offset);
@@ -1271,10 +1273,10 @@ public class RemoteBuildConfiguration extends Builder implements SimpleBuildStep
 			ListBoxModel model = new ListBoxModel();
 
 			model.add("");
-			for (RemoteJenkinsServer site : getRemoteSites()) {
-				model.add(site.getDisplayName());
-			}
-
+			Arrays.stream(getRemoteSites())
+					.filter(Objects::nonNull)
+					.map(RemoteJenkinsServer::getDisplayName)
+					.forEach(model::add);
 			return model;
 		}
 

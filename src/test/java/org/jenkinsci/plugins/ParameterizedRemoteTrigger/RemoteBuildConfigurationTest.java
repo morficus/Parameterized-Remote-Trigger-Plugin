@@ -16,6 +16,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jenkins.security.ApiTokenProperty;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.RemoteBuildConfiguration.DescriptorImpl;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.auth2.NullAuth;
@@ -77,7 +79,7 @@ public class RemoteBuildConfigurationTest {
 		HudsonPrivateSecurityRealm hudsonPrivateSecurityRealm = new HudsonPrivateSecurityRealm(false, false, null);
 		jenkinsRule.jenkins.setSecurityRealm(hudsonPrivateSecurityRealm); //jenkinsRule.createDummySecurityRealm());
 		testUser = hudsonPrivateSecurityRealm.createAccount("test", "test");
-		testUserToken = testUser.getProperty(jenkins.security.ApiTokenProperty.class).getApiToken();
+		testUserToken = testUser.getProperty(ApiTokenProperty.class).generateNewToken("test").plainValue;
 
 		mockAuth.grant(Jenkins.ADMINISTER).everywhere().toAuthenticated();
 	}
@@ -150,19 +152,23 @@ public class RemoteBuildConfigurationTest {
 		//Check results
 		FreeStyleBuild lastBuild2 = project.getLastBuild();
 		assertNotNull(lastBuild2);
-		List<String> log = IOUtils.readLines(lastBuild2.getLogInputStream());
-		assertTrue(log.toString(), log.toString().contains("Started by user " + (authenticate ? "test" : "anonymous") + ", Building in workspace"));
 
-		FreeStyleBuild lastBuild = remoteProject.getLastBuild();
-		assertNotNull("lastBuild null", lastBuild);
-		if (withParam) {
-			EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
-			for (Map.Entry<String, String> p : params.entrySet()) {
-				assertEquals(p.getValue(), remoteEnv.get(p.getKey()));
+		try(InputStream logStream=lastBuild2.getLogInputStream()){
+			List<String> log = IOUtils.readLines(logStream);
+			assertTrue(log.toString(), log.toString().contains("Started by user " + (authenticate ? "test" : "unknown or anonymous") + ", Running as SYSTEM, Building in workspace"));
+
+			FreeStyleBuild lastBuild = remoteProject.getLastBuild();
+			assertNotNull("lastBuild null", lastBuild);
+			if (withParam) {
+				EnvVars remoteEnv = lastBuild.getEnvironment(new LogTaskListener(null, null));
+				for (Map.Entry<String, String> p : params.entrySet()) {
+					assertEquals(p.getValue(), remoteEnv.get(p.getKey()));
+				}
+			} else {
+				assertNotEquals("lastBuild should be executed no matter the result which depends on the remote job configuration.", null, lastBuild.getNumber());
 			}
-		} else {
-			assertNotEquals("lastBuild should be executed no matter the result which depends on the remote job configuration.", null, lastBuild.getNumber());
 		}
+
 	}
 
 	private void _testRemoteBuild(boolean authenticate) throws Exception {
