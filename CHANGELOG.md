@@ -1,3 +1,10 @@
+# 3.2.0 (Sep 5th, 2023)
+
+### Improvement
+
+* Support opentelemeter.
+* Upgrade to Jenkins 2.346.3 baseline.
+
 # 3.1.6.4 (Sep 5th, 2023)
 
 ### Bug fixes
