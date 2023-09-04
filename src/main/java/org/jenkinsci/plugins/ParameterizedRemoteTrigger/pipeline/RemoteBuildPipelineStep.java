@@ -50,6 +50,7 @@ import org.jenkinsci.plugins.ParameterizedRemoteTrigger.remoteJob.RemoteBuildSta
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.AffectedField;
 import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.FormValidationUtils.RemoteURLCombinationsResult;
+import org.jenkinsci.plugins.ParameterizedRemoteTrigger.utils.OtelUtils;
 import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -380,7 +381,7 @@ public class RemoteBuildPipelineStep extends Step {
 			BuildContext context = new BuildContext(build, workspace, listener, listener.getLogger(),
 					effectiveRemoteServer);
 			Handle handle = null;
-			try {
+			try (AutoCloseable ignored = OtelUtils.isOpenTelemetryAvailable() ? OtelUtils.activeSpanIfAvailable(stepContext) : OtelUtils.noop()) {
 				if (!remoteBuildConfig.isStepDisabled(listener.getLogger())) {
 					handle = remoteBuildConfig.performTriggerAndGetQueueId(context);
 					if (remoteBuildConfig.getBlockBuildUntilComplete()) {
