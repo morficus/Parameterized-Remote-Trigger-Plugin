@@ -5,4 +5,7 @@
 //   - latest Pipeline plugins, 'Timestamper' plugin
 //   - recommended to use this Jenkinsfile with 'Multibranch Pipeline' plugin
 
-buildPlugin()
+buildPlugin(useContainerAgent: true, configurations: [
+  [platform: 'linux', jdk: 21],
+  [platform: 'windows', jdk: 17],
+])
