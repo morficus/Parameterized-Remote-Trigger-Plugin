@@ -23,6 +23,7 @@ import net.sf.json.util.JSONUtils;
 
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.SystemUtils;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -38,6 +39,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -612,14 +614,18 @@ public class RemoteBuildConfiguration extends Builder {
         if (this.getBlockBuildUntilComplete()) {
             listener.getLogger().println("Blocking local job until remote job completes");
             // Form the URL for the triggered job
-            String jobLocation = jobURL + nextBuildNumber + "/api/json";
+            String jobLocation = MessageFormat.format("{0}{1,number,#}/api/json?seed={2,number,#}", 
+            										jobURL, nextBuildNumber, System.currentTimeMillis());
+            
 
             buildStatusStr = getBuildStatus(jobLocation, build, listener);
 
             while (buildStatusStr.equals("not started")) {
                 listener.getLogger().println("Waiting for remote build to start.");
                 listener.getLogger().println("Waiting for " + this.pollInterval + " seconds until next poll.");
-                buildStatusStr = getBuildStatus(jobLocation, build, listener);
+                
+                jobLocation = MessageFormat.format("{0}{1,number,#}/api/json?seed={2,number,#}", 
+						jobURL, nextBuildNumber, System.currentTimeMillis());
                 // Sleep for 'pollInterval' seconds.
                 // Sleep takes miliseconds so need to convert this.pollInterval to milisecopnds (x 1000)
                 try {
@@ -628,6 +634,8 @@ public class RemoteBuildConfiguration extends Builder {
                 } catch (InterruptedException e) {
                     this.failBuild(e, listener);
                 }
+
+                buildStatusStr = getBuildStatus(jobLocation, build, listener);
             }
 
             listener.getLogger().println("Remote build started!");
