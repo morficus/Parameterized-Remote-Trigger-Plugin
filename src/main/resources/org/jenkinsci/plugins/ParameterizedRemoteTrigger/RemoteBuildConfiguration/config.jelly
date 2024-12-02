@@ -24,6 +24,10 @@
   <f:entry title="Poll Interval (seconds)" field="pollInterval">
      <f:number clazz="positive-number" min="1" step="1" default="10" />
   </f:entry>
+  
+  <f:entry title="Maximum number of retries" field="connectionRetryLimit">
+     <f:number clazz="positive-number" min="0" step="1" default="5" />
+  </f:entry>  
 
   <f:entry title="Block until the remote triggered projects finish their builds." field="blockBuildUntilComplete">
     <f:checkbox />

@@ -58,7 +58,7 @@ public class RemoteBuildConfiguration extends Builder {
 
     private final boolean         shouldNotFailBuild;
     private final int             pollInterval;
-    private final int             connectionRetryLimit = 5;
+    private final int             connectionRetryLimit;
     private final boolean         preventRemoteBuildQueue;
     private final boolean         blockBuildUntilComplete;
     private final boolean         enhancedLogging;
@@ -85,7 +85,7 @@ public class RemoteBuildConfiguration extends Builder {
     @DataBoundConstructor
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild, String job, String token,
             String parameters, boolean enhancedLogging, JSONObject overrideAuth, JSONObject loadParamsFromFile, boolean preventRemoteBuildQueue,
-            boolean blockBuildUntilComplete, int pollInterval) throws MalformedURLException {
+            boolean blockBuildUntilComplete, int pollInterval, int connectionRetryLimit) throws MalformedURLException {
 
         this.token = token.trim();
         this.remoteJenkinsName = remoteJenkinsName;
@@ -94,6 +94,7 @@ public class RemoteBuildConfiguration extends Builder {
         this.preventRemoteBuildQueue = preventRemoteBuildQueue;
         this.blockBuildUntilComplete = blockBuildUntilComplete;
         this.pollInterval = pollInterval;
+        this.connectionRetryLimit = connectionRetryLimit;
         this.enhancedLogging = enhancedLogging;
 
         if (overrideAuth != null && overrideAuth.has("auth")) {
@@ -127,7 +128,7 @@ public class RemoteBuildConfiguration extends Builder {
     }
 
     public RemoteBuildConfiguration(String remoteJenkinsName, boolean shouldNotFailBuild,
-            boolean preventRemoteBuildQueue, boolean blockBuildUntilComplete, int pollInterval, String job,
+            boolean preventRemoteBuildQueue, boolean blockBuildUntilComplete, int pollInterval, int connectionRetryLimit, String job,
             String token, String parameters, boolean enhancedLogging) throws MalformedURLException {
 
         this.token = token.trim();
@@ -139,6 +140,7 @@ public class RemoteBuildConfiguration extends Builder {
         this.preventRemoteBuildQueue = preventRemoteBuildQueue;
         this.blockBuildUntilComplete = blockBuildUntilComplete;
         this.pollInterval = pollInterval;
+        this.connectionRetryLimit = connectionRetryLimit;
         this.overrideAuth = false;
         this.auth.replaceBy(new Auth(null));
 
